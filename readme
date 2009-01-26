@@ -1,0 +1,97 @@
+PKGUTIL
+=======
+
+Pkgutil, written in Perl and licensed under GPL, is a tool to make
+installation of packages in Solaris easier. It handles package
+dependencies so all required packages are installed before the desired
+package automatically.
+
+Configure
+---------
+
+There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing 
+you normally need to change there is the mirror location. If you have a 
+pkgutil.conf file in /etc/opt/csw/ the settings in it will override the ones
+in /opt/csw/etc. If no pkgutil.conf is found in either of those two locations 
+defaults are used.
+
+Official web site
+-----------------
+
+URL: http://pkgutil.wikidot.com
+
+Version history
+---------------
+
+* v1.4. Released 2009-01-19
+  - Dependency calculations are now much faster
+  - Support for local file repositories (Dennis Clarke)
+  - Keyword "same" when using -c replaced with "SAME" (Dennis Clarke)
+  - Bldcat now skips SUNW packages as dependencies
+
+* v1.3.1. Released 2008-12-17
+  - Small packaging bug fixed. No code changes
+
+* v1.3. Released 2008-12-12
+  - New option -x (exclude) to exclude packages (Ihsan Dogan)
+  - New option -s (stream) to build a custom package (Dagobert Michelsen)
+  - New option -T (target) to set architecture and release for package
+    stream (-s)
+  - New option -o (output) names the package stream from -s (Dagobert Michelsen)
+  - New option -W (workdir) to set another directory to use for downloads.
+    Some operations are now possible without being root
+  - Option -f (force) renamed to -y (yes) (Dagobert Michelsen)
+  - Make config file more NFS/read-only friendly (Dagobert Michelsen)
+  - Changed default mirror from unstable to current (Dagobert Michelsen)
+  - Fixed bug which caused a warning to be displayed during some upgrades
+  - Fixed that locally cached packages are also MD5 checked (Dennis Clarke)
+  - PATH added to -V (syscheck) output
+  - Wget and Perl binaries added to -V
+  - Documented admin file in perldoc/man page
+  - Several changes in bldcat to improve speed (Dagobert Michelsen)
+  - bldcat supports the description file (Dagobert Michelsen)
+  - chkcat in verbose mode benefits from the same speed fix as in bldcat
+  - chkcat now checks for missing dependencies
+
+* v1.2.1. Released 2008-11-28
+  - Fixes compare bug with package names containing dashes
+
+* v1.2. Released 2008-11-12
+  - Temp site (-t) does no longer replace the mirror defined in pkgutil.conf. 
+    It instead is considered the primary location and the mirror defined in 
+    pkgutil.conf is considered the secondary. That means you can point -t to 
+    your own repository of packages that are built with dependencies to CSW and 
+    it will fetch all packages necessary regardless of their location
+  - Better MD5 support for Solaris 8 and 9
+  - Arguments to -a and -c are now treated like filters so 
+    "pkgutil -a bind dhcp" equals "pkgutil -a | egrep -i 'bind|dhcp'"
+  - Changed version info to be -v instead of -V
+  - Added -V (syscheck) to show info about binaries and more that pkgutil
+    needs to support all features
+  - Perldoc/man page updated with configuration file info
+  - Search for gzip in more places
+  - fixed bug when reporting package missing in catalog (Dagobert Michelsen)
+  - bundled wget binaries moved to /opt/csw/libexec/pkgutil
+  - bldcat supports CSW_CATEGORY
+  - bldcat now extracts data in a more dependable way
+  - chkcat checks for duplicates in catalog
+  - chkcat with option -v checks the catalog data against actual package 
+    files if they are located in the same directory as the catalog parsed
+
+* v1.1. Released 2008-10-24
+  - Added possibility to use both common name and package name
+  - Added bldcat to build catalalogs from package files
+  - Added chkcat to check catalogs for errors
+  - Fix for packages that are not compressed (gzip and pkg-get)
+  - Fix for size zero local files (failed package downloads)
+  - Fix for gpg-checks when updating the catalog (Yann Rouillard)
+  - Fix for version compare code rule #3 (Yann Rouillard)
+  - Updated prototype for package (Dennis Clarke)
+
+* v1.0. Released 2008-10-07
+  - Initial release
+  - Version compare method by James Lee and Dagobert Michelsen
+  - Tested to work on Solaris 8 with default Perl 5.5.3
+
+-- 
+2009-01-19/PB

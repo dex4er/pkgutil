@@ -1,0 +1,172 @@
+#!/opt/csw/bin/perl -w
+
+# bldcat - build a CSW catalog from packages in a directory
+# Copyright (C) 2008-2009 Peter Bonivart
+
+# $Id: bldcat,v 1.11 2009/01/24 01:42:01 root Exp root $
+
+use strict;
+use Digest::MD5;
+
+my $tmpdir = "/tmp/bldcat.$$.$^T";
+my $pkgdir = ".";
+my ($deptmp,$status,$pkgname);
+my ($description,$common,$version,$package,$pkgfile,$hash,$size,$deps,$category);
+my %oldcatalog;
+my %olddescriptions;
+
+$pkgdir = $ARGV[0] if $ARGV[0];
+if ($#ARGV > 0) {
+  print STDERR "Usage: $0 [<package dir>]\n";
+  exit 1;
+}
+
+if (open (CATALOG,"$pkgdir/catalog")) {
+  while (<CATALOG>) {
+    chomp;
+    my @line = split /\s+/;
+    my $hash = $line[4];
+    $oldcatalog{$hash} = \@line;
+  }
+  close CATALOG;
+}
+
+if (open (DESCRIPTIONS,"$pkgdir/descriptions")) {
+  while (<DESCRIPTIONS>) {
+    chomp;
+    my @line = split /\s+/;
+    my $common = $line[0];
+    $olddescriptions{$common} = $_;
+  }
+  close DESCRIPTIONS;
+}
+
+open (CATALOG,">$pkgdir/catalog.new") || die "Could not write new catalog at $pkgdir/catalog.new: $!";
+open (DESCRIPTIONS,">$pkgdir/descriptions.new") || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
+
+foreach my $file (glob "$pkgdir/*") {
+  ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category) = ("","","","","","","","");
+  next unless (-r $file);		# must be a readable file
+  next unless ($file =~ /\.pkg(\.gz)?$/);	# must end with .pkg or .pkg.gz
+
+  # Calculate hash before we do anything else to look up the cache
+  if (! $hash) {
+    open (FILE2,"<$file") || die "Could not open $file: $!\n";
+    binmode (FILE2);
+    $hash = Digest::MD5->new->addfile(*FILE2)->hexdigest;
+    close FILE2;
+  }
+
+  if (exists $oldcatalog{$hash} && exists $olddescriptions{$oldcatalog{$hash}[0]}) {
+    print "Reusing old information for $file\n";
+    print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
+    print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
+    next;
+  }
+
+  print "Inspecting $file\n";
+
+  # unpack package
+
+  if (! -d "$tmpdir") {
+    mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
+  }
+  my $DECOMPRESS = ($file =~ /\.gz$/ ? "/bin/gzip -c -d $file" : "cat $file");
+  $status = system("$DECOMPRESS | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
+  die "Could not transform $file: $!" if $status;
+
+  foreach (glob "$tmpdir/*") {
+    ($pkgname) = (/([\w\+-]+)$/) if (-d);
+  }
+
+  open (FILE,"<$tmpdir/$pkgname/pkginfo") || die "Could not open $tmpdir/$pkgname/pkginfo: $!";
+
+  while (my $line = <FILE>) {
+    chomp $line;
+
+    # field 1: common name
+
+    if ($line =~ /^NAME=/) {
+      ($description,$common) = ($line =~ /=((.+?)\s.*)/);
+      next;
+    }
+
+    # field 2: version
+
+    if ($line =~ /^VERSION=/) {
+      ($version) = ($line =~ /=(.+)$/);
+      next;
+    }
+
+    # field 3: package name
+
+    if ($line =~ /^PKG=/) {
+      ($package) = ($line =~ /=(.+)$/);
+      next;
+    }
+
+    # field 4: filename
+
+    if (! $pkgfile) {
+      ($pkgfile) = ($file =~ /\//) ? ($file =~ /\/(.+)$/) : ($file);
+    }
+
+    # field 5: md5 hash
+    # Already computed
+
+    # field 6: file size
+
+    if (! $size) {
+      $size = (stat($file))[7];
+    }
+
+    # field 8: categories
+
+    if ($line =~ /^CSW_CATEGORY=/) {
+      ($category) = ($line =~ /=(.+)$/);
+      $category = join('|',split(/,\s?/,$category));
+      next;
+    }
+  }
+  close FILE;
+
+  # field 7: dependencies
+
+  $deps = "";
+  if (-r "$tmpdir/$pkgname/install/depend") {
+    open (FILE,"<$tmpdir/$pkgname/install/depend");
+    while (<FILE>) {
+      chomp;
+      if (/^P\s+CSW/) {
+        ($deptmp) = (/P\s+(\S+)/);
+        if ($deptmp ne $pkgname) {	# skip if circular
+          $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+        }
+      }
+    }
+    close FILE;
+  }
+
+  # clean up
+
+  $status = system("/bin/rm -rf $tmpdir");
+  die "Could not delete files in $tmpdir: $!" if $status;
+
+  $deps = "none" unless $deps;
+  $category = "none" unless $category;
+  print CATALOG "$common $version $package $pkgfile $hash $size $deps $category\n";
+  print DESCRIPTIONS "$description\n";
+}
+
+close DESCRIPTIONS;
+close CATALOG;
+
+unlink "$pkgdir/descriptions";			# May or may not be there
+link "$pkgdir/descriptions.new", "$pkgdir/descriptions" or die "Cannot link $pkgdir/descriptions.new to $pkgdir/descriptions: $!";
+unlink "$pkgdir/descriptions.new" or die "Cannot unlink $pkgdir/descriptions.new: $!";
+
+unlink "$pkgdir/catalog";			# May or may not be there
+link "$pkgdir/catalog.new", "$pkgdir/catalog" or die "Cannot link $pkgdir/catalog.new to $pkgdir/catalog: $!";
+unlink "$pkgdir/catalog.new" or die "Cannot unlink $pkgdir/catalog.new: $!";
+
+exit 0;

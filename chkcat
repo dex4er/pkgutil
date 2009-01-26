@@ -1,0 +1,224 @@
+#!/opt/csw/bin/perl -w
+
+# chkcat - check that a CSW catalog is consistent
+# Copyright (C) 2008-2009 Peter Bonivart
+
+# $Id: chkcat,v 1.11 2009/01/24 01:44:01 root Exp root $
+
+use strict;
+use Digest::MD5;
+
+my @pkglist;
+my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat);
+my $prefix = ".";
+my $tmpdir = "/tmp/chkcat.$$.$^T";
+my %pkg;
+
+if ($ARGV[0] && $ARGV[0] eq "-v") {
+  $verbose = 1;
+  shift @ARGV;
+}
+
+if ($#ARGV >= 0) {
+  $catalog = $ARGV[0];
+} else {
+  print "Usage: $0 [-v] <catalog file>\n";
+  exit 1;
+}
+
+(-r $catalog) || die "Can't open $catalog";	# must be a readable file
+
+($prefix) = ($catalog =~ /^(.+)\//) if ($verbose && $catalog =~ /\//);
+
+my (@tmp) = `cat $catalog`;
+
+while ($#tmp >= 0) {
+  my $line = $tmp[0];
+  shift @tmp;
+  chomp $line;
+  if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
+    shift @tmp;
+    shift @tmp;
+    shift @tmp;
+    next;
+  }
+  last if ($line =~ /-BEGIN PGP SIGNATURE-/);
+  next if ($line =~ /^#/);
+  my @line = split(/\s+/,$line);
+  $pkg{$line[2]} = 1 if ($line[2] =~ /^CSW/);
+}
+
+(@tmp) = `cat $catalog`;
+
+while ($#tmp >= 0) {
+  my $line = $tmp[0];
+  shift @tmp;
+  chomp $line;
+  my (@field) = split(/ /,$line);
+
+  # if gpg signed catalog, skip a few lines in the beginning
+
+  if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
+    print "Skipping signature at start of file.\n";
+    shift @tmp;
+    shift @tmp;
+    shift @tmp;
+    next;
+  }
+
+  # if gpg signature found at the end, exit
+
+  if ($line =~ /-BEGIN PGP SIGNATURE-/) {
+    print "\nSkipping signature at end of file.\n";
+    last;
+  }
+
+  # if line starts with a comment, skip
+
+  if ($line =~ /^#/) {
+    print "Skipping comment.\n";
+    next;
+  }
+
+  # number of fields, should be 8
+
+  if ($#field != 7) {
+    print "\nERROR! ",$#field + 1," fields instead of normal 8.\n";
+    print "$line\n";
+    next;
+  }
+
+  # packages that are not compressed, normal for gzip and pkg-get
+
+  if ($field[3] !~ /\.gz$/) {
+    print "\nWARNING! Package $field[2] is not compressed.\n";
+    print "$line\n";
+  }
+
+  # check that dependency field begins and ends with a word char
+
+  if ($field[6] !~ /^\w/) {
+    print "\nERROR! The dependency field of package $field[2] begins with a non-char.\n";
+    print "$line\n";
+  }
+  if ($field[6] =~ /\|$/) {	# non-char is actually used, e.g. gcc2g++
+    print "\nERROR! The dependency field of package $field[2] ends with a pipe char.\n";
+    print "$line\n";
+  }
+
+  # check that no dependencies are missing
+
+  if ($field[6] ne "none") {
+    foreach (split(/\|/,$field[6])) {
+      print "\nWARNING! Dependency $_ of package $field[2] is missing.\n" unless $pkg{$_};
+    }
+  }
+
+  # check for circular dependencies
+
+  if ($field[6] ne "none") {
+    foreach (split(/\|/,$field[6])) {
+      print "\nERROR! Circular dependency detected in package $field[2].\n" if ($_ eq $field[2]);
+    }
+  }
+
+  # check that category field begins and ends with a word char
+
+  if ($field[7] !~ /^\w/) {
+    print "\nERROR! The category field of package $field[2] begins with a non-char.\n";
+    print "$line\n";
+  }
+  if ($field[7] !~ /\w$/) {
+    print "\nERROR! The category field of package $field[2] ends with a non-char.\n";
+    print "$line\n";
+  }
+
+  # if in verbose mode, check catalog entries against packages if found in
+  # same directory as catalog
+
+  if ($verbose) {
+    if (! -r "$prefix/$field[3]") {	# does the file exist?
+      print "ERROR! File $field[3] not found.\n";
+    } else {
+      if ($field[5] != (stat("$prefix/$field[3]"))[7]) { # correct size?
+        print "ERROR! Size does not match for $field[2].\n";
+      }
+      open (FILE,"<$prefix/$field[3]");		# MD5 check
+      binmode (FILE);
+      $hash = Digest::MD5->new->addfile(*FILE)->hexdigest;
+      close FILE;
+      if ($hash ne $field[4]) {
+        print "ERROR! MD5 hash does not match for $field[2].\n";
+      }
+
+      # unpack package if depends and/or categories are not "none"
+
+      if (! -d "$tmpdir") {
+        mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
+      }
+      $status = system("/bin/gunzip -cf $prefix/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
+      die "Could not transform $field[2]: $!" if $status;
+
+      # check deps against depend file in package
+
+      if ($field[6] ne "none") {
+        $deps = "";
+        if (-r "$tmpdir/$field[2]/install/depend") {
+          open (FILE,"<$tmpdir/$field[2]/install/depend");
+          while (<FILE>) {
+            chomp;
+            if (/^P\s+\w/) {
+              ($deptmp) = (/P\s+([\w\+-]+)/);
+              $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+            }
+          }
+        } else {
+          print "No depend file found in $field[2]\n";
+        }
+        if ($deps ne $field[6]) {
+          print "ERROR! Dependencies does not match for $field[2].\n";
+        }
+      }
+
+      # check categories against pkginfo file in package
+
+      if ($field[7] ne "none") {
+        $cat = "";
+        open (FILE,"<$tmpdir/$field[2]/pkginfo");
+        while (<FILE>) {
+          chomp;
+          if (/^CSW_CATEGORY=/) {
+            ($cat) = (/=(.+)$/) if (/^CSW_CATEGORY=/);
+            $cat = join('|',split(/,\s?/,$cat));
+            last;
+          }
+        }
+        if ($cat ne $field[7]) {
+          print "ERROR! Categories does not match for $field[2].\n";
+        }
+      }
+
+      # clean up
+
+      $status = system("/bin/rm -rf $tmpdir");
+      die "Could not delete files in $tmpdir: $!" if $status;
+    }
+  }
+
+  # add package to array for later duplicate check
+
+  push(@pkglist,$field[2]);
+}
+
+my @tmplist = sort(@pkglist);
+my $dup = "";
+while ($#tmplist > 0) {		# no need to check for dups if only one entry
+  my $tmp = $tmplist[0];
+  shift @tmplist;
+  if ($tmp eq $tmplist[0] && $dup ne $tmp) {
+    print "ERROR! $tmp exists more than once.\n";
+    $dup = $tmp;
+  }
+}
+
+exit 0;

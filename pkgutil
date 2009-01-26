@@ -3,7 +3,7 @@
 # pkgutil - manages packages on Sun Solaris systems
 # Copyright (C) 2008 Peter Bonivart
 
-# $Id: pkgutil,v 1.27 2009/01/19 16:49:20 root Exp root $
+# $Id$
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,16 +26,16 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.4";
+my $pkgutilver = "1.5b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my @mirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir = "$workdir/packages";
 my $admin = "$workdir/admin";
-my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$catalog,$mirrorstub);
+my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$catalog,$mirrorstub,$arch,$rel);
 my (@pkglist,@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist,@tmpdeps,@exclude);
-my (%config,%pkg);
+my (%config,%pkg,%commonpkg,%pkgmirror);
 
 # show available packages in catalog
 
@@ -44,12 +44,15 @@ sub available {
   my $tmp;
 
   print "Available packages in catalog...\n" if $debug;
+  my %already;
   open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
   while ($line = <CATALOG>) {
     chomp $line;
     if ($line =~ /^\w/) {
       @llst = split(/ /,$line);
-      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7]) {
+      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7] && $llst[8]) {
+        next if $already{$llst[3]};
+        $already{$llst[3]} = 1;
         $tmp = sprintf ("%-20s %-20s %-25s %s\n",$llst[0],$llst[2],$llst[1],format_byte($llst[5]));
         if ($#ARGV >= 0) {
           foreach (@ARGV) {
@@ -74,7 +77,6 @@ sub check_catalog {
   print "Catalog age in days: $age\n" if $debug;
   fetch_catalog() if ($age > 14 || ! -e $catalog);
   gpg($catalog) if $use_gpg;
-  read_catalog();
 }
 
 # check if package is already installed and if so, which version
@@ -113,7 +115,7 @@ sub compare {
   my ($pkg,$local_ver,$remote_ver,$tmp);
 
   print "package\t\t\t  installed\t\t    catalog\n" if (! $mode);
-  @cswpkgs = `/bin/pkginfo | grep CSW`;
+  @cswpkgs = `/bin/pkginfo`;
   foreach $pkg (@cswpkgs) {
     ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
     $local_ver = check_pkg($pkg,0);
@@ -141,6 +143,36 @@ sub compare {
   } else {
     exit 0;
   }
+}
+
+# compare two dotted version numbers, number if possible else alpha
+# on a per-field basis.
+# as per cmp, -1, 0, or 1 if p1 is less than, equal to or greater than p2
+sub compare_dotrevs {
+  my ($p1, $p2) = @_;
+  # simple cases
+  return 0 if !defined($p1) && !defined($p2);
+  return -1 if !defined($p1);
+  return 1 if !defined($p2);
+  return 0 if $p1 eq $p2;
+  return 0 if $p1 =~ /^\d+$/ && $p2 =~ /^\d+$/ && $p1 == $p2;
+  my @a1 = split /\./, $p1;
+  my @a2 = split /\./, $p2;
+  my $length = $#a1;
+  $length = $#a2 if $#a2 > $length;
+  my $r = 0;
+  for (my $i = 0; $i <= $length; $i++) {
+    return -1 if !defined($a1[$i]);
+    return 1 if !defined($a2[$i]);
+    my $unitcmp;
+    if ($a1[$i] =~ /^\d+$/ && $a2[$i] =~ /^\d+$/) {
+      $unitcmp = $a1[$i] <=> $a2[$i];
+    } else {
+      $unitcmp = $a1[$i] cmp $a2[$i];
+    }
+    return $unitcmp unless $unitcmp == 0;
+  }
+  die "compare_dotrevs failed miserably"; # should never get here
 }
 
 # compare version of installed package to current
@@ -199,9 +231,9 @@ sub compare_version {
     }
   }
 
-  # 4th case: installed no REV, catalog no REV => upgrade
+  # 4th case: dot-by-dot comparision of version
   if (! $skip) {
-    $update = 1 if ($irev !~ /REV=/ && $crev !~ /REV=/);
+    $update = 1 if compare_dotrevs($crev, $irev) == 1;
   }
 
   print "$pkg irtmp:$irtmp crtmp:$crtmp\n" if $debug;
@@ -239,8 +271,6 @@ sub email {
 
 sub fetch_catalog {
   my $wgetopts = "";
-  my $status;
-
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   print "Fetching new catalog if available...\n";
   die "Option -n selected, stopping here.\n" if $nomod;
@@ -248,17 +278,13 @@ sub fetch_catalog {
   system("> $catalog");
   for (my $i = 0; $i <= $#mirror; $i++) {
     my $tmpcatalog = $catalog . ".$i";
-    if ($mirror[$i] =~ /^file:/) {
-      my ($tmpcatsrc) = ($mirror[$i] =~ /^file:\/(.+)$/);
-      $status = system("/bin/cp $tmpcatsrc/catalog $tmpcatalog");
-    } else {
-      $status = system("$wget $wgetopts -O $tmpcatalog $mirror[$i]/catalog");
-    }
-    if ($status) {
+    my $retval = system("$wget $wgetopts -O $tmpcatalog $mirror[$i]/catalog");
+    if ($retval) {
       print "\nFetching of catalog failed.\n";
       exit 1;
     }
-    $status = system("/bin/cat $tmpcatalog >> $catalog");
+    my $cmd = "/bin/sed 's!\$! " . "$mirror[$i]!" . "'" . " $tmpcatalog >> $catalog";
+    my $status = system($cmd);
     die "Couldn't create catalog!\n" if $status;
     unlink $tmpcatalog;
   }
@@ -271,7 +297,7 @@ sub fetch_catalog {
 sub fetch_pkgs {
   my ($mode,@pkglist) = @_;
   my $wgetopts = "";
-  my ($file,$status);
+  my ($file,$retval);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
   if ($#pkglist > 0 && ! $force) {
@@ -290,16 +316,13 @@ sub fetch_pkgs {
     } else {
       print $fh "Fetching $_...\n";
       locate_wget() if (-x $wget);	# if wget disappeared locate alt.
-      foreach (@mirror) {
-        if ($_ =~ /^file:/) {
-          my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
-          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
-        } else {
-          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
-        }
-        last unless $status;
+      my $tried;
+      foreach (@{$pkgmirror{$file}}) {
+        $tried = 1;
+        $retval = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+        last unless $retval;
       }
-      if ($status) {
+      if ($retval || ! $tried) {
         print "\nFetching of $_ failed. Try updating your catalog with pkgutil -U.\n";
         exit 1;
       }
@@ -368,7 +391,7 @@ sub gpg {
 sub init {
   my $file;
   my @conf_file = ("/opt/csw/etc/pkgutil.conf","/etc/opt/csw/pkgutil.conf");
-  %config = ("mirror"		=> "",
+  %config = ("mirror"		=> [],
              "pkgaddopts"	=> "",
              "wgetopts"		=> "",
              "use_gpg"		=> "",
@@ -385,32 +408,32 @@ sub init {
         s/\s+$//;	# remove trailing white
         next unless length;	# next if nothing left
         my ($var,$value) = split(/\s*=\s*/,$_,2);
-        $config{$var} = $value;
-        print "$var = $config{$var}\n" if $debug;
+        print "$var = $value\n" if $debug;
+        my $r = ref($config{$var});
+        if (! $r) {
+	  $config{$var} = $value;
+        } elsif ($r eq 'ARRAY') {
+          push @{$config{$var}}, $value;
+        }
       }
       close CONFIG;
     }
   }
 
   if ($debug) {
-    print "mirror: $config{mirror}\n";
+    print "mirror: " . join("\t", @{$config{mirror}}) . "\n";
     print "pkgaddopts: $config{pkgaddopts}\n";
     print "wgetopts: $config{wgetopts}\n";
     print "use_gpg: $config{use_gpg}\n";
     print "use_md5: $config{use_md5}\n";
   }
 
-  $mirror[0] = $config{mirror} if $config{mirror};
-  ($mirror[0]) = ($mirror[0] =~ q!^(.+\w)!);
-  $mirrorstub = $mirror[0];
-  chomp($tmp = `uname -p`);	# arch type sparc|i386
-  $mirror[0] = $mirror[0] . "/" . $tmp;
-  $catalog = "$workdir/catalog.$tmp";
-  chomp($tmp = `uname -r`);	# os version, e.g. 5.10
-  $mirror[0] = $mirror[0] . "/" . $tmp;
-  $catalog = "$catalog.$tmp";
+  chomp($arch = `uname -p`);
+  chomp($rel = `uname -r`);
+  $catalog = "$workdir/catalog.$arch.$rel";
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
+
 }
 
 # install packages
@@ -435,6 +458,7 @@ sub inst_pkgs {
       `$pkgrm $pkgforce $_`;
     }
     $file = parse_catalog($_,3);
+    $name = parse_catalog($_,2);
     print "Installing $_\n";
     if ($file =~ /\.gz$/) {		# not all packages are compressed
       my $status = locate_gzip();
@@ -446,7 +470,7 @@ sub inst_pkgs {
       }
       ($file) = ($file =~ /(.+)\.gz$/);
     }
-    `$pkgadd $pkgforce $pkgaddopts -d $pkgdir/$file $_`;
+    `$pkgadd $pkgforce $pkgaddopts -d $pkgdir/$file $name`;
     `$rm -f $pkgdir/$file`;
   }
 }
@@ -463,12 +487,12 @@ sub install {
   print $fh "Parsing catalog, may take a while...\n";
   foreach (@ARGV) {
     $tmppkg = $_;
-    if ($tmppkg =~ /^CSW/) {
+    if ($tmppkg) {
       push(@pkglist,$tmppkg);
     } else {
       my $tmp = parse_catalog($tmppkg,2);
-      if ($tmp =~ /^CSW/) {
-        push(@pkglist,$tmp);
+      if ($tmp) {
+        push(@pkglist,$tmppkg);
       } else {
         print "Package $tmppkg not in catalog...exiting.\n";
         exit 1;
@@ -477,6 +501,8 @@ sub install {
     foreach (@pkglist) {
       $tmppkg2 = $_;
       if ($tmppkg2 ne "CSWcommon") {
+        system("pkginfo -q $tmppkg2");
+        next if $? == 0; # Already installed
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue ne "not in catalog") {
           @tmpdeps = split(/\|/,$retvalue);
@@ -532,7 +558,7 @@ sub install {
     push(@revpkglist,pop(@tmpexcludelist));
   }
 
-  # which packages do we really need to download?
+  # which packages do we really need to fetch?
 
   if ($mode != 3 && $mode != 4) {
     foreach (@revpkglist) {
@@ -683,18 +709,33 @@ sub md5 {
 
 sub parse_catalog {
   my ($pkg,$mode) = @_;
-  my $retvalue;
+  my ($retvalue, $name);
 
   print "Parsing catalog...looking for: $pkg\n" if $debug;
-  if (exists $pkg{$pkg}) {
-    $retvalue = (split(/ /,$pkg{$pkg}))[$mode];
-  } else {	# look thru the whole hash
-    foreach (keys %pkg) {
-      if ((split(/ /,$pkg{$_}))[0] eq $pkg) {
-        $retvalue = (split(/ /,$pkg{$_}))[2];
-        last;
-      }
+
+  # do we have an embedded version?
+  my($tryname, $vers) = split /-/, $pkg;
+
+  # We try the SysV name (CSWblah) and the common name (blah)
+  if ($pkg{$tryname}) {
+    # SysV
+    $name = $tryname;
+  } elsif ($commonpkg{$tryname} && $pkg{$commonpkg{$tryname}}) {
+    # Common
+    $name = $commonpkg{$tryname};
+  }
+  if ($name) {
+    # have we a version match?
+    if ($vers && exists $pkg{$name}{$vers}) {
+      $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
+    } elsif (! $vers) {
+      # we may have multiple versions in the catalog, take the highest
+      my $highest = (sort { compare_dotrevs($b, $a) } keys %{$pkg{$name}})[0];
+      $retvalue = (split(/ /,$pkg{$name}{$highest}))[$mode];
+    } else {
+      $retvalue = "not in catalog" if (! $retvalue);
     }
+  } else {	# look thru the whole hash
     $retvalue = "not in catalog" if (! $retvalue);
   }
   print "Return value: $retvalue\n" if $debug;
@@ -705,7 +746,7 @@ sub parse_catalog {
 
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
-      $opt_compare,$opt_upd_cat,$opt_email,$opt_temp,$opt_help,$opt_version,
+      $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir);
 
   usage() if (@ARGV == 0);
@@ -717,7 +758,7 @@ sub parse_cl {
              "c|compare"	=> \$opt_compare,
              "U|catalog"	=> \$opt_upd_cat,
              "e|email=s"	=> \$opt_email,
-             "t|temp=s"		=> \$opt_temp,
+             "t|temp=s"		=> \@opt_temp,
              "y|yes"		=> \$force,
              "s|stream"		=> \$opt_stream,
              "T|target=s"	=> \$opt_target,
@@ -736,8 +777,6 @@ sub parse_cl {
   if ($opt_workdir) {	# set/create optional working dir
     $workdir = $opt_workdir;
     print "new workdir: $workdir\n" if $debug;
-    chomp(my $arch = `uname -p`);
-    chomp(my $rel = `uname -r`);
     $catalog = "$workdir/catalog.$arch.$rel";
     $pkgdir = "$workdir/packages";
     if (! -d $pkgdir) {
@@ -748,11 +787,21 @@ sub parse_cl {
   }
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
-  push(@mirror,$opt_temp) if $opt_temp;
+  # Get mirrors together
+  @mirror = @{$config{mirror}};
+  unshift @mirror, @opt_temp if @opt_temp;
+
+  foreach (my $i=0; $i < scalar @mirror; $i++) {
+    ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
+    $mirrorstub = $mirror[$i];
+    $mirror[$i] = $mirror[$i] . "/" . $arch . "/" . $rel;
+  }
+  die "No mirrors defined in configuration file or on command line" unless @mirror;
   print "primary mirror: $mirror[0]\n" if $debug;
+  fetch_catalog() if ($opt_upd_cat || @opt_temp);
+  read_catalog();
   stream($opt_target,$opt_output) if $opt_stream;
   email($opt_email) if $opt_email;
-  fetch_catalog() if ($opt_upd_cat || $opt_temp);
   check_catalog();
   available() if $opt_avail;
   compare(0) if $opt_compare;
@@ -848,8 +897,10 @@ sub read_catalog {
     chomp $line;
     if ($line =~ /^\w/) {
       @llst = split(/ /,$line);
-      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7]) {
-        $pkg{$llst[2]} = $line;
+      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7] && $llst[8]) {
+        $pkg{$llst[2]}{$llst[1]} = $line;
+        $commonpkg{$llst[0]} = $llst[2];
+        push @{$pkgmirror{$llst[3]}}, $llst[8];
       }
     }
   }
@@ -967,9 +1018,7 @@ sub stream {
   print "OS release $rel not supported.\n" if (! $ok_rel);
   exit 1 if (($ok_arch + $ok_rel) < 2);
   $catalog = "$workdir/catalog.$arch.$rel";
-  $mirror[0] = "$mirrorstub/$arch/$rel";
-  $#mirror = 0;
-  print "catalog: $catalog\nmirror: $mirror[0]\n" if $debug;
+  print "catalog: $catalog\nprimary mirror: $mirror[0]" if $debug;
 
   if ($output) {
     $transfile = ($output eq "-" ? "/dev/fd/1" : "$pkgdir/$output");
@@ -981,7 +1030,7 @@ sub stream {
 
   check_catalog();
   my @install_order = install($mode);	# download packages needed
-  exit 1 if ($#install_order <= 0);	# empty list, nothing to do
+  exit 1 if ($#install_order < 0);	# empty list, nothing to do
   my $pkglist = join(' ',@install_order);
   print "install order: $pkglist\n" if $debug;
 
@@ -1015,7 +1064,7 @@ sub stream {
 
 sub usage {
   print "Pkgutil $pkgutilver, install Solaris packages the easy way.\n\n";
-  print "Usage: pkgutil [option]... [package]...\n";
+  print "Usage: pkgutil [option]... [package](-[version])...\n";
   print "\n  -i, --install\t\tInstall package";
   print "\n  -u, --upgrade\t\tUpgrade package";
   print "\n  -r, --remove\t\tRemove package";
@@ -1078,7 +1127,7 @@ In the example CSWbind has two dependencies separated by a pipe. Multiple catego
 
 =item B<-i, --install>
 
-Install package. Will install the specified packages with all their dependencies.
+Install package. Will install the specified packages with all their dependencies.  You may specify an explicit version (e.g. amarok-1.4.8,REV=2008.02.26) if desired, otherwise the latest version found is chosen.
 
 =item B<-u, --upgrade>
 
@@ -1110,7 +1159,7 @@ Send e-mail with available updates. E-mail address as argument. Don't use with o
 
 =item B<-t, --temp=site>
 
-Temporarily use this site for download. Must be the complete url where to find the catalog and associated packages.
+Temporarily use this site for download. Must be the complete url where to find the catalog and associated packages. May be specified multiple times.
 
 =item B<-s, --stream>
 
@@ -1194,7 +1243,7 @@ The settings that can be used are:
 
 C<mirror>
 
-This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed.
+This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed.  This option may be specified multiple times, as can the mirror= option in pkgutil.conf.
 
 C<pkgaddopts>
 
@@ -1228,6 +1277,8 @@ James Lee - method for version compare.
 Dagobert Michelsen - method for version compare.
 
 Yann Rouillard - reporting/fixing bugs.
+
+Derek Whayman - support for multiple repositories, performance enhancements.
 
 =head1 COPYRIGHT AND DISCLAIMER
 
