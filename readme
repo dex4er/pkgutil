@@ -23,6 +23,13 @@ URL: http://pkgutil.wikidot.com
 Version history
 ---------------
 
+* v1.5. Released TBD
+  - Support catalogs with multiple versions of each package and selecting
+    specific version (Derek Whayman)
+  - Perldoc/man updates
+  - Bldcat skips dependencies to the same package
+  - Chkcat checks for packages that contain dependencies to themselves
+
 * v1.4. Released 2009-01-19
   - Dependency calculations are now much faster
   - Support for local file repositories (Dennis Clarke)
@@ -94,4 +101,4 @@ Version history
   - Tested to work on Solaris 8 with default Perl 5.5.3
 
 -- 
-2009-01-19/PB
+$Id$

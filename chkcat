@@ -4,7 +4,6 @@
 # Copyright (C) 2008-2009 Peter Bonivart
 
 # $Id$
-# $Id$
 
 use strict;
 use Digest::MD5;
