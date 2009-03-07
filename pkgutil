@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # pkgutil - manages packages on Sun Solaris systems
-# Copyright (C) 2008 Peter Bonivart
+# Copyright (C) 2008-2009 Peter Bonivart
 
 # $Id$
 
@@ -29,54 +29,51 @@ my $debug = 0;
 my $pkgutilver = "1.5b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
+my $noncsw = 0;
 my @mirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
-my $pkgdir = "$workdir/packages";
-my $admin = "$workdir/admin";
-my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$catalog,$mirrorstub,$arch,$rel);
-my (@pkglist,@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist,@tmpdeps,@exclude);
-my (%config,%pkg,%commonpkg,%pkgmirror);
+my $pkgdir;
+my $admin;
+my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2);
+my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
+chomp(my $arch = `uname -p`);
+chomp(my $rel = `uname -r`);
 # show available packages in catalog
 
 sub available {
-  my @llst;
-  my $tmp;
-
-  print "Available packages in catalog...\n" if $debug;
-  my %already;
-  open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
-  while ($line = <CATALOG>) {
-    chomp $line;
-    if ($line =~ /^\w/) {
-      @llst = split(/ /,$line);
-      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7] && $llst[8]) {
-        next if $already{$llst[3]};
-        $already{$llst[3]} = 1;
-        $tmp = sprintf ("%-20s %-20s %-25s %s\n",$llst[0],$llst[2],$llst[1],format_byte($llst[5]));
-        if ($#ARGV >= 0) {
-          foreach (@ARGV) {
-            print $tmp if ($llst[0] =~ /$_/i || $llst[2] =~ /$_/i);
-          }
-        } else {
-           print $tmp;
+  foreach my $common (sort keys %commonpkg) {
+    my $pkgname = $commonpkg{$common};
+    foreach my $vers (sort keys %{$pkg{$pkgname}}) {
+      my($size) = (split /\s+/, $pkg{$pkgname}{$vers})[5];
+      my $tmp = sprintf ("%-20s %-20s %-25s %s\n",$common,$pkgname,$vers,format_byte($size));
+      if ($#ARGV >= 0) {
+        foreach (@ARGV) {
+          print $tmp if ("$pkgname-$vers" =~ /$_/i || "$common-$vers" =~ /$_/i);
         }
+      } else {
+         print $tmp;
       }
     }
   }
-  close CATALOG;
   exit 0;
 }
 
 # check catalog
 
 sub check_catalog {
+  my($always) = @_;
   my $age = 0;
 
-  $age = -M $catalog if (-r $catalog);
-  print "Catalog age in days: $age\n" if $debug;
-  fetch_catalog() if ($age > 14 || ! -e $catalog);
-  gpg($catalog) if $use_gpg;
+  foreach my $url (@mirror) {
+    my $filename = mangle_url($url);
+    my $age_i = -M $filename if (-r $filename);
+    $age = $age_i if defined($age_i) && $age_i > $age;
+    print "Catalog $url age in days: $age_i\n" if $debug;
+    fetch_catalog($url, $filename) if ($age > 14 || ! -e $filename || $always);
+    gpg($filename) if $use_gpg;
+    read_catalog($url, $filename); # Once per file
+  }
 }
 
 # check if package is already installed and if so, which version
@@ -115,7 +112,11 @@ sub compare {
   my ($pkg,$local_ver,$remote_ver,$tmp);
 
   print "package\t\t\t  installed\t\t    catalog\n" if (! $mode);
-  @cswpkgs = `/bin/pkginfo`;
+  if ($noncsw) {
+    @cswpkgs = `/bin/pkginfo`;
+  } else {
+    @cswpkgs = `/bin/pkginfo | grep CSW`;
+  }
   foreach $pkg (@cswpkgs) {
     ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
     $local_ver = check_pkg($pkg,0);
@@ -145,55 +146,43 @@ sub compare {
   }
 }
 
-# compare two dotted version numbers, number if possible else alpha
-# on a per-field basis.
-# as per cmp, -1, 0, or 1 if p1 is less than, equal to or greater than p2
-sub compare_dotrevs {
-  my ($p1, $p2) = @_;
-  # simple cases
-  return 0 if !defined($p1) && !defined($p2);
-  return -1 if !defined($p1);
-  return 1 if !defined($p2);
-  return 0 if $p1 eq $p2;
-  return 0 if $p1 =~ /^\d+$/ && $p2 =~ /^\d+$/ && $p1 == $p2;
-  my @a1 = split /\./, $p1;
-  my @a2 = split /\./, $p2;
-  my $length = $#a1;
-  $length = $#a2 if $#a2 > $length;
-  my $r = 0;
-  for (my $i = 0; $i <= $length; $i++) {
-    return -1 if !defined($a1[$i]);
-    return 1 if !defined($a2[$i]);
-    my $unitcmp;
-    if ($a1[$i] =~ /^\d+$/ && $a2[$i] =~ /^\d+$/) {
-      $unitcmp = $a1[$i] <=> $a2[$i];
-    } else {
-      $unitcmp = $a1[$i] cmp $a2[$i];
-    }
-    return $unitcmp unless $unitcmp == 0;
-  }
-  die "compare_dotrevs failed miserably"; # should never get here
-}
-
 # compare version of installed package to current
 #   pkg  - package to compare
 #   irev - version of installed package
 
 sub compare_version {
   my ($pkg,$irev) = @_;
-  my $update = 0;
-  my (@ivlist,@cvlist,@irlist,@crlist);
-  my $irtmp = "";
-  my $crtmp = "";
   my $crev = parse_catalog($pkg,1);
+  print "$pkg - " if $debug;
+  my $rc = verscmp($irev,$crev);
+  print "irev=$irev, crev=$crev, verscmp=$rc\n" if $debug;
+  return -$rc;	# verscmp == -1 => Upgrade
+}
+
+# comparison of two package versions as per
+# http://pkgutil.wikidot.com/get-install-and-configure#toc7
+# as per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
+# Note that if neither has a REV code, -1 is *ALWAYS* returned.
+
+sub verscmp {
+  my($p1rev,$p2rev) = @_; # crev, irev, then -1 => upgrade
+  my (@p1list,@p2list);
+  my $p1tmp = "";
+  my $p2tmp = "";
+  my $update = 0;
+
   my $skip = 0;
 
   # 1st case: same strings => no upgrade
-  $skip = 1 if ($irev eq $crev);
+  $skip = 1 if ($p1rev eq $p2rev);
 
   # 2nd case: installed no REV, catalog REV => upgrade
   if (! $skip) {
-    if ($irev !~ /REV=/ && $crev =~ /REV=/) {
+    if ($p1rev !~ /REV=/ && $p2rev =~ /REV=/) {
+      $update = -1;
+      $skip = 1;
+    } elsif ($p2rev !~ /REV=/ && $p1rev =~ /REV=/) {
+      # Reverse case (intalled REV, catalog no REV => "downgrade")
       $update = 1;
       $skip = 1;
     }
@@ -201,43 +190,47 @@ sub compare_version {
 
   # 3rd case: installed REV, catalog REV => if newer, upgrade
   if (! $skip) {
-    if ($irev =~ /REV=/ && $crev =~ /REV=/) {
-      if ($irev =~ /rev=/) {
-        ($irtmp) = ($irev =~ /REV=(.+)_/);
+    if ($p1rev =~ /REV=/ && $p2rev =~ /REV=/) {
+      if ($p1rev =~ /rev=/) {
+        ($p1tmp) = ($p1rev =~ /REV=(.+)_/);
       } else {
-        ($irtmp) = ($irev =~ /REV=(.+)$/);
+        ($p1tmp) = ($p1rev =~ /REV=(.+)$/);
       }
-      @irlist = split(/\./,$irtmp);
+      @p1list = split(/\./,$p1tmp);
 
-      if ($crev =~ /rev=/) {
-        ($crtmp) = ($crev =~ /REV=(.+)_/);
+      if ($p2rev =~ /rev=/) {
+        ($p2tmp) = ($p2rev =~ /REV=(.+)_/);
       } else {
-        ($crtmp) = ($crev =~ /REV=(.+)$/);
+        ($p2tmp) = ($p2rev =~ /REV=(.+)$/);
       }
-      @crlist = split(/\./,$crtmp);
+      @p2list = split(/\./,$p2tmp);
 
-      for (my $i = 0; $i <= $#irlist; $i++) {
-        last unless $crlist[$i];
-        if ($irlist[$i] != $crlist[$i]) {
-          $update = 1 if ($irlist[$i] < $crlist[$i]);
-          print "$i $irlist[$i] $crlist[$i] $update\n" if $debug;
+      for (my $i = 0; $i <= $#p1list; $i++) {
+        if (! $p2list[$i]) {
+          $update = 1;
           last;
         }
-        print "$i $irlist[$i] $crlist[$i] $update\n" if $debug;
+        if ($p1list[$i] != $p2list[$i]) {
+          if ($p1list[$i] > $p2list[$i]) {
+            $update = 1;
+          } else {
+            $update = -1;
+          }
+          print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
+          last;
+        }
+        print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
       }
-      $update = 1 if (! $update && $#crlist > $#irlist);
+      $update = -1 if (! $update && $#p2list > $#p1list);
 
       $skip = 1;
     }
   }
 
-  # 4th case: dot-by-dot comparision of version
+  # 4th case: installed no REV, catalog no REV => upgrade
   if (! $skip) {
-    $update = 1 if compare_dotrevs($crev, $irev) == 1;
+    $update = -1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
   }
-
-  print "$pkg irtmp:$irtmp crtmp:$crtmp\n" if $debug;
-  print "$pkg irev:$irev crev:$crev u:$update\n" if $debug;
 
   return $update;
 }
@@ -250,10 +243,9 @@ sub email {
   my $file = "/tmp/pkgutil.$$.$^T";
 
   die "Mailx not found on system!\n" if (! -x "/bin/mailx");
-  check_catalog();
   my @update_list = compare(2);
   if ($#update_list >= 0) {
-    open (FILE,">$file") or die "Can't open $file: $!\n";
+    open (FILE,'>',$file) or die "Can't open $file: $!\n";
     foreach (@update_list) {
       print FILE;
     }
@@ -270,24 +262,33 @@ sub email {
 # fetch catalog
 
 sub fetch_catalog {
+  my($url, $filename) = @_;
   my $wgetopts = "";
+  my $status;
+
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
-  print "Fetching new catalog if available...\n";
+  print "Fetching new catalog $url if available...\n";
   die "Option -n selected, stopping here.\n" if $nomod;
 
-  system("> $catalog");
-  for (my $i = 0; $i <= $#mirror; $i++) {
-    my $tmpcatalog = $catalog . ".$i";
-    my $retval = system("$wget $wgetopts -O $tmpcatalog $mirror[$i]/catalog");
-    if ($retval) {
-      print "\nFetching of catalog failed.\n";
-      exit 1;
-    }
-    my $cmd = "/bin/sed 's!\$! " . "$mirror[$i]!" . "'" . " $tmpcatalog >> $catalog";
-    my $status = system($cmd);
-    die "Couldn't create catalog!\n" if $status;
-    unlink $tmpcatalog;
+  if ($url =~ /^file:/) {
+    my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
+    $status = system("/bin/cp $tmpcatsrc/catalog $filename");
+  } else {
+    $status = system("$wget $wgetopts -O $filename $url/catalog");
   }
+  if ($status) {
+    print "\nFetching of catalog failed.\n";
+    exit 1;
+  }
+}
+
+sub mangle_url {
+  my($url) = @_;
+  # Make a filename from the URL - /es to _es.
+  (my $mangled = $url) =~ s?\w+://??;
+  $mangled =~ s?/?_?g;
+  my $filename = "$workdir/catalog.$mangled";
+  return $filename;
 }
 
 # get wanted package and its dependencies
@@ -297,7 +298,7 @@ sub fetch_catalog {
 sub fetch_pkgs {
   my ($mode,@pkglist) = @_;
   my $wgetopts = "";
-  my ($file,$retval);
+  my ($file,$status);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
   if ($#pkglist > 0 && ! $force) {
@@ -319,10 +320,15 @@ sub fetch_pkgs {
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
         $tried = 1;
-        $retval = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
-        last unless $retval;
+        if ($_ =~ /^file:/) {
+          my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
+          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
+        } else {
+          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+        }
+        last unless $status;
       }
-      if ($retval || ! $tried) {
+      if ($status || ! $tried) {
         print "\nFetching of $_ failed. Try updating your catalog with pkgutil -U.\n";
         exit 1;
       }
@@ -354,7 +360,6 @@ sub format_byte {
 }
 
 # check signature on catalog
-
 sub gpg {
   my ($catalog) = @_;
   my $line;
@@ -364,7 +369,7 @@ sub gpg {
     print "GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.\n";
     exit 1;
   }
-  open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
+  open (CATALOG,$catalog) or die "Can't open $catalog: $!\n";
   while ($line = <CATALOG>) {
     $gpg_signed_catalog = 1 if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/);
     last;
@@ -381,7 +386,7 @@ sub gpg {
     die "Couldn't rename catalog!\n" if $status;
     print "Status GPG: $status\n" if $debug;
   } else {
-    print "Catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.\n";
+    print "Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.\n";
     exit 1;
   }
 }
@@ -395,7 +400,8 @@ sub init {
              "pkgaddopts"	=> "",
              "wgetopts"		=> "",
              "use_gpg"		=> "",
-             "use_md5"		=> "");
+             "use_md5"		=> "",
+             "noncsw"           => "");
 
   foreach (@conf_file) {
     if (-r $_) {	# if conf file found, parse it
@@ -411,10 +417,11 @@ sub init {
         print "$var = $value\n" if $debug;
         my $r = ref($config{$var});
         if (! $r) {
-	  $config{$var} = $value;
+         $config{$var} = $value;
         } elsif ($r eq 'ARRAY') {
           push @{$config{$var}}, $value;
         }
+
       }
       close CONFIG;
     }
@@ -426,14 +433,12 @@ sub init {
     print "wgetopts: $config{wgetopts}\n";
     print "use_gpg: $config{use_gpg}\n";
     print "use_md5: $config{use_md5}\n";
+    print "noncsw: $config{noncsw}\n";
   }
 
-  chomp($arch = `uname -p`);
-  chomp($rel = `uname -r`);
-  $catalog = "$workdir/catalog.$arch.$rel";
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
-
+  $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
 }
 
 # install packages
@@ -447,15 +452,17 @@ sub inst_pkgs {
   my $pkgrm = "/usr/sbin/pkgrm";
   my $rm = "/bin/rm";
   my $file;
+  my $name;
   my $pkgforce = "";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgforce = "-a $admin -n" if $force;
   foreach (@pkglist) {
-    $tmp = check_pkg($_,0);
+    my($pkgname, $vers) = split /-/, $_, 2;
+    $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       print "Removing old version of $_\n";
-      `$pkgrm $pkgforce $_`;
+      `$pkgrm $pkgforce $pkgname`;
     }
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
@@ -463,7 +470,11 @@ sub inst_pkgs {
     if ($file =~ /\.gz$/) {		# not all packages are compressed
       my $status = locate_gzip();
       if (! $status) {
-        `$gzip -d $pkgdir/$file`;
+        if ($force) {
+          `$gzip -f -d $pkgdir/$file`;
+        } else {
+          `$gzip -d $pkgdir/$file`;
+        }
       } else {
         print "\nGzip not found, please install CSWgzip.\n";
         exit 1;
@@ -479,72 +490,65 @@ sub inst_pkgs {
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
 #          4 = stream silent
 
+
 sub install {
   my ($mode) = @_;
   my $retvalue;
+  my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
+  my(%pkgvers, @pkglist); # @pkglist is specifically in the correct order.
 
   print $fh "Parsing catalog, may take a while...\n";
-  foreach (@ARGV) {
-    $tmppkg = $_;
-    if ($tmppkg) {
-      push(@pkglist,$tmppkg);
+  foreach my $tmppkg (@ARGV) {
+    my $tmp = parse_catalog($tmppkg,2);
+    my $vers = parse_catalog($tmppkg,1);
+    if ($tmp ne 'not in catalog' && ($tmp =~ /^CSW/ || $noncsw)) {
+      push(@pkglist,$tmp);
+      $pkgvers{$tmp} = $vers;
     } else {
-      my $tmp = parse_catalog($tmppkg,2);
-      if ($tmp) {
-        push(@pkglist,$tmppkg);
-      } else {
-        print "Package $tmppkg not in catalog...exiting.\n";
-        exit 1;
-      }
+      print "Package $tmppkg not in catalog...exiting.\n";
+      exit 1;
     }
-    foreach (@pkglist) {
-      $tmppkg2 = $_;
+    foreach my $tmppkg2 (@pkglist) {
+      my @tmpdeps;
       if ($tmppkg2 ne "CSWcommon") {
-        system("pkginfo -q $tmppkg2");
-        next if $? == 0; # Already installed
         $retvalue = parse_catalog($tmppkg2,6);
-        if ($retvalue ne "not in catalog") {
-          @tmpdeps = split(/\|/,$retvalue);
-        } else {
-          print "Package $_ not in catalog...exiting.\n";
+        if ($retvalue eq "not in catalog") {
+          system("pkginfo -q $tmppkg2");
+          next if $? == 0;	# already installed... forgive its absence from the catalog
+          print "Package $tmppkg2 not in catalog...exiting.\n";
           exit 1;
+        } else {
+          @tmpdeps = split(/\|/,$retvalue);
+          print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
         }
       } else {
         next;
       }
       if ($tmpdeps[0] ne "none") {
-        push(@pkglist,@tmpdeps);
+        foreach my $dep (@tmpdeps) {
+          # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
+          if (! exists $pkgvers{$dep}) {
+            $pkgvers{$dep} = parse_catalog($dep,1);
+            push @pkglist, $dep;	# append to list, includes deduplication
+          }
+        }
       }
       next;
     }
   }
-
-  # clean list from duplicates
-
-  my $dup = 0;
-  for (my $i = 0; $i <= $#pkglist; $i++) {
-    for (my $j = $i + 1; $j <= $#pkglist; $j++) {
-      if ($pkglist[$i] eq $pkglist[$j]) {
-        $dup = 1;
-        last;
-      }
-      print "i:$i j:$j dup:$dup $pkglist[$i] $pkglist[$j]\n" if $debug;
-    }
-    push(@tmppkglist,$pkglist[$i]) if ! $dup;
-    $dup = 0;
-  }
+  print "pkglist ", join(",", @pkglist), "\n" if $debug;
 
   # clean list from excludes
 
   my @tmpexcludelist;
-  foreach my $i (@tmppkglist) {
-    my $flag = 0;
-    foreach my $j (@exclude) {
-      $flag = 1 if ($i eq $j);
-    }
-    push(@tmpexcludelist,$i) unless $flag;
+  foreach my $i (@exclude) {
+    delete $pkgvers{$i} if exists $pkgvers{$i};
   }
+  foreach my $i (@pkglist) {
+    push @tmpexcludelist, $i if exists $pkgvers{$i};
+  }
+  print "tmpexcludelist ", join(",", @tmpexcludelist), "\n" if $debug;
 
   if ($mode == 2) {		# if -r used
     if ($#tmpexcludelist >= 0) {
@@ -554,55 +558,42 @@ sub install {
 
   # reverse list
 
-  for (my $i = 0, my $j = $#tmpexcludelist; $i <= $j; $i++) {
-    push(@revpkglist,pop(@tmpexcludelist));
-  }
+  @revpkglist = reverse @tmpexcludelist;
+  print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
-  # which packages do we really need to fetch?
+  # which packages do we really need to download?
 
   if ($mode != 3 && $mode != 4) {
     foreach (@revpkglist) {
       $tmp = check_pkg($_,0);
       if ($tmp eq "notinst") {	# new package needed
-        push(@newpkglist,$_);
+        push(@newpkglist,"$_-$pkgvers{$_}");
       } else {			# package already installed
-        $tmp = compare_version ($_,$tmp);
-        if ($tmp) {
-          push(@updpkglist,$_);	# updated package needed
+        $tmp = verscmp($pkgvers{$_},$tmp);
+        if ($tmp == 1) {
+          push(@updpkglist,"$_-$pkgvers{$_}");	# updated package needed
         } else {
-          push(@curpkglist,$_);	# package is current
+          push(@curpkglist,"$_-$pkgvers{$_}");	# package is current
         }
       }
     }
-  } else {	# if -s then just copy revpkglist to newpkglist
+  } else {	# if -s or -d then just copy revpkglist to newpkglist
     foreach (@revpkglist) {
-      push(@newpkglist,$_);
+      push(@newpkglist,"$_-$pkgvers{$_}");
     }
   }
 
   if ($#newpkglist >= 0) {
-    print $fh "New packages: ";
-    foreach (@newpkglist) {
-      print $fh "$_ ";
-    }
-    print $fh "\n";
+    print $fh "New packages: ", join(" ", @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if ($#updpkglist >= 0) {
-      print "Updated packages: ";
-      foreach (@updpkglist) {
-        print "$_ ";
-      }
-      print "\n";
+      print "Updated packages: ", join(" ", @updpkglist), "\n";
     }
 
     if ($#curpkglist >= 0) {
-      print "Current packages: ";
-      foreach (@curpkglist) {
-        print "$_ ";
-      }
-      print "\n";
+      print "Current packages: ", join(" ", @curpkglist), "\n";
     }
   }
 
@@ -610,6 +601,7 @@ sub install {
 
   push(@dlpkglist,@newpkglist);
   push(@dlpkglist,@updpkglist);
+  print "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
 
   # print size of download
 
@@ -711,12 +703,12 @@ sub parse_catalog {
   my ($pkg,$mode) = @_;
   my ($retvalue, $name);
 
-  print "Parsing catalog...looking for: $pkg\n" if $debug;
+  print "Parsing catalog...looking for: $pkg (mode $mode)\n" if $debug;
 
   # do we have an embedded version?
   my($tryname, $vers) = split /-/, $pkg;
 
-  # We try the SysV name (CSWblah) and the common name (blah)
+  # We try the SysV "pkgname" name (CSWblah) and the common name (blah)
   if ($pkg{$tryname}) {
     # SysV
     $name = $tryname;
@@ -730,12 +722,13 @@ sub parse_catalog {
       $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
     } elsif (! $vers) {
       # we may have multiple versions in the catalog, take the highest
-      my $highest = (sort { compare_dotrevs($b, $a) } keys %{$pkg{$name}})[0];
+      # note this won't work unless at least one has a REV in it
+      my $highest = (sort { verscmp($b, $a) } keys %{$pkg{$name}})[0];
       $retvalue = (split(/ /,$pkg{$name}{$highest}))[$mode];
     } else {
       $retvalue = "not in catalog" if (! $retvalue);
     }
-  } else {	# look thru the whole hash
+  } else {
     $retvalue = "not in catalog" if (! $retvalue);
   }
   print "Return value: $retvalue\n" if $debug;
@@ -777,32 +770,34 @@ sub parse_cl {
   if ($opt_workdir) {	# set/create optional working dir
     $workdir = $opt_workdir;
     print "new workdir: $workdir\n" if $debug;
-    $catalog = "$workdir/catalog.$arch.$rel";
-    $pkgdir = "$workdir/packages";
-    if (! -d $pkgdir) {
-      my $status = system("/bin/mkdir -p $pkgdir");
-      die "Could not create $workdir: $!" if $status;
+    if (! -d $workdir) {
     }
-    check_catalog();
   }
+  $pkgdir = "$workdir/packages";
+  $admin = "$workdir/admin";
+  my $status = system("/bin/mkdir -p $pkgdir");
+  die "Could not create $pkgdir: $!" if $status;
+
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
   # Get mirrors together
   @mirror = @{$config{mirror}};
+  # Prepend temp mirrors so they are selected first
   unshift @mirror, @opt_temp if @opt_temp;
 
   foreach (my $i=0; $i < scalar @mirror; $i++) {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
-    $mirrorstub = $mirror[$i];
-    $mirror[$i] = $mirror[$i] . "/" . $arch . "/" . $rel;
+    $mirror[$i] .= "/" . $arch . "/" . $rel;
   }
   die "No mirrors defined in configuration file or on command line" unless @mirror;
   print "primary mirror: $mirror[0]\n" if $debug;
-  fetch_catalog() if ($opt_upd_cat || @opt_temp);
-  read_catalog();
+  if ($opt_upd_cat || @opt_temp) {
+    check_catalog(1);	# Reread everything
+  } else {
+    check_catalog();
+  }
   stream($opt_target,$opt_output) if $opt_stream;
   email($opt_email) if $opt_email;
-  check_catalog();
   available() if $opt_avail;
   compare(0) if $opt_compare;
   install(0) if $opt_install;
@@ -888,19 +883,19 @@ sub pkgutilver {
 }
 
 # read catalog into hash
-
 sub read_catalog {
+  my($catalog, $filename) = @_;
   my @llst;
 
-  open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
+  open (CATALOG,$filename) or die "Can't open $filename: $!\n";
   while (my $line = <CATALOG>) {
     chomp $line;
     if ($line =~ /^\w/) {
       @llst = split(/ /,$line);
-      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7] && $llst[8]) {
+      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7]) {
         $pkg{$llst[2]}{$llst[1]} = $line;
         $commonpkg{$llst[0]} = $llst[2];
-        push @{$pkgmirror{$llst[3]}}, $llst[8];
+        push @{$pkgmirror{$llst[3]}}, $catalog;
       }
     }
   }
@@ -1017,8 +1012,6 @@ sub stream {
   print "Architecture $arch not supported.\n" if (! $ok_arch);
   print "OS release $rel not supported.\n" if (! $ok_rel);
   exit 1 if (($ok_arch + $ok_rel) < 2);
-  $catalog = "$workdir/catalog.$arch.$rel";
-  print "catalog: $catalog\nprimary mirror: $mirror[0]" if $debug;
 
   if ($output) {
     $transfile = ($output eq "-" ? "/dev/fd/1" : "$pkgdir/$output");
@@ -1028,7 +1021,6 @@ sub stream {
   }
   print STDERR "output: $output\ntransfile: $transfile\n" if $debug;
 
-  check_catalog();
   my @install_order = install($mode);	# download packages needed
   exit 1 if ($#install_order < 0);	# empty list, nothing to do
   my $pkglist = join(' ',@install_order);
@@ -1243,7 +1235,7 @@ The settings that can be used are:
 
 C<mirror>
 
-This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed.  This option may be specified multiple times, as can the mirror= option in pkgutil.conf.
+This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed. This option may be specified multiple times, as can the mirror= option in pkgutil.conf.
 
 C<pkgaddopts>
 
@@ -1278,11 +1270,11 @@ Dagobert Michelsen - method for version compare.
 
 Yann Rouillard - reporting/fixing bugs.
 
-Derek Whayman - support for multiple repositories, performance enhancements.
+Derek Whayman - support for multiple different repositories (mirrors), multiple versions of packages, performance enhancements.
 
 =head1 COPYRIGHT AND DISCLAIMER
 
-Copyright (C) 2008 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+Copyright (C) 2008-2009 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
