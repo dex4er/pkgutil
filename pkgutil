@@ -26,11 +26,12 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.5b1";
+my $pkgutilver = "1.5b2";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
-my @mirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
+my @mirror;
+my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
@@ -69,7 +70,7 @@ sub check_catalog {
     my $filename = mangle_url($url);
     my $age_i = -M $filename if (-r $filename);
     $age = $age_i if defined($age_i) && $age_i > $age;
-    print "Catalog $url age in days: $age_i\n" if $debug;
+    print "Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url, $filename) if ($age > 14 || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
     read_catalog($url, $filename); # Once per file
@@ -245,7 +246,7 @@ sub email {
   die "Mailx not found on system!\n" if (! -x "/bin/mailx");
   my @update_list = compare(2);
   if ($#update_list >= 0) {
-    open (FILE,'>',$file) or die "Can't open $file: $!\n";
+    open (FILE,">$file") or die "Can't open $file: $!\n";
     foreach (@update_list) {
       print FILE;
     }
@@ -782,6 +783,7 @@ sub parse_cl {
   pkgutilver(1) if $opt_syscheck;
   # Get mirrors together
   @mirror = @{$config{mirror}};
+  $mirror[0] = $defaultmirror unless @mirror; # if no mirrors configured
   # Prepend temp mirrors so they are selected first
   unshift @mirror, @opt_temp if @opt_temp;
 
@@ -789,7 +791,6 @@ sub parse_cl {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
     $mirror[$i] .= "/" . $arch . "/" . $rel;
   }
-  die "No mirrors defined in configuration file or on command line" unless @mirror;
   print "primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
     check_catalog(1);	# Reread everything
@@ -1059,7 +1060,7 @@ sub usage {
   print "Usage: pkgutil [option]... [package](-[version])...\n";
   print "\n  -i, --install\t\tInstall package";
   print "\n  -u, --upgrade\t\tUpgrade package";
-  print "\n  -r, --remove\t\tRemove package";
+  print "\n  -r, --remove\t\tRemove package (experimental)";
   print "\n  -d, --download\tDownload only";
   print "\n  -a, --available\tShow available packages";
   print "\n  -c, --compare\t\tCompare installed packages to current";
