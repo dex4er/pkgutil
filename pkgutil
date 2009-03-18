@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.5b2";
+my $pkgutilver = "1.5b3";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -40,6 +40,7 @@ my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 chomp(my $arch = `uname -p`);
 chomp(my $rel = `uname -r`);
+
 # show available packages in catalog
 
 sub available {
@@ -61,6 +62,7 @@ sub available {
 }
 
 # check catalog
+#   always - always update catalog
 
 sub check_catalog {
   my($always) = @_;
@@ -261,6 +263,8 @@ sub email {
 }
 
 # fetch catalog
+#   url - url to download from
+#   filename - filename to use for local catalog
 
 sub fetch_catalog {
   my($url, $filename) = @_;
@@ -281,15 +285,6 @@ sub fetch_catalog {
     print "\nFetching of catalog failed.\n";
     exit 1;
   }
-}
-
-sub mangle_url {
-  my($url) = @_;
-  # Make a filename from the URL - /es to _es.
-  (my $mangled = $url) =~ s?\w+://??;
-  $mangled =~ s?/?_?g;
-  my $filename = "$workdir/catalog.$mangled";
-  return $filename;
 }
 
 # get wanted package and its dependencies
@@ -361,6 +356,7 @@ sub format_byte {
 }
 
 # check signature on catalog
+
 sub gpg {
   my ($catalog) = @_;
   my $line;
@@ -370,7 +366,7 @@ sub gpg {
     print "GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.\n";
     exit 1;
   }
-  open (CATALOG,$catalog) or die "Can't open $catalog: $!\n";
+  open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
   while ($line = <CATALOG>) {
     $gpg_signed_catalog = 1 if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/);
     last;
@@ -420,7 +416,7 @@ sub init {
         if (! $r) {
          $config{$var} = $value;
         } elsif ($r eq 'ARRAY') {
-          push @{$config{$var}}, $value;
+          push(@{$config{$var}},$value);
         }
 
       }
@@ -491,7 +487,6 @@ sub inst_pkgs {
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
 #          4 = stream silent
 
-
 sub install {
   my ($mode) = @_;
   my $retvalue;
@@ -531,7 +526,7 @@ sub install {
           # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
           if (! exists $pkgvers{$dep}) {
             $pkgvers{$dep} = parse_catalog($dep,1);
-            push @pkglist, $dep;	# append to list, includes deduplication
+            push(@pkglist,$dep);	# append to list, includes deduplication
           }
         }
       }
@@ -547,7 +542,7 @@ sub install {
     delete $pkgvers{$i} if exists $pkgvers{$i};
   }
   foreach my $i (@pkglist) {
-    push @tmpexcludelist, $i if exists $pkgvers{$i};
+    push(@tmpexcludelist,$i) if exists $pkgvers{$i};
   }
   print "tmpexcludelist ", join(",", @tmpexcludelist), "\n" if $debug;
 
@@ -663,6 +658,18 @@ sub locate_wget {
   return 1 if (! $wget);
 }
 
+# make a filename from the URL - /es to _es.
+#   url - url to mangle
+
+sub mangle_url {
+  my($url) = @_;
+
+  (my $mangled = $url) =~ s?\w+://??;
+  $mangled =~ s?/?_?g;
+  my $filename = "$workdir/catalog.$mangled";
+  return $filename;
+}
+
 # check md5 on downloaded files
 #   mode - 4 = stream silent
 
@@ -771,8 +778,6 @@ sub parse_cl {
   if ($opt_workdir) {	# set/create optional working dir
     $workdir = $opt_workdir;
     print "new workdir: $workdir\n" if $debug;
-    if (! -d $workdir) {
-    }
   }
   $pkgdir = "$workdir/packages";
   $admin = "$workdir/admin";
@@ -884,11 +889,14 @@ sub pkgutilver {
 }
 
 # read catalog into hash
+#   catalog - catalog to read
+#   filename - filename to use
+
 sub read_catalog {
   my($catalog, $filename) = @_;
   my @llst;
 
-  open (CATALOG,$filename) or die "Can't open $filename: $!\n";
+  open (CATALOG,"<$filename") or die "Can't open $filename: $!\n";
   while (my $line = <CATALOG>) {
     chomp $line;
     if ($line =~ /^\w/) {
@@ -896,7 +904,7 @@ sub read_catalog {
       if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7]) {
         $pkg{$llst[2]}{$llst[1]} = $line;
         $commonpkg{$llst[0]} = $llst[2];
-        push @{$pkgmirror{$llst[3]}}, $catalog;
+        push(@{$pkgmirror{$llst[3]}},$catalog);
       }
     }
   }
