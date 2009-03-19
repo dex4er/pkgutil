@@ -149,95 +149,6 @@ sub compare {
   }
 }
 
-# compare version of installed package to current
-#   pkg  - package to compare
-#   irev - version of installed package
-
-sub compare_version {
-  my ($pkg,$irev) = @_;
-  my $crev = parse_catalog($pkg,1);
-  print "$pkg - " if $debug;
-  my $rc = verscmp($irev,$crev);
-  print "irev=$irev, crev=$crev, verscmp=$rc\n" if $debug;
-  return -$rc;	# verscmp == -1 => Upgrade
-}
-
-# comparison of two package versions as per
-# http://pkgutil.wikidot.com/get-install-and-configure#toc7
-# as per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
-# Note that if neither has a REV code, -1 is *ALWAYS* returned.
-
-sub verscmp {
-  my($p1rev,$p2rev) = @_; # crev, irev, then -1 => upgrade
-  my (@p1list,@p2list);
-  my $p1tmp = "";
-  my $p2tmp = "";
-  my $update = 0;
-
-  my $skip = 0;
-
-  # 1st case: same strings => no upgrade
-  $skip = 1 if ($p1rev eq $p2rev);
-
-  # 2nd case: installed no REV, catalog REV => upgrade
-  if (! $skip) {
-    if ($p1rev !~ /REV=/ && $p2rev =~ /REV=/) {
-      $update = -1;
-      $skip = 1;
-    } elsif ($p2rev !~ /REV=/ && $p1rev =~ /REV=/) {
-      # Reverse case (intalled REV, catalog no REV => "downgrade")
-      $update = 1;
-      $skip = 1;
-    }
-  }
-
-  # 3rd case: installed REV, catalog REV => if newer, upgrade
-  if (! $skip) {
-    if ($p1rev =~ /REV=/ && $p2rev =~ /REV=/) {
-      if ($p1rev =~ /rev=/) {
-        ($p1tmp) = ($p1rev =~ /REV=(.+)_/);
-      } else {
-        ($p1tmp) = ($p1rev =~ /REV=(.+)$/);
-      }
-      @p1list = split(/\./,$p1tmp);
-
-      if ($p2rev =~ /rev=/) {
-        ($p2tmp) = ($p2rev =~ /REV=(.+)_/);
-      } else {
-        ($p2tmp) = ($p2rev =~ /REV=(.+)$/);
-      }
-      @p2list = split(/\./,$p2tmp);
-
-      for (my $i = 0; $i <= $#p1list; $i++) {
-        if (! $p2list[$i]) {
-          $update = 1;
-          last;
-        }
-        if ($p1list[$i] != $p2list[$i]) {
-          if ($p1list[$i] > $p2list[$i]) {
-            $update = 1;
-          } else {
-            $update = -1;
-          }
-          print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
-          last;
-        }
-        print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
-      }
-      $update = -1 if (! $update && $#p2list > $#p1list);
-
-      $skip = 1;
-    }
-  }
-
-  # 4th case: installed no REV, catalog no REV => upgrade
-  if (! $skip) {
-    $update = -1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
-  }
-
-  return $update;
-}
-
 # email notifications when updates are available
 #   email - address to send notications to
 
@@ -1089,6 +1000,83 @@ sub usage {
   print "\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 0;
+}
+
+# comparison of two package versions as per
+# http://pkgutil.wikidot.com/get-install-and-configure#toc7
+# as per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
+# Note that if neither has a REV code, -1 is *ALWAYS* returned.
+#   p1rev, p2rev - versions to compare
+
+sub verscmp {
+  my($p1rev,$p2rev) = @_; # crev, irev, then -1 => upgrade
+  my (@p1list,@p2list);
+  my $p1tmp = "";
+  my $p2tmp = "";
+  my $update = 0;
+
+  my $skip = 0;
+
+  # 1st case: same strings => no upgrade
+  $skip = 1 if ($p1rev eq $p2rev);
+
+  # 2nd case: installed no REV, catalog REV => upgrade
+  if (! $skip) {
+    if ($p1rev !~ /REV=/ && $p2rev =~ /REV=/) {
+      $update = -1;
+      $skip = 1;
+    } elsif ($p2rev !~ /REV=/ && $p1rev =~ /REV=/) {
+      # Reverse case (intalled REV, catalog no REV => "downgrade")
+      $update = 1;
+      $skip = 1;
+    }
+  }
+
+  # 3rd case: installed REV, catalog REV => if newer, upgrade
+  if (! $skip) {
+    if ($p1rev =~ /REV=/ && $p2rev =~ /REV=/) {
+      if ($p1rev =~ /rev=/) {
+        ($p1tmp) = ($p1rev =~ /REV=(.+)_/);
+      } else {
+        ($p1tmp) = ($p1rev =~ /REV=(.+)$/);
+      }
+      @p1list = split(/\./,$p1tmp);
+
+      if ($p2rev =~ /rev=/) {
+        ($p2tmp) = ($p2rev =~ /REV=(.+)_/);
+      } else {
+        ($p2tmp) = ($p2rev =~ /REV=(.+)$/);
+      }
+      @p2list = split(/\./,$p2tmp);
+
+      for (my $i = 0; $i <= $#p1list; $i++) {
+        if (! $p2list[$i]) {
+          $update = 1;
+          last;
+        }
+        if ($p1list[$i] != $p2list[$i]) {
+          if ($p1list[$i] > $p2list[$i]) {
+            $update = 1;
+          } else {
+            $update = -1;
+          }
+          print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
+          last;
+        }
+        print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
+      }
+      $update = -1 if (! $update && $#p2list > $#p1list);
+
+      $skip = 1;
+    }
+  }
+
+  # 4th case: installed no REV, catalog no REV => upgrade
+  if (! $skip) {
+    $update = -1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
+  }
+
+  return $update;
 }
 
 # main
