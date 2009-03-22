@@ -15,8 +15,8 @@ pkgutil.conf file in /etc/opt/csw/ the settings in it will override the ones
 in /opt/csw/etc. If no pkgutil.conf is found in either of those two locations 
 defaults are used.
 
-Official web site
------------------
+Official web sites
+------------------
 
 URL: http://pkgutil.wikidot.com
 URL: http://pkgutil.sourceforge.net
@@ -91,7 +91,7 @@ Version history
   - Added possibility to use both common name and package name
   - Added bldcat to build catalalogs from package files
   - Added chkcat to check catalogs for errors
-  - Fix for packages that are not compressed (gzip and pkg-get)
+  - Fix for packages that are not compressed (e.g. gzip)
   - Fix for size zero local files (failed package downloads)
   - Fix for gpg-checks when updating the catalog (Yann Rouillard)
   - Fix for version compare code rule #3 (Yann Rouillard)

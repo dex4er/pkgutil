@@ -1232,7 +1232,9 @@ The settings that can be used are:
 
 C<mirror>
 
-This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed. This option may be specified multiple times, as can the mirror= option in pkgutil.conf.
+This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed. This option may be specified multiple times.
+
+It also supports (in an experimental way) the file:// protocol for local/NFS mirrors.
 
 C<pkgaddopts>
 
@@ -1247,7 +1249,16 @@ C<use_md5>
 
 These two can enable (default is disabled for both) checking the catalogs integrity (GPG) and that each downloaded file is unchanged from the published one (MD5). To use GPG you need CSWgnupg installed. MD5 is supported by default in Solaris 10 and on Solaris 8 and 9 if you have CSWperl installed and have /opt/csw/bin first in your path. You can also install CSWtextutils to get MD5 support.
  
+C<noncsw>
+
+Enable (default is disable) support for non-CSW prefixed packages.
+
 Pkgutil also uses a file to configure pkgadd when the yes (-y) option is used. This file is located in /var/opt/csw/pkgutil and is called admin. It's by default set up to fully automate installations but if you change something in this file it will be preserved during upgrades of pkgutil. Read more about the admin file with "man -s4 admin".
+
+=head1 SEE ALSO
+
+http://pkgutil.wikidot.com
+http://pkgutil.sourceforge.net
 
 =head1 TODO
 
@@ -1259,15 +1270,17 @@ Peter Bonivart <bonivart@opencsw.org>
 
 =head1 CREDITS
 
-Dennis Clarke - reporting on problems with prototype in package.
+Dennis Clarke - reporting on problems with prototype in package (v1.1). Reporting that locally cached packages should be MD5 checked (v1.3). Suggested replacing same with SAME for --compare, local/NFS file repositories (v1.4).
 
-James Lee - method for version compare.
+Ihsan Dogan - suggested --exclude option (v1.3).
 
-Dagobert Michelsen - method for version compare.
+James Lee - method for version compare (v1.0).
 
-Yann Rouillard - reporting/fixing bugs.
+Dagobert Michelsen - method for version compare (v1.0). Reporting missing package bug (v1.2). Suggested changing default mirror from unstable to current and renaming --force to --yes, moving pkgutil.conf to /opt/csw/etc, --stream and --output options (v1.3).
 
-Derek Whayman - support for multiple different repositories (mirrors), multiple versions of packages, performance enhancements.
+Yann Rouillard - reporting/fixing bugs (v1.1).
+
+Derek Whayman - support for multiple different repositories (mirrors), multiple versions of packages, performance enhancements (v1.5).
 
 =head1 COPYRIGHT AND DISCLAIMER
 
