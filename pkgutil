@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.5b3";
+my $pkgutilver = "1.5b4";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -66,12 +66,11 @@ sub available {
 
 sub check_catalog {
   my($always) = @_;
-  my $age = 0;
 
   foreach my $url (@mirror) {
     my $filename = mangle_url($url);
-    my $age_i = -M $filename if (-r $filename);
-    $age = $age_i if defined($age_i) && $age_i > $age;
+    my $age = 0;
+    $age = -M $filename if (-r $filename);
     print "Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url, $filename) if ($age > 14 || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
@@ -192,6 +191,7 @@ sub fetch_catalog {
   } else {
     $status = system("$wget $wgetopts -O $filename $url/catalog");
   }
+  system("touch $filename") if (-w $filename);
   if ($status) {
     print "\nFetching of catalog failed.\n";
     exit 1;
