@@ -216,11 +216,11 @@ sub fetch_pkgs {
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   foreach (@pkglist) {
     $file = parse_catalog($_,3);
-    if (-s "$pkgdir/$file" != parse_catalog($_,5)) {	# broken/empty files may be present
+    if (-r "$pkgdir/$file" && -s _ != parse_catalog($_,5)) {	# broken/empty files may be present
       print $fh "Removing non-matching local file.\n";
       unlink "$pkgdir/$file";
     }
-    if (-r _) {
+    if (-r "$pkgdir/$file") {
       print $fh "A local copy of $_ exists and is of matching size.\n";
     } else {
       print $fh "Fetching $_...\n";
