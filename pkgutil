@@ -191,7 +191,7 @@ sub fetch_catalog {
   } else {
     $status = system("$wget $wgetopts -O $filename $url/catalog");
   }
-  system("touch $filename") if (-w $filename);
+  system("/bin/touch $filename") if (-w $filename);
   if ($status) {
     print "\nFetching of catalog failed.\n";
     exit 1;
