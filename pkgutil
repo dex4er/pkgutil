@@ -1235,7 +1235,7 @@ C<mirror>
 
 This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed. This option may be specified multiple times.
 
-It also supports (in an experimental way) the file:// protocol for local/NFS mirrors.
+It also supports (in an experimental way) the file:// protocol for local/NFS mirrors. Example: C<mirror=file:///absolute/path/to/files>
 
 C<pkgaddopts>
 
