@@ -417,56 +417,59 @@ sub install {
       print "Package $tmppkg not in catalog...exiting.\n";
       exit 1;
     }
-    foreach my $tmppkg2 (@pkglist) {
-      my @tmpdeps;
-      if ($tmppkg2 ne "CSWcommon") {
-        $retvalue = parse_catalog($tmppkg2,6);
-        if ($retvalue eq "not in catalog") {
-          system("pkginfo -q $tmppkg2");
-          next if $? == 0;	# already installed... forgive its absence from the catalog
-          print "Package $tmppkg2 not in catalog...exiting.\n";
-          exit 1;
-        } else {
-          @tmpdeps = split(/\|/,$retvalue);
-          print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
-        }
+  }
+  foreach my $tmppkg2 (@pkglist) {
+    # N.B. This array grows and we keep looping until we've satisfied all
+    # of the dependencies.
+    my @tmpdeps;
+    if ($tmppkg2 ne "CSWcommon") {
+      $retvalue = parse_catalog($tmppkg2,6);
+      if ($retvalue eq "not in catalog") {
+        system("pkginfo -q $tmppkg2");
+        next if $? == 0;	# already installed... forgive its absence from the catalog
+        print "Package $tmppkg2 not in catalog...exiting.\n";
+        exit 1;
       } else {
-        next;
+        @tmpdeps = split(/\|/,$retvalue);
+        print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
       }
-      if ($tmpdeps[0] ne "none") {
-        foreach my $dep (@tmpdeps) {
-          # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
-          if (! exists $pkgvers{$dep}) {
-            $pkgvers{$dep} = parse_catalog($dep,1);
-            push(@pkglist,$dep);	# append to list, includes deduplication
-          }
-        }
-      }
+    } else {
       next;
     }
+    if ($tmpdeps[0] ne "none") {
+      foreach my $dep (@tmpdeps) {
+        # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
+        if (! exists $pkgvers{$dep}) {
+          $pkgvers{$dep} = parse_catalog($dep,1);
+	}
+        push(@pkglist,$dep);	# append to list, does not include deduplication
+      }
+    }
+    next;
   }
   print "pkglist ", join(",", @pkglist), "\n" if $debug;
 
-  # clean list from excludes
-
-  my @tmpexcludelist;
-  foreach my $i (@exclude) {
-    delete $pkgvers{$i} if exists $pkgvers{$i};
+  # clean list from excludes.  Delete from the %pkgvers hash:
+  foreach my $pkg (@exclude) {
+    delete $pkgvers{$pkg} if exists $pkgvers{$pkg};
   }
-  foreach my $i (@pkglist) {
-    push(@tmpexcludelist,$i) if exists $pkgvers{$i};
-  }
-  print "tmpexcludelist ", join(",", @tmpexcludelist), "\n" if $debug;
 
-  if ($mode == 2) {		# if -r used
-    if ($#tmpexcludelist >= 0) {
-      rem_pkgs(@tmpexcludelist);
+  # now reverse and deduplicate @pkglist.  Need the last instance of each
+  # package if reading @pkglist forwards.
+  my %deduped;
+  for my $pkg (reverse @pkglist) {
+    next unless $pkgvers{$pkg}; # not if excluded
+    unless (exists $deduped{$pkg}) {
+	push @revpkglist, $pkg;
+	$deduped{$pkg} = 1;
     }
   }
 
-  # reverse list
-
-  @revpkglist = reverse @tmpexcludelist;
+  if ($mode == 2) {		# if -r used
+    if ($#revpkglist >= 0) {
+      rem_pkgs(reverse @revpkglist);
+    }
+  }
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
   # which packages do we really need to download?
@@ -626,16 +629,28 @@ sub parse_catalog {
   print "Parsing catalog...looking for: $pkg (mode $mode)\n" if $debug;
 
   # do we have an embedded version?
-  my($tryname, $vers) = split /-/, $pkg;
+  my @p = split /-/, $pkg;
+  my $vers = pop @p;
+  my $tryname = join('-', @p);
 
-  # We try the SysV "pkgname" name (CSWblah) and the common name (blah)
-  if ($pkg{$tryname}) {
-    # SysV
+  # first check the whole name without stripping off a "version"
+  # e.g. CSWdovecot-devel:
+  if ($pkg{$pkg}) {
+    # SysV, no version (e.g. CSWdovecot-devel)
+    $name = $pkg;
+    undef $vers;
+  } elsif ($commonpkg{$pkg} && $pkg{$commonpkg{$pkg}}) {
+    # Common (e.g. dovecot_devel)
+    $name = $commonpkg{$pkg};
+    undef $vers;
+  } elsif ($pkg{$tryname}) {
+    # SysV, version (e.g. CSWdovecot-devel-1.0.13,REV=2008.03.16)
     $name = $tryname;
   } elsif ($commonpkg{$tryname} && $pkg{$commonpkg{$tryname}}) {
-    # Common
+    # Common (e.g. dovecot_devel-1.0.13,REV=2008.03.16)
     $name = $commonpkg{$tryname};
   }
+
   if ($name) {
     # have we a version match?
     if ($vers && exists $pkg{$name}{$vers}) {
