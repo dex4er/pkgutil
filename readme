@@ -29,6 +29,8 @@ Version history
     selecting specific versions (Derek Whayman)
   - Performance enhancements (Derek Whayman)
   - Perldoc/man updates
+  - Fix catalog update issue when mirror catalog is old
+  - Increased protection against broken/empty local package files
   - Bldcat skips dependencies to the same package
   - Chkcat checks for packages that contain dependencies to themselves
 
