@@ -370,7 +370,7 @@ sub inst_pkgs {
     my($pkgname, $vers) = split /-/, $_, 2;
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
-      print "Removing old version of $_\n";
+      print "Removing old version of $pkgname\n";
       `$pkgrm $pkgforce $pkgname`;
     }
     $file = parse_catalog($_,3);
