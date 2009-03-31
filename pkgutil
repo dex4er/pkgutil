@@ -476,15 +476,15 @@ sub install {
 
   if ($mode != 3 && $mode != 4) {
     foreach (@revpkglist) {
-      $tmp = check_pkg($_,0);
-      if ($tmp eq "notinst") {	# new package needed
-        push(@newpkglist,"$_-$pkgvers{$_}");
+      my $old = check_pkg($_,0);
+      my $new = $pkgvers{$_};
+      if ($old eq "notinst") {	# new package needed
+        push(@newpkglist,"$_-$new");
       } else {			# package already installed
-        $tmp = verscmp($pkgvers{$_},$tmp);
-        if ($tmp == 1) {
-          push(@updpkglist,"$_-$pkgvers{$_}");	# updated package needed
+        if (verscmp($new,$old) == 1) {
+          push(@updpkglist,"$_-$new");	# updated package needed
         } else {
-          push(@curpkglist,"$_-$pkgvers{$_}");	# package is current
+          push(@curpkglist,"$_-$old");	# package is current
         }
       }
     }
@@ -1025,7 +1025,7 @@ sub usage {
 #   p1rev, p2rev - versions to compare
 
 sub verscmp {
-  my($p1rev,$p2rev) = @_; # crev, irev, then -1 => upgrade
+  my($p1rev,$p2rev) = @_; # crev (new), irev (old), then 1 => upgrade
   my (@p1list,@p2list);
   my $p1tmp = "";
   my $p2tmp = "";
@@ -1089,7 +1089,7 @@ sub verscmp {
 
   # 4th case: installed no REV, catalog no REV => upgrade
   if (! $skip) {
-    $update = -1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
+    $update = 1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
   }
 
   return $update;
