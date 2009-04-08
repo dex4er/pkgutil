@@ -367,7 +367,7 @@ sub inst_pkgs {
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgforce = "-a $admin -n" if $force;
   foreach (@pkglist) {
-    my($pkgname, $vers) = split /-/, $_, 2;
+    my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       print "Removing old version of $pkgname\n";
