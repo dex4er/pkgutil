@@ -24,7 +24,7 @@ URL: http://pkgutil.sourceforge.net
 Version history
 ---------------
 
-* v1.5. Released 2009-04-08
+* v1.5. Released 2009-04-09
   - Support multiple catalogs with multiple versions of each package and
     selecting specific versions (Derek Whayman)
   - Performance enhancements (Derek Whayman)
