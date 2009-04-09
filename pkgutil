@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.5b4";
+my $pkgutilver = "1.5";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
