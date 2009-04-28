@@ -1287,17 +1287,23 @@ Peter Bonivart <bonivart@opencsw.org>
 
 =head1 CREDITS
 
-Dennis Clarke - reporting on problems with prototype in package (v1.1). Reporting that locally cached packages should be MD5 checked (v1.3). Suggested replacing same with SAME for --compare, local/NFS file repositories (v1.4).
+Dennis Clarke
 
-Ihsan Dogan - suggested --exclude option (v1.3).
+Ivo De Decker
 
-James Lee - method for version compare (v1.0).
+Ihsan Dogan
 
-Dagobert Michelsen - method for version compare (v1.0). Reporting missing package bug (v1.2). Suggested changing default mirror from unstable to current and renaming --force to --yes, moving pkgutil.conf to /opt/csw/etc, --stream and --output options (v1.3).
+Sebastian Kayser
 
-Yann Rouillard - reporting/fixing bugs (v1.1).
+James Lee
 
-Derek Whayman - support for multiple different repositories (mirrors), multiple versions of packages, performance enhancements (v1.5).
+Dagobert Michelsen
+
+Yann Rouillard
+
+Derek Whayman
+
+For more details, see the readme file.
 
 =head1 COPYRIGHT AND DISCLAIMER
 
