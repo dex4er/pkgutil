@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.5";
+my $pkgutilver = "1.6b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -770,12 +770,16 @@ sub pkgutilver {
   if ($mode) {
     print "Pkgutil\t\t$pkgutilver\n";
     print "Arch\t\t$solarch\n";
+    print "Solaris\t\t$solver\n";
     $pkgpatch = ($solarch eq "sparc") ? "110934" : "110935" if ("$solver" eq "5.8");
     $pkgpatch = ($solarch eq "sparc") ? "113713" : "114568" if ("$solver" eq "5.9");
     $pkgpatch = ($solarch eq "sparc") ? "119317" : "119318" if ("$solver" eq "5.10");
-    print "Solaris\t\t$solver\n";
-    chomp($pkgpatchinst = `showrev -p | grep $pkgpatch | cut -d' ' -f2 | grep $pkgpatch | sort | tail -1`);
-    $pkgpatchinst = ($pkgpatchinst) ? "$pkgpatchinst installed" : "not found";
+    if ($solver ne "5.11") {
+      chomp($pkgpatchinst = `showrev -p | grep $pkgpatch | cut -d' ' -f2 | grep $pkgpatch | sort | tail -1`);
+      $pkgpatchinst = ($pkgpatchinst) ? "$pkgpatchinst installed" : "not found";
+    } else {
+      $pkgpatch = $pkgpatchinst = "na";
+    }
     print "Pkg patch\t$pkgpatch ($pkgpatchinst)\n";
     if (-x "/opt/csw/bin/gpg") {
       print "GPG binary\t/opt/csw/bin/gpg\n";
