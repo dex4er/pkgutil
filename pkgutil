@@ -48,7 +48,7 @@ sub available {
     my $pkgname = $commonpkg{$common};
     foreach my $vers (sort keys %{$pkg{$pkgname}}) {
       my($size) = (split /\s+/, $pkg{$pkgname}{$vers})[5];
-      my $tmp = sprintf ("%-20s %-20s %-25s %s\n",$common,$pkgname,$vers,format_byte($size));
+      my $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$vers,format_byte($size));
       if ($#ARGV >= 0) {
         foreach (@ARGV) {
           print $tmp if ("$pkgname-$vers" =~ /$_/i || "$common-$vers" =~ /$_/i);
@@ -264,7 +264,7 @@ sub format_byte {
     $size /= 1024;
     $suffix = "GB";
   }
-  return sprintf ("%6.1f %s",$size,$suffix);
+  return sprintf ("%1.1f %s",$size,$suffix);
 }
 
 # check signature on catalog
