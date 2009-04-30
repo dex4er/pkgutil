@@ -301,8 +301,13 @@ sub gpg {
 # init
 
 sub init {
-  my $file;
-  my @conf_file = ("/opt/csw/etc/pkgutil.conf","/etc/opt/csw/pkgutil.conf");
+  my ($conf) = @_;
+  my @conf_file;
+  if ($conf) {
+    @conf_file = ($conf);
+  } else {
+    @conf_file = ("/opt/csw/etc/pkgutil.conf","/etc/opt/csw/pkgutil.conf");
+  }
   %config = ("mirror"		=> [],
              "pkgaddopts"	=> "",
              "wgetopts"		=> "",
@@ -321,7 +326,7 @@ sub init {
         s/\s+$//;	# remove trailing white
         next unless length;	# next if nothing left
         my ($var,$value) = split(/\s*=\s*/,$_,2);
-        print "$var = $value\n" if $debug;
+        print "Found $var = $value\n" if $debug;
         my $r = ref($config{$var});
         if (! $r) {
          $config{$var} = $value;
@@ -343,6 +348,7 @@ sub init {
     print "noncsw: $config{noncsw}\n";
   }
 
+  $use_md5 = $use_gpg = $noncsw = 0;
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
@@ -672,7 +678,8 @@ sub parse_catalog {
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
-      $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir);
+      $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
+      $opt_config);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -681,6 +688,7 @@ sub parse_cl {
              "d|download"	=> \$opt_download,
              "a|available"	=> \$opt_avail,
              "c|compare"	=> \$opt_compare,
+             "C|config=s"	=> \$opt_config,
              "U|catalog"	=> \$opt_upd_cat,
              "e|email=s"	=> \$opt_email,
              "t|temp=s"		=> \@opt_temp,
@@ -697,6 +705,7 @@ sub parse_cl {
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   usage() if $opt_help;
+  init($opt_config) if $opt_config;
   locate_wget();
   locate_gzip();
   if ($opt_workdir) {	# set/create optional working dir
@@ -1000,6 +1009,7 @@ sub usage {
   print "\n  -d, --download\tDownload only";
   print "\n  -a, --available\tShow available packages";
   print "\n  -c, --compare\t\tCompare installed packages to current";
+  print "\n  -C, --config=file\tUse this configuration file";
   print "\n  -U, --catalog\t\tUpdate catalog";
   print "\n  -e, --email=address\tSend e-mail with available updates";
   print "\n  -t, --temp=site\tTemporarily use this site as primary for download";
