@@ -287,12 +287,10 @@ sub gpg {
   print "GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
     print "Checking catalog integrity with gpg.\n";
-    my $status = system("/bin/mv $catalog $catalog.asc");
-    die "Couldn't rename catalog!\n" if $status;
-    $status = system("/opt/csw/bin/gpg $catalog.asc");
+    rename($catalog, $catalog . ".asc") or die "Couldn't rename catalog!\n";
+    my $status = system("/opt/csw/bin/gpg $catalog.asc");
     die "Catalog signature is not correct!\n" if $status;
-    $status = system("/bin/mv $catalog.asc $catalog");
-    die "Couldn't rename catalog!\n" if $status;
+    rename($catalog . ".asc", $catalog) or die "Couldn't rename catalog!\n";
     print "Status GPG: $status\n" if $debug;
   } else {
     print "Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.\n";
@@ -359,7 +357,6 @@ sub inst_pkgs {
   my $pkgadd = "/usr/sbin/pkgadd";
   my $pkgaddopts = "";
   my $pkgrm = "/usr/sbin/pkgrm";
-  my $rm = "/bin/rm";
   my $file;
   my $name;
   my $pkgforce = "";
@@ -391,7 +388,7 @@ sub inst_pkgs {
       ($file) = ($file =~ /(.+)\.gz$/);
     }
     `$pkgadd $pkgforce $pkgaddopts -d $pkgdir/$file $name`;
-    `$rm -f $pkgdir/$file`;
+    unlink("$pkgdir/$file") or die "Can't delete $pkgdir/$file: $!\n";
   }
 }
 
