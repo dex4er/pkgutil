@@ -7,22 +7,34 @@
 
 use strict;
 use Digest::MD5;
+use Getopt::Long;
+Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my @pkglist;
-my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat);
+my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$erroronly);
 my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my %pkg;
 
-if ($ARGV[0] && $ARGV[0] eq "-v") {
-  $verbose = 1;
-  shift @ARGV;
-}
+usage() if (@ARGV == 0);
+GetOptions("v|verbose"		=> \$verbose,
+	   "h|help"		=> \$help,
+	   "e|erroronly"	=> \$erroronly) || usage();
 
+usage() if $help;
 if ($#ARGV >= 0) {
   $catalog = $ARGV[0];
 } else {
-  print "Usage: $0 [-v] <catalog file>\n";
+  usage();
+}
+
+sub usage {
+  print "Chkcat, check catalog for problems.\n\n";
+  print "Usage: chkcat [-veh] <catalog file>\n";
+  print "\n  -v, --verbose\t\tVerbose mode";
+  print "\n  -e, --erroronly\tOnly show errors (supress warnings)";
+  print "\n  -h, --help\t\tShow this help\n";
+  print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
 }
 
@@ -59,7 +71,7 @@ while ($#tmp >= 0) {
   # if gpg signed catalog, skip a few lines in the beginning
 
   if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
-    print "Skipping signature at start of file.\n";
+    print "Skipping signature at start of file.\n" unless $erroronly;
     shift @tmp;
     shift @tmp;
     shift @tmp;
@@ -69,14 +81,14 @@ while ($#tmp >= 0) {
   # if gpg signature found at the end, exit
 
   if ($line =~ /-BEGIN PGP SIGNATURE-/) {
-    print "\nSkipping signature at end of file.\n";
+    print "\nSkipping signature at end of file.\n" unless $erroronly;
     last;
   }
 
   # if line starts with a comment, skip
 
   if ($line =~ /^#/) {
-    print "Skipping comment.\n";
+    print "Skipping comment.\n" unless $erroronly;
     next;
   }
 
@@ -90,7 +102,7 @@ while ($#tmp >= 0) {
 
   # packages that are not compressed, normal for gzip and pkg-get
 
-  if ($field[3] !~ /\.gz$/) {
+  if ($field[3] !~ /\.gz$/ && ! $erroronly) {
     print "\nWARNING! Package $field[2] is not compressed.\n";
     print "$line\n";
   }
@@ -108,7 +120,7 @@ while ($#tmp >= 0) {
 
   # check that no dependencies are missing
 
-  if ($field[6] ne "none") {
+  if ($field[6] ne "none" && ! $erroronly) {
     foreach (split(/\|/,$field[6])) {
       print "\nWARNING! Dependency $_ of package $field[2] is missing.\n" unless $pkg{$_};
     }
