@@ -11,14 +11,16 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my @pkglist;
-my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$erroronly);
+my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,$erroronly);
 my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my %pkg;
+my $rc = 0;
 
 usage() if (@ARGV == 0);
 GetOptions("v|verbose"		=> \$verbose,
 	   "h|help"		=> \$help,
+	   "q|quiet"		=> \$quiet,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
@@ -37,6 +39,12 @@ sub usage {
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
+}
+
+sub retcode {
+  my ($rctmp) = @_;
+
+  $rc = $rctmp if ($rctmp > $rc);
 }
 
 (-r $catalog) || die "Can't open $catalog";	# must be a readable file
@@ -72,7 +80,7 @@ while ($#tmp >= 0) {
   # if gpg signed catalog, skip a few lines in the beginning
 
   if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
-    print "Skipping signature at start of file.\n" unless $erroronly;
+    print "Skipping signature at start of file.\n" unless ($erroronly || $quiet);
     shift @tmp;
     shift @tmp;
     shift @tmp;
@@ -82,48 +90,63 @@ while ($#tmp >= 0) {
   # if gpg signature found at the end, exit
 
   if ($line =~ /-BEGIN PGP SIGNATURE-/) {
-    print "\nSkipping signature at end of file.\n" unless $erroronly;
+    print "\nSkipping signature at end of file.\n" unless ($erroronly || $quiet);
     last;
   }
 
   # if line starts with a comment, skip
 
   if ($line =~ /^#/) {
-    print "Skipping comment.\n" unless $erroronly;
+    print "Skipping comment.\n" unless ($erroronly || $quiet);
     next;
   }
 
   # number of fields, should be 8
 
   if ($#field != 7) {
-    print "\nERROR! ",$#field + 1," fields instead of normal 8.\n";
-    print "$line\n";
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! ",$#field + 1," fields instead of normal 8.\n";
+      print "$line\n";
+    }
     next;
   }
 
   # packages that are not compressed, normal for gzip and pkg-get
 
-  if ($field[3] !~ /\.gz$/ && ! $erroronly) {
-    print "\nWARNING! Package $field[2] is not compressed.\n";
-    print "$line\n";
+  if ($field[3] !~ /\.gz$/) {
+    retcode(1);
+    if (! $erroronly && ! $quiet) {
+      print "\nWARNING! Package $field[2] is not compressed.\n";
+      print "$line\n";
+    }
   }
 
   # check that dependency field begins and ends with a word char
 
   if ($field[6] !~ /^\w/) {
-    print "\nERROR! The dependency field of package $field[2] begins with a non-char.\n";
-    print "$line\n";
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! The dependency field of package $field[2] begins with a non-char.\n";
+      print "$line\n";
+    }
   }
   if ($field[6] =~ /\|$/) {	# non-char is actually used, e.g. gcc2g++
-    print "\nERROR! The dependency field of package $field[2] ends with a pipe char.\n";
-    print "$line\n";
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! The dependency field of package $field[2] ends with a pipe char.\n";
+      print "$line\n";
+    }
   }
 
   # check that no dependencies are missing
 
-  if ($field[6] ne "none" && ! $erroronly) {
+  if ($field[6] ne "none") {
     foreach (split(/\|/,$field[6])) {
-      print "\nWARNING! Dependency $_ of package $field[2] is missing.\n" unless $pkg{$_};
+      if (! $pkg{$_}) {
+        retcode(1);
+        print "\nWARNING! Dependency $_ of package $field[2] is missing.\n" unless ($erroronly || $quiet);
+      }
     }
   }
 
@@ -131,19 +154,28 @@ while ($#tmp >= 0) {
 
   if ($field[6] ne "none") {
     foreach (split(/\|/,$field[6])) {
-      print "\nERROR! Circular dependency detected in package $field[2].\n" if ($_ eq $field[2]);
+      if ($_ eq $field[2]) {
+        retcode(2);
+        print "\nERROR! Circular dependency detected in package $field[2].\n" unless $quiet;
+      }
     }
   }
 
   # check that category field begins and ends with a word char
 
   if ($field[7] !~ /^\w/) {
-    print "\nERROR! The category field of package $field[2] begins with a non-char.\n";
-    print "$line\n";
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! The category field of package $field[2] begins with a non-char.\n";
+      print "$line\n";
+    }
   }
   if ($field[7] !~ /\w$/) {
-    print "\nERROR! The category field of package $field[2] ends with a non-char.\n";
-    print "$line\n";
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! The category field of package $field[2] ends with a non-char.\n";
+      print "$line\n";
+    }
   }
 
   # if in verbose mode, check catalog entries against packages if found in
@@ -151,17 +183,20 @@ while ($#tmp >= 0) {
 
   if ($verbose) {
     if (! -r "$prefix/$field[3]") {	# does the file exist?
-      print "ERROR! File $field[3] not found.\n";
+      retcode(2);
+      print "ERROR! File $field[3] not found.\n" unless $quiet;
     } else {
       if ($field[5] != (stat("$prefix/$field[3]"))[7]) { # correct size?
-        print "ERROR! Size does not match for $field[2].\n";
+        retcode(2);
+        print "ERROR! Size does not match for $field[2].\n" unless $quiet;
       }
       open (FILE,"<$prefix/$field[3]");		# MD5 check
       binmode (FILE);
       $hash = Digest::MD5->new->addfile(*FILE)->hexdigest;
       close FILE;
       if ($hash ne $field[4]) {
-        print "ERROR! MD5 hash does not match for $field[2].\n";
+        retcode(2);
+        print "ERROR! MD5 hash does not match for $field[2].\n" unless $quiet;
       }
 
       # unpack package if depends and/or categories are not "none"
@@ -186,10 +221,11 @@ while ($#tmp >= 0) {
             }
           }
         } else {
-          print "No depend file found in $field[2]\n";
+          print "No depend file found in $field[2]\n" unless $quiet;
         }
         if ($deps ne $field[6]) {
-          print "ERROR! Dependencies does not match for $field[2].\n";
+          retcode(2);
+          print "ERROR! Dependencies does not match for $field[2].\n" unless $quiet;
         }
       }
 
@@ -207,7 +243,8 @@ while ($#tmp >= 0) {
           }
         }
         if ($cat ne $field[7]) {
-          print "ERROR! Categories does not match for $field[2].\n";
+          retcode(2);
+          print "ERROR! Categories does not match for $field[2].\n" unless $quiet;
         }
       }
 
@@ -229,12 +266,13 @@ while ($#tmplist > 0) {		# no need to check for dups if only one entry
   my $tmp = $tmplist[0];
   shift @tmplist;
   if ($tmp eq $tmplist[0] && $dup ne $tmp) {
-    print "ERROR! $tmp exists more than once.\n";
+    retcode(2);
+    print "ERROR! $tmp exists more than once.\n" unless $quiet;
     $dup = $tmp;
   }
 }
 
-exit 0;
+exit $rc;
 
 =head1 NAME
 
@@ -283,6 +321,16 @@ Will check catalog for problems.
 C<# chkcat -q catalog>
 
 Will supress all output and only generate a return code, 0 for OK, 1 for warnings found and 2 for errors found.
+
+=head1 EXIT STATUS
+
+The following exit values are returned:
+
+	0	OK
+
+	1	Warning
+
+	2	Error
 
 =head1 SEE ALSO
 
