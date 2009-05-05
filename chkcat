@@ -11,7 +11,8 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my @pkglist;
-my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,$erroronly);
+my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,
+    $erroronly,$pkgver);
 my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my %pkg;
@@ -35,7 +36,7 @@ sub usage {
   print "Usage: chkcat [-veqh] <catalog file>\n";
   print "\n  -v, --verbose\t\tVerbose mode";
   print "\n  -e, --erroronly\tOnly show errors (supress warnings)";
-  print "\n  -q, --quiet\tNo output (only return codes)";
+  print "\n  -q, --quiet\t\tNo output (only return codes)";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
@@ -120,6 +121,32 @@ while ($#tmp >= 0) {
       print "\nWARNING! Package $field[2] is not compressed.\n";
       print "$line\n";
     }
+  }
+
+  # check the naming standard - http://opencsw.org/standards/build#versioning
+  my ($name, $version, $unames, $unamer, $arch, $footer, $rest) = split /-/, $field[3];
+print "$name,$version,$unames,$unamer,$arch,$footer,$rest\n";
+  if (! $footer && $arch) {
+    # assume arch is missing - it is optional after all
+    $footer = $arch;
+    $arch = '';
+  }
+  if ($arch && ($arch ne 'i386' && $arch ne 'sparc' && $arch ne 'all')) {
+    print "\nWARNING! Package $field[2] has an unknown architecture.\n";
+    print "$line\n";
+  }
+  if ($rest) {
+    print "\nWARNING! Package $field[2] does not meet the opencsw naming standard - too many hyphens.\n";
+    print "$line\n";
+  }
+  if ($field[3] !~ /\.pkg(\.gz)?$/) {
+    print "\nWARNING! Package $field[2] does not meet the opencsw naming standard - should end in .pkg(.gz).\n";
+    print "$line\n";
+  }
+  # XXX Should we allow single digit months and days (\d{1,2}) ?
+  if (! $version || $version !~ /[0-9\.]+,REV=(\d{4})\.(\d{2})\.(\d{2})/) {
+    print "\nWARNING! Package $field[2] does not meet the CSW naming standard - REV section incorrect.\n";
+    print "$line\n";
   }
 
   # check that dependency field begins and ends with a word char
@@ -232,6 +259,7 @@ while ($#tmp >= 0) {
       # check categories against pkginfo file in package
 
       if ($field[7] ne "none") {
+        $pkgver = "";
         $cat = "";
         open (FILE,"<$tmpdir/$field[2]/pkginfo");
         while (<FILE>) {
@@ -239,13 +267,24 @@ while ($#tmp >= 0) {
           if (/^CSW_CATEGORY=/) {
             ($cat) = (/=(.+)$/) if (/^CSW_CATEGORY=/);
             $cat = join('|',split(/,\s?/,$cat));
-            last;
+          } elsif (/^VERSION=(\S+)/) {
+            $pkgver = $1;
           }
+          last if $cat && $pkgver;
         }
+      }
+
+      if ($field[7] ne "none") {
         if ($cat ne $field[7]) {
           retcode(2);
           print "ERROR! Categories does not match for $field[2].\n" unless $quiet;
         }
+      }
+
+      # check version field matches filename
+
+      if ($pkgver && $version && $pkgver ne $version) {
+        print "ERROR! version in filename doesn't match version in pkginfo for $field[2].\n";
       }
 
       # clean up
