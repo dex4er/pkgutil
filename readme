@@ -24,6 +24,19 @@ URL: http://pkgutil.sourceforge.net
 Version history
 ---------------
 
+* v1.6. Released TBD
+  - Support package dirs like on Sun DVD's (Ivo De Decker)
+  - Replaced some system commands with native Perl
+  - New option -C (config) for using custom configuration file (Don Jackson)
+  - Fix size formatting
+  - Skip showing pkgadd patch when using -V on 5.11 (Dennis Clarke)
+  - Update credits in perldoc/man page
+  - Perldoc/man page added to both bldcat and chkcat
+  - Chkcat now includes more tests (Derek Whayman)
+  - Chkcat exit values are 0 for OK, 1 for warning and 2 for error
+  - New option -e (erroronly) added to chkcat to supress warnings
+  - New option -q (quiet) added to chkcat to supress all output
+
 * v1.5. Released 2009-04-09
   - Support multiple catalogs with multiple versions of each package and
     selecting specific versions (Derek Whayman)
