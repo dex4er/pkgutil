@@ -35,7 +35,7 @@ my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
-my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2);
+my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 chomp(my $arch = `uname -p`);
@@ -368,15 +368,17 @@ sub inst_pkgs {
   my $file;
   my $name;
   my $pkgforce = "";
+  my $pkgtrace = "";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgforce = "-a $admin -n" if $force;
+  $pkgtrace = "-v" if $trace;
   foreach (@pkglist) {
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       print "Removing old version of $pkgname\n";
-      `$pkgrm $pkgforce $pkgname`;
+      system("$pkgrm $pkgforce $pkgtrace $pkgname`");
     }
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
@@ -395,7 +397,7 @@ sub inst_pkgs {
       }
       ($file) = ($file =~ /(.+)\.gz$/);
     }
-    `$pkgadd $pkgforce $pkgaddopts -d $pkgdir/$file $name`;
+    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
     unlink("$pkgdir/$file") or die "Can't delete $pkgdir/$file: $!\n";
   }
 }
@@ -703,6 +705,7 @@ sub parse_cl {
              "W|workdir=s"	=> \$opt_workdir,
              "n|nomod"		=> \$nomod,
              "D|debug"		=> \$debug,
+             "trace"		=> \$trace,
              "h|help"		=> \$opt_help,
              "v|version"	=> \$opt_version,
              "V|syscheck"	=> \$opt_syscheck) || usage();
@@ -860,10 +863,12 @@ sub rem_pkgs {
   my $retval = "";
   my $pkgrm = "/usr/sbin/pkgrm";
   my $pkgforce = "";
+  my $pkgtrace = "";
   my ($pkg,$i,$j,$k,$l,$depinuse,$skip);
   my (@cswpkgs,@deptmp,@rempkgs);
 
   $pkgforce = "-a $admin -n" if $force;
+  $pkgtrace = "-v" if $trace;
   print "Looking at installed CSW packages...\n";
   my @cswpkgstmp = `/bin/pkginfo | grep CSW`;
   foreach $pkg (@cswpkgstmp) {
@@ -906,7 +911,7 @@ sub rem_pkgs {
       if ($retval ne "notinst") {
         die "Option -n selected, stopping here.\n" if ($nomod);
         print "Removing $_\n";
-        `$pkgrm $pkgforce $_`;
+        system("$pkgrm $pkgforce $pkgtrace $_`");
       }
     }
   } else {
@@ -1026,6 +1031,7 @@ sub usage {
   print "\n  -y, --yes\t\tAnswer yes on all prompts";
   print "\n  -n, --nomod\t\tNo modifications are made to the system";
   print "\n  -D, --debug\t\tDebug mode";
+  print "\n      --trace\t\tSet trace mode (-v) for pkgadd/pkgrm";
   print "\n  -h, --help\t\tShow this help";
   print "\n  -v, --version\t\tShow version";
   print "\n  -V, --syscheck\tSystem check\n";
