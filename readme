@@ -25,9 +25,11 @@ Version history
 ---------------
 
 * v1.6. Released TBD
-  - Support package dirs like on Sun DVD's (Ivo De Decker)
+  - New option -C, same as -c but only shows different versions, no more
+    piping to grep -v SAME (Ben Walton)
+  - New option --trace to debug pkgadd/pkgrm operations (Yann Rouillard)
   - Replaced some system commands with native Perl
-  - New option -C (config) for using custom configuration file (Don Jackson)
+  - New option --config for using custom configuration file (Don Jackson)
   - Fix size formatting
   - Skip showing pkgadd patch when using -V on 5.11 (Dennis Clarke)
   - Update credits in perldoc/man page
