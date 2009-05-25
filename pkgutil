@@ -106,14 +106,14 @@ sub check_pkg {
 
 # compare current to available packages
 #   mode - 0 = print full list, 1 = return list of old packages
-#          2 = return full list of old packages
+#          2 = return full list of old packages, 3 = same as 0 but only diffs
 
 sub compare {
   my ($mode) = @_;
   my (@cswpkgs,@retlist);
   my ($pkg,$local_ver,$remote_ver,$tmp);
 
-  print "package\t\t\t  installed\t\t    catalog\n" if (! $mode);
+  print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
   if ($noncsw) {
     @cswpkgs = `/bin/pkginfo`;
   } else {
@@ -133,15 +133,17 @@ sub compare {
       } else {
         if ($#ARGV >= 0) {
           foreach (@ARGV) {
-            print $tmp if ($pkg =~ /$_/i);
+            if ($pkg =~ /$_/i) {
+              print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
+            }
           }
         } else {
-          print $tmp;
+          print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
         }
       }
     }
   } 
-  if ($mode) {
+  if ($mode == 1 || $mode == 2) {
     return @retlist;
   } else {
     exit 0;
@@ -679,7 +681,7 @@ sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
-      $opt_config);
+      $opt_config,$opt_compare_diffonly);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -688,7 +690,8 @@ sub parse_cl {
              "d|download"	=> \$opt_download,
              "a|available"	=> \$opt_avail,
              "c|compare"	=> \$opt_compare,
-             "C|config=s"	=> \$opt_config,
+             "C"		=> \$opt_compare_diffonly,
+             "config=s"		=> \$opt_config,
              "U|catalog"	=> \$opt_upd_cat,
              "e|email=s"	=> \$opt_email,
              "t|temp=s"		=> \@opt_temp,
@@ -738,6 +741,7 @@ sub parse_cl {
   stream($opt_target,$opt_output) if $opt_stream;
   email($opt_email) if $opt_email;
   available() if $opt_avail;
+  compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
   install(0) if $opt_install;
   install(2) if $opt_remove;		# remove instead of install
@@ -1007,10 +1011,10 @@ sub usage {
   print "\n  -u, --upgrade\t\tUpgrade package";
   print "\n  -r, --remove\t\tRemove package (experimental)";
   print "\n  -d, --download\tDownload only";
+  print "\n  -U, --catalog\t\tUpdate catalog";
   print "\n  -a, --available\tShow available packages";
   print "\n  -c, --compare\t\tCompare installed packages to current";
-  print "\n  -C, --config=file\tUse this configuration file";
-  print "\n  -U, --catalog\t\tUpdate catalog";
+  print "\n  -C           \t\tSame as -c but only show different versions";
   print "\n  -e, --email=address\tSend e-mail with available updates";
   print "\n  -t, --temp=site\tTemporarily use this site as primary for download";
   print "\n  -s, --stream\t\tBuild a package stream";
@@ -1018,6 +1022,7 @@ sub usage {
   print "\n  -o, --output=file\tFile name for package stream (used with -s)";
   print "\n  -x, --exclude=package\tPackage to exclude";
   print "\n  -W, --workdir=path\tPath to use for downloads";
+  print "\n      --config=file\tUse this configuration file";
   print "\n  -y, --yes\t\tAnswer yes on all prompts";
   print "\n  -n, --nomod\t\tNo modifications are made to the system";
   print "\n  -D, --debug\t\tDebug mode";
