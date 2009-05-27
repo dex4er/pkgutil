@@ -989,6 +989,11 @@ sub stream {
   my $pkglist = join(' ',@install_order);
   print "install order: $pkglist\n" if $debug;
 
+  foreach (@install_order) {		# delete package directories
+    my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
+    die "Could not delete $pkgdir/$_: $!" if $status;
+  }
+
   foreach (@install_order) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
     print $fh "Transforming $_...\n";
@@ -998,7 +1003,9 @@ sub stream {
 
   # pkgtrans all of them into one package stream
   print $fh "Transforming packages into stream ($transfile)...\n";
-  my $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
+  my $status = system("/bin/touch $transfile");
+  die "Could not create stream file: $!" if $status;
+  $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
   die "Could not transform packages into stream: $!" if $status;
 
   foreach (@install_order) {		# delete package directories
