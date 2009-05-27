@@ -1168,6 +1168,10 @@ Remove package. This will remove a package including all dependencies that are n
 
 Download only. Same as install but stops after downloading the packages.
 
+=item B<-U, --catalog>
+
+Update catalog.
+
 =item B<-a, --available>
 
 Show available packages.
@@ -1176,9 +1180,9 @@ Show available packages.
 
 Compare installed packages to current.
 
-=item B<-U, --catalog>
+=item B<-C>
 
-Update catalog.
+Compare installed packages to current, show only different versions.
 
 =item B<-e, --email=address>
 
@@ -1208,6 +1212,10 @@ Package to exclude. This option can be specified multiple times.
 
 Path to use for downloads. This can be used to run pkgutil as non-root, e.g. called from a web server.
 
+=item B<--config=file>
+
+Use this configuration file instead of the default ones.
+
 =item B<-y, --yes>
 
 Answer yes on all prompts. Skips prompt when multiple packares are to be downloaded. Makes pkgrm/pkgadd operations more silent and without prompts. Only makes sense with -i and -u.
@@ -1219,6 +1227,10 @@ No modifications are made to the system. Stops before downloading catalog/packag
 =item B<-D, --debug>
 
 Debug mode. Adds a lot of info about what's going on. Only use if you're having problems you think is a bug.
+
+=item B<--trace>
+
+Set trace mode (-v) for pkgadd/pkgrm.
 
 =item B<-h, --help>
 
@@ -1250,7 +1262,7 @@ Will run silently and send an e-mail (with mailx) to the given address if there'
 
 =head2 Example 3
 
-C<# pkgutil -y -o - -s bind | gzip > bind.pkg.gz>
+C<# pkgutil -y -o - -s bind | gzip E<gt> bind.pkg.gz>
 
 Will send a package stream including all dependencies needed for CSWbind to standard output which is piped to gzip. With "-o -" the normal output is sent to standard error and "-y" is used to skip the confirmation prompt.
 
@@ -1310,8 +1322,6 @@ Peter Bonivart <bonivart@opencsw.org>
 =head1 CREDITS
 
 Dennis Clarke
-
-Ivo De Decker
 
 Ihsan Dogan
 
