@@ -928,7 +928,7 @@ sub stream {
   my ($target,$output) = @_;
   my @supp_arch = qw(sparc i386);
   my @supp_rel = qw(5.8 5.9 5.10 5.11);
-  my ($fh,$mode,$arch,$rel,$transfile);
+  my ($fh,$mode,$loc_arch,$loc_rel,$transfile);
   my ($ok_arch,$ok_rel) = (0,0);
 
   if ($output) {
@@ -941,41 +941,49 @@ sub stream {
  
   if ($target) {
     if ($target =~ /.:./) {
-      ($arch,$rel) = split(/:/,$target);
+      ($loc_arch,$loc_rel) = split(/:/,$target);
     } else {
       print "$target is not a correct arch:rel combo.\n";
       exit 1;
     }
   } else {
-    chomp($arch = `uname -p`);	# arch type sparc|i386
-    chomp($rel = `uname -r`);	# os version, e.g. 5.10
+    chomp($loc_arch = `uname -p`);	# arch type sparc|i386
+    chomp($loc_rel = `uname -r`);	# os version, e.g. 5.10
   }
-  print "arch: $arch\nos rel: $rel\n" if $debug;
+  print "arch: $loc_arch\nos rel: $loc_rel\n" if $debug;
 
   foreach (@supp_arch) {
-    if ($arch eq $_) {
+    if ($loc_arch eq $_) {
       $ok_arch = 1;
       last;
     }
   }
   foreach (@supp_rel) {
-    if ($rel eq $_) {
+    if ($loc_rel eq $_) {
       $ok_rel = 1;
       last;
     }
   }
-  print "Architecture $arch not supported.\n" if (! $ok_arch);
-  print "OS release $rel not supported.\n" if (! $ok_rel);
+  print "Architecture $loc_arch not supported.\n" if (! $ok_arch);
+  print "OS release $loc_rel not supported.\n" if (! $ok_rel);
   exit 1 if (($ok_arch + $ok_rel) < 2);
+
+  foreach (my $i=0; $i < scalar @mirror; $i++) {
+    print "mirror $i: $mirror[$i]\n" if $debug;
+    $mirror[$i] =~ s!\b$arch\b!$loc_arch!;
+    $mirror[$i] =~ s!\b$rel\b!$loc_rel!;
+    print "mirror $i: $mirror[$i]\n" if $debug;
+  }
 
   if ($output) {
     $transfile = ($output eq "-" ? "/dev/fd/1" : "$pkgdir/$output");
   } else {
-    $output = "$ARGV[0].$arch.$rel.pkg";
+    $output = "$ARGV[0].$loc_arch.$loc_rel.pkg";
     $transfile = "$pkgdir/$output";
   }
   print STDERR "output: $output\ntransfile: $transfile\n" if $debug;
 
+  check_catalog();
   my @install_order = install($mode);	# download packages needed
   exit 1 if ($#install_order < 0);	# empty list, nothing to do
   my $pkglist = join(' ',@install_order);
@@ -989,7 +997,7 @@ sub stream {
   }
 
   # pkgtrans all of them into one package stream
-  print $fh "Transforming packages into stream...\n";
+  print $fh "Transforming packages into stream ($transfile)...\n";
   my $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
   die "Could not transform packages into stream: $!" if $status;
 
@@ -1202,7 +1210,7 @@ Specify architecture and OS release for stream, e.g. i386:5.9 or sparc:5.10. Use
 
 =item B<-o, --output=file>
 
-File name for package stream. Used with -s. A special argument is "-" which sends the stream to standard output, see example below.
+File name for package stream. Used with -s. A special argument is "-" which sends the stream to standard output, see example below. The default name is the first package argument followed by architecture and OS release, for example "bind.i386.5.10.pkg".
 
 =item B<-x, --exclude=package>
 
