@@ -24,10 +24,12 @@ URL: http://pkgutil.sourceforge.net
 Version history
 ---------------
 
-* v1.6. Released TBD
+* v1.6. Released 2009-05-29
+  - Fix -T bug (#3689)
+  - Fix -W bug (#3688)
   - New option -C, same as -c but only shows different versions, no more
     piping to grep -v SAME (Ben Walton)
-  - New option --trace to debug pkgadd/pkgrm operations (Yann Rouillard)
+  - New option --trace to debug pkgadd/pkgrm operations (#3683) (Yann Rouillard)
   - Replaced some system commands with native Perl
   - New option --config for using custom configuration file (Don Jackson)
   - Fix size formatting
