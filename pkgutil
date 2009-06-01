@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.6";
+my $pkgutilver = "1.6.1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -367,13 +367,13 @@ sub inst_pkgs {
   my $pkgrm = "/usr/sbin/pkgrm";
   my $file;
   my $name;
-  my $pkgforce = "";
   my $pkgtrace = "";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
-  $pkgforce = "-a $admin -n" if $force;
   $pkgtrace = "-v" if $trace;
   foreach (@pkglist) {
+    my $pkgforce = "";
+    $pkgforce = "-a $admin -n" if ($force && -r $admin);
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
