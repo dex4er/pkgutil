@@ -24,9 +24,14 @@ URL: http://pkgutil.sourceforge.net
 Version history
 ---------------
 
+* v1.6.1. Released 2009-06-04
+  - Fix -y bug when upgrading pkgutil (#3701) (Sebastian Kayser)
+  - Fix order of install to ,e.g., make sure that cswclassutils
+    is always installed first/early (#3702) (Sebastian Kayser)
+
 * v1.6. Released 2009-05-29
-  - Fix -T bug (#3689)
-  - Fix -W bug (#3688)
+  - Fix -T bug (#3689) (Sebastian Kayser)
+  - Fix -W bug (#3688) (Sebastian Kayser)
   - New option -C, same as -c but only shows different versions, no more
     piping to grep -v SAME (Ben Walton)
   - New option --trace to debug pkgadd/pkgrm operations (#3683) (Yann Rouillard)
