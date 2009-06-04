@@ -521,11 +521,13 @@ sub install {
   foreach my $i (@revpkglist) {
     my $hit = 0;
     foreach (@curpkglist) {
-      my ($j) = ($_ =~ /^(\w+)\W?/);
+      my ($j) = ($_ =~ /^(.+)-/);
       if ($i eq $j) {
         $hit = 1;
+        print "i: $i j: $j hit: $hit\n" if $debug;
         last;
       }
+      print "i: $i j: $j hit: $hit\n" if $debug;
     }
     my $tmp = "$i-$pkgvers{$i}";
     push(@dlpkglist,$tmp) unless $hit;
