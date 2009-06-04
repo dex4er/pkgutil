@@ -467,7 +467,7 @@ sub install {
   for my $pkg (reverse @pkglist) {
     next unless $pkgvers{$pkg}; # not if excluded
     unless (exists $deduped{$pkg}) {
-	push @revpkglist, $pkg;
+	push(@revpkglist,$pkg);
 	$deduped{$pkg} = 1;
     }
   }
@@ -516,9 +516,20 @@ sub install {
   }
 
   # what packages do we need to fetch?
+  # make sure they are in correct order
 
-  push(@dlpkglist,@newpkglist);
-  push(@dlpkglist,@updpkglist);
+  foreach my $i (@revpkglist) {
+    my $hit = 0;
+    foreach (@curpkglist) {
+      my ($j) = ($_ =~ /^(\w+)\W?/);
+      if ($i eq $j) {
+        $hit = 1;
+        last;
+      }
+    }
+    my $tmp = "$i-$pkgvers{$i}";
+    push(@dlpkglist,$tmp) unless $hit;
+  }
   print "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
 
   # print size of download
@@ -729,7 +740,7 @@ sub parse_cl {
   @mirror = @{$config{mirror}};
   $mirror[0] = $defaultmirror unless @mirror; # if no mirrors configured
   # Prepend temp mirrors so they are selected first
-  unshift @mirror, @opt_temp if @opt_temp;
+  unshift(@mirror,@opt_temp) if @opt_temp;
 
   foreach (my $i=0; $i < scalar @mirror; $i++) {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
