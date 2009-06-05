@@ -24,8 +24,9 @@ URL: http://pkgutil.sourceforge.net
 Version history
 ---------------
 
-* v1.6.1. Released 2009-06-04
-  - Fix -y bug when upgrading pkgutil (#3701) (Sebastian Kayser)
+* v1.6.1. Released 2009-06-05
+  - Fix -y bug when upgrading pkgutil (#3701) (Sebastian Kayser, Dagobert
+    Michelsen)
   - Fix order of install to ,e.g., make sure that cswclassutils
     is always installed first/early (#3702) (Sebastian Kayser)
 
