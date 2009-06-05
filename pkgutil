@@ -213,7 +213,10 @@ sub fetch_pkgs {
   if ($#pkglist > 0 && ! $force) {
     print $#pkglist + 1 . " packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
-    exit 1 if ($prompt =~ /^[nN]/);
+    if ($prompt =~ /^[nN]/) {
+      unlink $admin if (-r $admin);
+      exit 1;
+    }
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   foreach (@pkglist) {
@@ -398,7 +401,7 @@ sub inst_pkgs {
       ($file) = ($file =~ /(.+)\.gz$/);
     }
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
-    unlink("$pkgdir/$file") or die "Can't delete $pkgdir/$file: $!\n";
+    unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
   }
 }
 
@@ -556,6 +559,7 @@ sub install {
       inst_pkgs(@dlpkglist);
     }
   }
+  unlink $admin if (-r $admin);
   exit 0;
 }
 
@@ -732,7 +736,19 @@ sub parse_cl {
     print "new workdir: $workdir\n" if $debug;
   }
   $pkgdir = "$workdir/packages";
+
+  # create runtime copy of admin to make sure we have one
+  # available even during upgrade of pkgutil itself
   $admin = "$workdir/admin";
+  open (ADMSRC,"<$admin") or die "Can't open $admin: $!\n";
+  open (ADMCPY,">$admin.run") or die "Can't open $admin.run: $!\n";
+  while (<ADMSRC>) {
+    print ADMCPY;
+  }
+  close ADMSRC;
+  close ADMCPY;
+  $admin = "$workdir/admin.run";
+
   my $status = system("/bin/mkdir -p $pkgdir");
   die "Could not create $pkgdir: $!" if $status;
 
@@ -930,6 +946,7 @@ sub rem_pkgs {
   } else {
     print "Nothing to remove.\n";
   }
+  unlink $admin if (-r $admin);
   exit 1;
 }
 
