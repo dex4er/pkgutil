@@ -26,7 +26,7 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.6.1";
+my $pkgutilver = "1.7b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -380,12 +380,12 @@ sub inst_pkgs {
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
-      print "Removing old version of $pkgname\n";
+      print "=> Removing old version of $pkgname\n";
       system("$pkgrm $pkgforce $pkgtrace $pkgname`");
     }
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
-    print "Installing $_\n";
+    print "=> Installing $_\n";
     if ($file =~ /\.gz$/) {		# not all packages are compressed
       my $status = locate_gzip();
       if (! $status) {
@@ -939,7 +939,7 @@ sub rem_pkgs {
       $retval = check_pkg($_,0);
       if ($retval ne "notinst") {
         die "Option -n selected, stopping here.\n" if ($nomod);
-        print "Removing $_\n";
+        print "=> Removing $_\n";
         system("$pkgrm $pkgforce $pkgtrace $_`");
       }
     }
