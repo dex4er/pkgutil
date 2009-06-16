@@ -49,7 +49,7 @@ sub available {
     foreach my $vers (sort keys %{$pkg{$pkgname}}) {
       my($size) = (split /\s+/, $pkg{$pkgname}{$vers})[5];
       my $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$vers,format_byte($size));
-      if ($#ARGV >= 0) {
+      if (scalar(@ARGV) > 0) {
         foreach (@ARGV) {
           print $tmp if ("$pkgname-$vers" =~ /$_/i || "$common-$vers" =~ /$_/i);
         }
@@ -131,7 +131,7 @@ sub compare {
       if ($mode == 2) {
         push(@retlist,$tmp) if ($remote_ver ne "SAME" && $remote_ver ne "not in catalog");
       } else {
-        if ($#ARGV >= 0) {
+        if (scalar(@ARGV) > 0) {
           foreach (@ARGV) {
             if ($pkg =~ /$_/i) {
               print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
@@ -159,7 +159,7 @@ sub email {
 
   die "Mailx not found on system!\n" if (! -x "/bin/mailx");
   my @update_list = compare(2);
-  if ($#update_list >= 0) {
+  if (scalar(@update_list) > 0) {
     open (FILE,">$file") or die "Can't open $file: $!\n";
     foreach (@update_list) {
       print FILE;
@@ -210,8 +210,8 @@ sub fetch_pkgs {
   my ($file,$status);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
-  if ($#pkglist > 0 && ! $force) {
-    print $#pkglist + 1 . " packages to fetch. Do you want to continue? [Y,n] ";
+  if (scalar(@pkglist) > 1 && ! $force) {
+    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
       unlink $admin if (-r $admin);
@@ -476,7 +476,7 @@ sub install {
   }
 
   if ($mode == 2) {		# if -r used
-    if ($#revpkglist >= 0) {
+    if (scalar(@revpkglist) > 0) {
       rem_pkgs(reverse @revpkglist);
     }
   }
@@ -504,16 +504,16 @@ sub install {
     }
   }
 
-  if ($#newpkglist >= 0) {
+  if (scalar(@newpkglist) > 0) {
     print $fh "New packages: ", join(" ", @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
-    if ($#updpkglist >= 0) {
+    if (scalar(@updpkglist) > 0) {
       print "Updated packages: ", join(" ", @updpkglist), "\n";
     }
 
-    if ($#curpkglist >= 0) {
+    if (scalar(@curpkglist) > 0) {
       print "Current packages: ", join(" ", @curpkglist), "\n";
     }
   }
@@ -539,7 +539,7 @@ sub install {
 
   # print size of download
 
-  if ($#dlpkglist >= 0) {
+  if (scalar(@dlpkglist) > 0) {
     foreach (@dlpkglist) {
       $size += parse_catalog($_,5);
     }
@@ -548,14 +548,14 @@ sub install {
 
   die "Option -n selected, stopping here.\n" if ($nomod);
 
-  if ($#dlpkglist >= 0) {
+  if (scalar(@dlpkglist) > 0) {
     fetch_pkgs($mode,@dlpkglist);
   }
 
   return @revpkglist if ($mode == 3 || $mode == 4);	# is -s used
 
   if ($mode == 0) {		# if -d not used, install
-    if ($#dlpkglist >= 0) {
+    if (scalar(@dlpkglist) > 0) {
       inst_pkgs(@dlpkglist);
     }
   }
@@ -929,12 +929,12 @@ sub rem_pkgs {
     push(@rempkgs,$i) unless $depinuse;
     $depinuse ? print " (in use)\n" : print " (remove)\n";
   }
-  if ($#rempkgs > 0 && ! $force) {
-    print $#rempkgs + 1 . " packages to remove. Do you want to continue? [Y,n] ";
+  if (scalar(@rempkgs) > 1 && ! $force) {
+    print scalar(@rempkgs)," packages to remove. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     exit 1 if ($prompt =~ /^[nN]/);
   }
-  if ($#rempkgs >= 0) {
+  if (scalar(@rempkgs) > 0) {
     foreach (@rempkgs) {
       $retval = check_pkg($_,0);
       if ($retval ne "notinst") {
@@ -1015,7 +1015,7 @@ sub stream {
 
   check_catalog();
   my @install_order = install($mode);	# download packages needed
-  exit 1 if ($#install_order < 0);	# empty list, nothing to do
+  exit 1 if (scalar(@install_order) == 0);	# empty list, nothing to do
   my $pkglist = join(' ',@install_order);
   print "install order: $pkglist\n" if $debug;
 
@@ -1132,7 +1132,7 @@ sub verscmp {
       }
       @p2list = split(/\./,$p2tmp);
 
-      for (my $i = 0; $i <= $#p1list; $i++) {
+      for (my $i = 0; $i < scalar(@p1list); $i++) {
         if (! $p2list[$i]) {
           $update = 1;
           last;
@@ -1148,7 +1148,7 @@ sub verscmp {
         }
         print "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
       }
-      $update = -1 if (! $update && $#p2list > $#p1list);
+      $update = -1 if (! $update && scalar(@p2list) > scalar(@p1list));
 
       $skip = 1;
     }
