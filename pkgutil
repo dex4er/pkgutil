@@ -523,16 +523,16 @@ sub install {
   }
 
   if (scalar(@newpkglist) > 0) {
-    print $fh "New packages: ", join(" ", @newpkglist), "\n";
+    print $fh "New packages:\n\t", join("\n\t", sort @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if (scalar(@updpkglist) > 0) {
-      print "Updated packages: ", join(" ", @updpkglist), "\n";
+      print "Updated packages:\n\t", join("\n\t", sort @updpkglist), "\n";
     }
 
     if (scalar(@curpkglist) > 0) {
-      print "Current packages: ", join(" ", @curpkglist), "\n";
+      print "Current packages:\n\t", join("\n\t", sort @curpkglist), "\n";
     }
   }
 
@@ -801,7 +801,7 @@ sub parse_cl {
   # Prepend temp mirrors so they are selected first
   unshift(@mirror,@opt_temp) if @opt_temp;
 
-  foreach (my $i=0; $i < scalar @mirror; $i++) {
+  foreach (my $i=0; $i < scalar(@mirror); $i++) {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
     $mirror[$i] .= "/" . $arch . "/" . $rel;
   }
@@ -1039,7 +1039,7 @@ sub stream {
   print "OS release $loc_rel not supported.\n" if (! $ok_rel);
   exit 1 if (($ok_arch + $ok_rel) < 2);
 
-  foreach (my $i=0; $i < scalar @mirror; $i++) {
+  foreach (my $i=0; $i < scalar(@mirror); $i++) {
     print "mirror $i: $mirror[$i]\n" if $debug;
     $mirror[$i] =~ s!\b$arch\b!$loc_arch!;
     $mirror[$i] =~ s!\b$rel\b!$loc_rel!;
