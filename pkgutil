@@ -250,6 +250,24 @@ sub fetch_pkgs {
   }
 }
 
+# find files in package
+
+sub find_file {
+  my $contents = "/var/sadm/install/contents";
+
+  foreach (@ARGV) {
+    open (FILE,"<$contents") or die "Can't open $contents: $!\n";
+    while(my $line = <FILE>) {
+      chomp $line;
+      my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
+      ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
+      print "$file\t$pkg\n" if ($file =~ /$_/);
+    }
+    close FILE;
+  }
+  exit 0;
+}
+
 # format size in bytes to more human friendly format with suffixes
 #   size - size in bytes
 
@@ -563,6 +581,25 @@ sub install {
   exit 0;
 }
 
+# list files in package
+
+sub list_file {
+  my $contents = "/var/sadm/install/contents";
+
+  foreach (@ARGV) {
+    open (FILE,"<$contents") or die "Can't open $contents: $!\n";
+    while(my $line = <FILE>) {
+      chomp $line;
+      my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
+      ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
+      print "$file\n" if ($pkg eq $_);
+    }
+    close FILE;
+    print "\n";
+  }
+  exit 0;
+}
+
 # find gzip
 
 sub locate_gzip {
@@ -700,7 +737,7 @@ sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
-      $opt_config,$opt_compare_diffonly);
+      $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -725,9 +762,13 @@ sub parse_cl {
              "trace"		=> \$trace,
              "h|help"		=> \$opt_help,
              "v|version"	=> \$opt_version,
+             "L|listfile"	=> \$opt_listfile,
+             "F|findfile"	=> \$opt_findfile,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   usage() if $opt_help;
+  list_file() if $opt_listfile;
+  find_file() if $opt_findfile;
   init($opt_config) if $opt_config;
   locate_wget();
   locate_gzip();
@@ -1079,7 +1120,9 @@ sub usage {
   print "\n      --trace\t\tSet trace mode (-v) for pkgadd/pkgrm";
   print "\n  -h, --help\t\tShow this help";
   print "\n  -v, --version\t\tShow version";
-  print "\n  -V, --syscheck\tSystem check\n";
+  print "\n  -V, --syscheck\tSystem check";
+  print "\n  -L, --listfile\tList files in package";
+  print "\n  -F, --findfile\tFind files in package\n";
   print "\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 0;
