@@ -587,15 +587,30 @@ sub list_file {
   my $contents = "/var/sadm/install/contents";
 
   foreach (@ARGV) {
-    open (FILE,"<$contents") or die "Can't open $contents: $!\n";
-    while(my $line = <FILE>) {
-      chomp $line;
-      my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
-      ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-      print "$file\n" if ($pkg eq $_);
-    }
-    close FILE;
     print "\n";
+    if (-r $_ && -f _) {	# argument is a package file
+      if ($_ =~ /\.pkg$/) {
+        my (@tmp) = `/usr/sbin/pkgchk -l -d $_ all`;
+        foreach (@tmp) {
+          next unless ($_ =~ /^Pathname:\s\//);
+          my ($file) = ($_ =~ /^Pathname:\s(.+?)\s/);
+          ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
+          print "$file\n";
+        }
+      } else {
+        print "Package file name [$_] must end in .pkg\n";
+        next;
+      }
+    } else {	# argument is a package name
+      open (FILE,"<$contents") or die "Can't open $contents: $!\n";
+      while(my $line = <FILE>) {
+        chomp $line;
+        my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
+        ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
+        print "$file\n" if ($pkg eq $_);
+      }
+      close FILE;
+    }
   }
   exit 0;
 }
