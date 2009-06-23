@@ -30,6 +30,7 @@ my $pkgutilver = "1.7b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
+my $pkgliststyle = 0;
 my @mirror;
 my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
@@ -336,6 +337,7 @@ sub init {
              "wgetopts"		=> "",
              "use_gpg"		=> "",
              "use_md5"		=> "",
+             "pkgliststyle"	=> "",
              "noncsw"           => "");
 
   foreach (@conf_file) {
@@ -364,13 +366,15 @@ sub init {
 
   if ($debug) {
     print "mirror: " . join("\t", @{$config{mirror}}) . "\n";
+    print "noncsw: $config{noncsw}\n";
     print "pkgaddopts: $config{pkgaddopts}\n";
-    print "wgetopts: $config{wgetopts}\n";
+    print "pkgliststyle: $config{pkgliststyle}\n";
     print "use_gpg: $config{use_gpg}\n";
     print "use_md5: $config{use_md5}\n";
-    print "noncsw: $config{noncsw}\n";
+    print "wgetopts: $config{wgetopts}\n";
   }
 
+  $pkgliststyle = $config{pkgliststyle};
   $use_md5 = $use_gpg = $noncsw = 0;
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
@@ -522,17 +526,19 @@ sub install {
     }
   }
 
+  my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
+
   if (scalar(@newpkglist) > 0) {
-    print $fh "New packages:\n\t", join("\n\t", sort @newpkglist), "\n";
+    print $fh "New packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if (scalar(@updpkglist) > 0) {
-      print "Updated packages:\n\t", join("\n\t", sort @updpkglist), "\n";
+      print "Updated packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
 
     if (scalar(@curpkglist) > 0) {
-      print "Current packages:\n\t", join("\n\t", sort @curpkglist), "\n";
+      print "Current packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
     }
   }
 
