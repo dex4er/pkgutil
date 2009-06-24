@@ -31,6 +31,7 @@ my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
 my $pkgliststyle = 0;
+my $maxpkglist = 25000;
 my @mirror;
 my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
@@ -158,7 +159,7 @@ sub email {
   my ($email) = @_;
   my $file = "/tmp/pkgutil.$$.$^T";
 
-  die "Mailx not found on system!\n" if (! -x "/bin/mailx");
+  die "Mailx not found on system!\n" unless (-x "/bin/mailx");
   my @update_list = compare(2);
   if (scalar(@update_list) > 0) {
     open (FILE,">$file") or die "Can't open $file: $!\n";
@@ -338,6 +339,7 @@ sub init {
              "use_gpg"		=> "",
              "use_md5"		=> "",
              "pkgliststyle"	=> "",
+             "maxpkglist"	=> "",
              "noncsw"           => "");
 
   foreach (@conf_file) {
@@ -365,6 +367,7 @@ sub init {
   }
 
   if ($debug) {
+    print "maxpkglist: $config{maxpkglist}\n";
     print "mirror: " . join("\t", @{$config{mirror}}) . "\n";
     print "noncsw: $config{noncsw}\n";
     print "pkgaddopts: $config{pkgaddopts}\n";
@@ -374,7 +377,8 @@ sub init {
     print "wgetopts: $config{wgetopts}\n";
   }
 
-  $pkgliststyle = $config{pkgliststyle};
+  $pkgliststyle = $config{pkgliststyle} if $config{pkgliststyle};
+  $maxpkglist = $config{maxpkglist} if $config{maxpkglist};
   $use_md5 = $use_gpg = $noncsw = 0;
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
@@ -453,6 +457,8 @@ sub install {
   foreach my $tmppkg2 (@pkglist) {
     # N.B. This array grows and we keep looping until we've satisfied all
     # of the dependencies.
+    print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+    die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
     my @tmpdeps;
     if ($tmppkg2 ne "CSWcommon") {
       $retvalue = parse_catalog($tmppkg2,6);
@@ -570,7 +576,7 @@ sub install {
     print $fh "Total size: " . format_byte($size) . "\n";
   }
 
-  die "Option -n selected, stopping here.\n" if ($nomod);
+  die "Option -n selected, stopping here.\n" if $nomod;
 
   if (scalar(@dlpkglist) > 0) {
     fetch_pkgs($mode,@dlpkglist);
@@ -696,7 +702,7 @@ sub md5 {
   }
   my $md5cat = parse_catalog($pkg,4);
   print "$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n" if $debug;
-  die "MD5 for $pkg doesn't match catalog!" if ($md5 ne $md5cat);
+  die "MD5 for $pkg doesn't match catalog!\n" if ($md5 ne $md5cat);
   print $fh "MD5 for $pkg matched.\n";
 }
 
@@ -812,7 +818,7 @@ sub parse_cl {
   $admin = "$workdir/admin.run";
 
   my $status = system("/bin/mkdir -p $pkgdir");
-  die "Could not create $pkgdir: $!" if $status;
+  die "Could not create $pkgdir: $!\n" if $status;
 
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
@@ -1000,7 +1006,7 @@ sub rem_pkgs {
     foreach (@rempkgs) {
       $retval = check_pkg($_,0);
       if ($retval ne "notinst") {
-        die "Option -n selected, stopping here.\n" if ($nomod);
+        die "Option -n selected, stopping here.\n" if $nomod;
         print "=> Removing $_\n";
         system("$pkgrm $pkgforce $pkgtrace $_`");
       }
@@ -1083,26 +1089,26 @@ sub stream {
 
   foreach (@install_order) {		# delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
-    die "Could not delete $pkgdir/$_: $!" if $status;
+    die "Could not delete $pkgdir/$_: $!\n" if $status;
   }
 
   foreach (@install_order) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
     print $fh "Transforming $_...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not transform $file: $!" if $status;
+    die "Could not transform $file: $!\n" if $status;
   }
 
   # pkgtrans all of them into one package stream
   print $fh "Transforming packages into stream ($transfile)...\n";
   my $status = system("/bin/touch $transfile");
-  die "Could not create stream file: $!" if $status;
+  die "Could not create stream file: $!\n" if $status;
   $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
-  die "Could not transform packages into stream: $!" if $status;
+  die "Could not transform packages into stream: $!\n" if $status;
 
   foreach (@install_order) {		# delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_");
-    die "Could not delete $pkgdir/$_: $!" if $status;
+    die "Could not delete $pkgdir/$_: $!\n" if $status;
   }
 
   # print cmd needed to install
