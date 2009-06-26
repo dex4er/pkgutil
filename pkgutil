@@ -152,6 +152,28 @@ sub compare {
   }
 }
 
+# describe available packages
+
+sub describe {
+  my $desc_file = mangle_url($mirror[0]);
+  $desc_file =~ s|/catalog\.|/descriptions\.|;
+
+  open(DESC,"<$desc_file");
+  while (my $line = <DESC>) {
+    chomp $line;
+    if (scalar(@ARGV) > 0) {
+      foreach (@ARGV) {
+        print "$line\n" if ($line =~ /$_/i);
+      }
+    } else {
+      print "$line\n";
+    }
+  }
+  close DESC;
+  exit 0;
+}
+
+# check catalog
 # email notifications when updates are available
 #   email - address to send notications to
 
@@ -186,20 +208,24 @@ sub fetch_catalog {
   my $status;
 
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
-  print "Fetching new catalog $url if available...\n";
+  print "Fetching new catalog and descriptions ($url) if available...\n";
   die "Option -n selected, stopping here.\n" if $nomod;
 
+  my $desc_file = $filename;
+  $desc_file =~ s|/catalog\.?|/descriptions\.|;
   if ($url =~ /^file:/) {
     my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
     $status = system("/bin/cp $tmpcatsrc/catalog $filename");
+    die "\nFetching of catalog failed.\n" if $status;
+    $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
+    die "\nFetching of descriptions failed.\n" if $status;
   } else {
     $status = system("$wget $wgetopts -O $filename $url/catalog");
+    die "\nFetching of catalog failed.\n" if $status;
+    $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
+    die "\nFetching of descriptions failed.\n" if $status;
   }
   system("/bin/touch $filename") if (-w $filename);
-  if ($status) {
-    print "\nFetching of catalog failed.\n";
-    exit 1;
-  }
 }
 
 # get wanted package and its dependencies
@@ -764,7 +790,8 @@ sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
-      $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile);
+      $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
+      $opt_describe);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -772,6 +799,7 @@ sub parse_cl {
              "r|remove"		=> \$opt_remove,
              "d|download"	=> \$opt_download,
              "a|available"	=> \$opt_avail,
+             "describe"		=> \$opt_describe,
              "c|compare"	=> \$opt_compare,
              "C"		=> \$opt_compare_diffonly,
              "config=s"		=> \$opt_config,
@@ -841,6 +869,7 @@ sub parse_cl {
   stream($opt_target,$opt_output) if $opt_stream;
   email($opt_email) if $opt_email;
   available() if $opt_avail;
+  describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
   install(0) if $opt_install;
@@ -1131,6 +1160,7 @@ sub usage {
   print "\n  -d, --download\tDownload only";
   print "\n  -U, --catalog\t\tUpdate catalog";
   print "\n  -a, --available\tShow available packages";
+  print "\n      --describe\tDescribe available packages";
   print "\n  -c, --compare\t\tCompare installed packages to current";
   print "\n  -C           \t\tSame as -c but only show different versions";
   print "\n  -e, --email=address\tSend e-mail with available updates";
@@ -1291,6 +1321,10 @@ Update catalog.
 
 Show available packages.
 
+=item B<--describe>
+
+Describe available packages.
+
 =item B<-c, --compare>
 
 Compare installed packages to current.
@@ -1359,6 +1393,14 @@ Show pkgutil version.
 
 System check. This shows info about binaries and more that pkgutil needs to support all features.
 
+=item B<-L, --listfile>
+
+List files in packages. Works on both installed packages as well as on (uncompressed) package files. You can even mix them on the command line.
+
+=item B<-F, --findfile>
+
+Find files in installed packages.
+
 =back
 
 =head1 EXAMPLES
@@ -1395,30 +1437,38 @@ Pkgutil will look for pkgutil.conf in /opt/csw/etc but the primary location is /
 
 The settings that can be used are:
 
+C<maxpkglist>
+
+During dependency calculation the recursive algorithm needs to be protected against cyclic dependencies in the catalog (packages that list each other as dependencies) or pkgutil will not stop until memory is exhausted. This sets the maximum number of recursions before pkgutil stops.
+
 C<mirror>
 
 This is the mirror that is used for downloading the catalog and packages. Try setting it to your nearest mirror to improve download speed. This option may be specified multiple times.
 
 It also supports (in an experimental way) the file:// protocol for local/NFS mirrors. Example: C<mirror=file:///absolute/path/to/files>
 
+C<noncsw>
+
+Enable (default is disable) support for non-CSW prefixed packages.
+
+Pkgutil also uses a file to configure pkgadd when the yes (-y) option is used. This file is located in /var/opt/csw/pkgutil and is called admin. It's by default set up to fully automate installations but if you change something in this file it will be preserved during upgrades of pkgutil. Read more about the admin file with "man -s4 admin".
+
 C<pkgaddopts>
 
 Send options to pkgadd, one example is -G that will only install the packages in the global zone for Solaris 10.
 
-C<wgetopts>
+C<pkgliststyle>
 
-Send options to wget, for example to show more or less information during downloads.
+Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read.
 
 C<use_gpg>
 C<use_md5>
 
 These two can enable (default is disabled for both) checking the catalogs integrity (GPG) and that each downloaded file is unchanged from the published one (MD5). To use GPG you need CSWgnupg installed. MD5 is supported by default in Solaris 10 and on Solaris 8 and 9 if you have CSWperl installed and have /opt/csw/bin first in your path. You can also install CSWtextutils to get MD5 support.
  
-C<noncsw>
+C<wgetopts>
 
-Enable (default is disable) support for non-CSW prefixed packages.
-
-Pkgutil also uses a file to configure pkgadd when the yes (-y) option is used. This file is located in /var/opt/csw/pkgutil and is called admin. It's by default set up to fully automate installations but if you change something in this file it will be preserved during upgrades of pkgutil. Read more about the admin file with "man -s4 admin".
+Send options to wget, for example to show more or less information during downloads.
 
 =head1 SEE ALSO
 
