@@ -220,6 +220,7 @@ sub fetch_catalog {
     $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
     die "\nFetching of descriptions failed.\n" if $status;
   } else {
+    locate_wget() unless (-x $wget);	# if wget disappeared locate alt.
     $status = system("$wget $wgetopts -O $filename $url/catalog");
     die "\nFetching of catalog failed.\n" if $status;
     $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
@@ -257,7 +258,7 @@ sub fetch_pkgs {
       print $fh "A local copy of $_ exists and is of matching size.\n";
     } else {
       print $fh "Fetching $_...\n";
-      locate_wget() if (-x $wget);	# if wget disappeared locate alt.
+      locate_wget() unless (-x $wget);	# if wget disappeared locate alt.
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
         $tried = 1;
