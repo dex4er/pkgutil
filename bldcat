@@ -16,7 +16,7 @@ my %oldcatalog;
 my %olddescriptions;
 
 $pkgdir = $ARGV[0] if $ARGV[0];
-if ($#ARGV > 0) {
+if (scalar(@ARGV) > 1) {
   print STDERR "Usage: $0 [<package dir>]\n";
   exit 1;
 }
