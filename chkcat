@@ -25,7 +25,7 @@ GetOptions("v|verbose"		=> \$verbose,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
-if ($#ARGV >= 0) {
+if (scalar(@ARGV) > 0) {
   $catalog = $ARGV[0];
 } else {
   usage();
@@ -54,7 +54,7 @@ sub retcode {
 
 my (@tmp) = `cat $catalog`;
 
-while ($#tmp >= 0) {
+while (scalar(@tmp) > 0) {
   my $line = $tmp[0];
   shift @tmp;
   chomp $line;
@@ -72,7 +72,7 @@ while ($#tmp >= 0) {
 
 (@tmp) = `cat $catalog`;
 
-while ($#tmp >= 0) {
+while (scalar(@tmp) > 0) {
   my $line = $tmp[0];
   shift @tmp;
   chomp $line;
@@ -104,10 +104,10 @@ while ($#tmp >= 0) {
 
   # number of fields, should be 8
 
-  if ($#field != 7) {
+  if (scalar(@field) != 8) {
     retcode(2);
     if (! $quiet) {
-      print "\nERROR! ",$#field + 1," fields instead of normal 8. [$line]\n";
+      print "\nERROR! ",scalar(@field)," fields instead of normal 8. [$line]\n";
     }
     next;
   }
@@ -306,7 +306,7 @@ while ($#tmp >= 0) {
 
 my @tmplist = sort(@pkglist);
 my $dup = "";
-while ($#tmplist > 0) {		# no need to check for dups if only one entry
+while (scalar(@tmplist) > 1) {		# no need to check for dups if only one entry
   my $tmp = $tmplist[0];
   shift @tmplist;
   if ($tmp eq $tmplist[0] && $dup ne $tmp) {
