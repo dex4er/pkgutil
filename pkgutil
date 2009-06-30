@@ -158,6 +158,7 @@ sub describe {
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
 
+  check_catalog(1) unless (-r $desc_file);
   open(DESC,"<$desc_file");
   while (my $line = <DESC>) {
     chomp $line;
