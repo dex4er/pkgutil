@@ -44,7 +44,6 @@ chomp(my $arch = `uname -p`);
 chomp(my $rel = `uname -r`);
 
 # show available packages in catalog
-
 sub available {
   foreach my $common (sort keys %commonpkg) {
     my $pkgname = $commonpkg{$common};
@@ -65,7 +64,6 @@ sub available {
 
 # check catalog
 #   always - always update catalog
-
 sub check_catalog {
   my($always) = @_;
 
@@ -83,7 +81,6 @@ sub check_catalog {
 # check if package is already installed and if so, which version
 #   pkg  - package to check for
 #   mode - 0 = return full string, 1 = return only rev part
-
 sub check_pkg {
   my ($pkg,$mode) = @_;
   my ($tmp,$exit_code,$retvalue);
@@ -109,7 +106,6 @@ sub check_pkg {
 # compare current to available packages
 #   mode - 0 = print full list, 1 = return list of old packages
 #          2 = return full list of old packages, 3 = same as 0 but only diffs
-
 sub compare {
   my ($mode) = @_;
   my (@cswpkgs,@retlist);
@@ -153,7 +149,6 @@ sub compare {
 }
 
 # describe available packages
-
 sub describe {
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
@@ -177,7 +172,6 @@ sub describe {
 # check catalog
 # email notifications when updates are available
 #   email - address to send notications to
-
 sub email {
   my ($email) = @_;
   my $file = "/tmp/pkgutil.$$.$^T";
@@ -202,7 +196,6 @@ sub email {
 # fetch catalog
 #   url - url to download from
 #   filename - filename to use for local catalog
-
 sub fetch_catalog {
   my($url, $filename) = @_;
   my $wgetopts = "";
@@ -233,7 +226,6 @@ sub fetch_catalog {
 # get wanted package and its dependencies
 #   pkglist - packages to fetch
 #   mode - 4 = stream silent
-
 sub fetch_pkgs {
   my ($mode,@pkglist) = @_;
   my $wgetopts = "";
@@ -281,7 +273,6 @@ sub fetch_pkgs {
 }
 
 # find files in package
-
 sub find_file {
   my $contents = "/var/sadm/install/contents";
 
@@ -300,7 +291,6 @@ sub find_file {
 
 # format size in bytes to more human friendly format with suffixes
 #   size - size in bytes
-
 sub format_byte {
   my ($size) = @_;
   my $suffix = "B";
@@ -321,7 +311,6 @@ sub format_byte {
 }
 
 # check signature on catalog
-
 sub gpg {
   my ($catalog) = @_;
   my $line;
@@ -352,7 +341,6 @@ sub gpg {
 }
 
 # init
-
 sub init {
   my ($conf) = @_;
   my @conf_file;
@@ -415,7 +403,6 @@ sub init {
 
 # install packages
 #   pkglist - packages to install
-
 sub inst_pkgs {
   my @pkglist = @_;
   my $tmp = "";
@@ -461,8 +448,7 @@ sub inst_pkgs {
 
 # install (-i) option
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
-#          4 = stream silent
-
+#          4 = stream silent, 5 = transform
 sub install {
   my ($mode) = @_;
   my $retvalue;
@@ -610,6 +596,8 @@ sub install {
     fetch_pkgs($mode,@dlpkglist);
   }
 
+  transform_pkg(@dlpkglist) if ($mode == 5);
+
   return @revpkglist if ($mode == 3 || $mode == 4);	# is -s used
 
   if ($mode == 0) {		# if -d not used, install
@@ -622,7 +610,6 @@ sub install {
 }
 
 # list files in package
-
 sub list_file {
   my $contents = "/var/sadm/install/contents";
 
@@ -656,7 +643,6 @@ sub list_file {
 }
 
 # find gzip
-
 sub locate_gzip {
   my @locations = ("/opt/csw/bin","/bin","/usr/local/bin");
 
@@ -671,7 +657,6 @@ sub locate_gzip {
 }
 
 # find wget
-
 sub locate_wget {
   my @locations = ("/opt/csw/bin","/usr/sfw/bin","/usr/local/bin");
   my $libexec = "/opt/csw/libexec/pkgutil";
@@ -691,7 +676,6 @@ sub locate_wget {
 
 # make a filename from the URL - /es to _es.
 #   url - url to mangle
-
 sub mangle_url {
   my($url) = @_;
 
@@ -703,7 +687,6 @@ sub mangle_url {
 
 # check md5 on downloaded files
 #   mode - 4 = stream silent
-
 sub md5 {
   my ($pkg,$file,$mode) = @_;
   my $md5;
@@ -737,7 +720,6 @@ sub md5 {
 # parse catalog
 #   pkg  - package to look for, can be both common name and true name
 #   mode - what we want to return, field number from catalog
-
 sub parse_catalog {
   my ($pkg,$mode) = @_;
   my ($retvalue, $name);
@@ -787,13 +769,12 @@ sub parse_catalog {
 }
 
 # parse command line
-
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe);
+      $opt_describe,$opt_transform);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -821,6 +802,7 @@ sub parse_cl {
              "v|version"	=> \$opt_version,
              "L|listfile"	=> \$opt_listfile,
              "F|findfile"	=> \$opt_findfile,
+             "transform"	=> \$opt_transform,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   usage() if $opt_help;
@@ -877,6 +859,7 @@ sub parse_cl {
   install(0) if $opt_install;
   install(2) if $opt_remove;		# remove instead of install
   install(1) if $opt_download;		# download only
+  install(5) if $opt_transform;		# download and transform only
 
   # upgrade is a special case of install
 
@@ -900,7 +883,6 @@ sub parse_cl {
 
 # show version info
 #   mode - 0 = print only version, 1 = system check
-
 sub pkgutilver {
   my ($mode) = @_;
   my $flag = 0;
@@ -963,7 +945,6 @@ sub pkgutilver {
 # read catalog into hash
 #   catalog - catalog to read
 #   filename - filename to use
-
 sub read_catalog {
   my($catalog, $filename) = @_;
   my @llst;
@@ -985,7 +966,6 @@ sub read_catalog {
 
 # remove packages
 #   pkglist - packages to remove
-
 sub rem_pkgs {
   my @pkgs = @_;
   my $retval = "";
@@ -1052,7 +1032,6 @@ sub rem_pkgs {
 # build package streams
 #   target - arch and os release
 #   output - file name for package stream
-
 sub stream {
   my ($target,$output) = @_;
   my @supp_arch = qw(sparc i386);
@@ -1151,8 +1130,19 @@ sub stream {
   exit 0;
 }
 
-# show usage info
+# transform downloaded packages
+sub transform_pkg {
+  my (@pkglist) = @_;
 
+  foreach (@pkglist) {		# pkgtrans them one by one
+    my $file = parse_catalog($_,3);
+    print "Transforming $_ ($pkgdir)...\n";
+    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+    die "Could not transform $file: $!\n" if $status;
+  }
+}
+
+# show usage info
 sub usage {
   print "Pkgutil $pkgutilver, install Solaris packages the easy way.\n\n";
   print "Usage: pkgutil [option]... [package](-[version])...\n";
@@ -1181,7 +1171,8 @@ sub usage {
   print "\n  -v, --version\t\tShow version";
   print "\n  -V, --syscheck\tSystem check";
   print "\n  -L, --listfile\tList files in package";
-  print "\n  -F, --findfile\tFind files in package\n";
+  print "\n  -F, --findfile\tFind files in package";
+  print "\n      --transform\tTransform (unpack) package\n";
   print "\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 0;
@@ -1192,7 +1183,6 @@ sub usage {
 # as per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
 # Note that if neither has a REV code, -1 is *ALWAYS* returned.
 #   p1rev, p2rev - versions to compare
-
 sub verscmp {
   my($p1rev,$p2rev) = @_; # crev (new), irev (old), then 1 => upgrade
   my (@p1list,@p2list);
