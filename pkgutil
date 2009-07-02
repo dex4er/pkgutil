@@ -820,8 +820,9 @@ sub parse_cl {
   # create runtime copy of admin to make sure we have one
   # available even during upgrade of pkgutil itself
   $admin = "$workdir/admin";
+  $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
   open (ADMSRC,"<$admin") or die "Can't open $admin: $!\n";
-  open (ADMCPY,">$admin.run") or die "Can't open $admin.run: $!\n";
+  open (ADMCPY,">$workdir/admin.run") or die "Can't open $workdir/admin.run: $!\n";
   while (<ADMSRC>) {
     print ADMCPY;
   }
@@ -856,10 +857,10 @@ sub parse_cl {
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
+  install(5) if $opt_transform;		# download and transform only
   install(0) if $opt_install;
   install(2) if $opt_remove;		# remove instead of install
   install(1) if $opt_download;		# download only
-  install(5) if $opt_transform;		# download and transform only
 
   # upgrade is a special case of install
 
