@@ -9,11 +9,11 @@ package automatically.
 Configure
 ---------
 
-There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing 
-you normally need to change there is the mirror location. If you have a 
-pkgutil.conf file in /etc/opt/csw/ the settings in it will override the ones
-in /opt/csw/etc. If no pkgutil.conf is found in either of those two locations 
-defaults are used.
+There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing
+you normally need to change there is the mirror location. If you have a
+pkgutil.conf file in /etc/opt/csw it will override the one in /opt/csw/etc
+on a setting-by-setting basis. If no pkgutil.conf is found in either of
+those two locations defaults are used.
 
 Official web sites
 ------------------

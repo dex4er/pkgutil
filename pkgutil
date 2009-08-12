@@ -1426,7 +1426,7 @@ Will make a package stream including all dependencies needed for CSWbind. The pa
 
 Pkgutil uses a configuration file, pkgutil.conf, that contains a few important settings. No modifications are mandatory though since pkgutil will happily run with the defaults.
 
-Pkgutil will look for pkgutil.conf in /opt/csw/etc but the primary location is /etc/opt/csw. If no pkgutil.conf is found in either of those two locations defaults are used.
+There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing you normally need to change there is the mirror location. If you have a pkgutil.conf file in /etc/opt/csw it will override the one in /opt/csw/etc on a setting-by-setting basis. If no pkgutil.conf is found in either of those two locations defaults are used.
 
 The settings that can be used are:
 
