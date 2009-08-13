@@ -806,11 +806,14 @@ sub parse_cl {
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   usage() if $opt_help;
+  pkgutilver(0) if $opt_version;
+  pkgutilver(1) if $opt_syscheck;
   list_file() if $opt_listfile;
   find_file() if $opt_findfile;
   init($opt_config) if $opt_config;
   locate_wget();
   locate_gzip();
+
   if ($opt_workdir) {	# set/create optional working dir
     $workdir = $opt_workdir;
     print "new workdir: $workdir\n" if $debug;
@@ -822,6 +825,7 @@ sub parse_cl {
   $admin = "$workdir/admin";
   $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
   open (ADMSRC,"<$admin") or die "Can't open $admin: $!\n";
+  die "Another instance of pkgutil is already running!\n($workdir/admin.run found)\n" if (-r "$workdir/admin.run");
   open (ADMCPY,">$workdir/admin.run") or die "Can't open $workdir/admin.run: $!\n";
   while (<ADMSRC>) {
     print ADMCPY;
@@ -833,8 +837,6 @@ sub parse_cl {
   my $status = system("/bin/mkdir -p $pkgdir");
   die "Could not create $pkgdir: $!\n" if $status;
 
-  pkgutilver(0) if $opt_version;
-  pkgutilver(1) if $opt_syscheck;
   # Get mirrors together
   @mirror = @{$config{mirror}};
   $mirror[0] = $defaultmirror unless @mirror; # if no mirrors configured
