@@ -59,6 +59,7 @@ sub available {
       }
     }
   }
+  unlink $admin if (-r $admin);
   exit 0;
 }
 
@@ -144,6 +145,7 @@ sub compare {
   if ($mode == 1 || $mode == 2) {
     return @retlist;
   } else {
+    unlink $admin if (-r $admin);
     exit 0;
   }
 }
@@ -166,6 +168,7 @@ sub describe {
     }
   }
   close DESC;
+  unlink $admin if (-r $admin);
   exit 0;
 }
 
@@ -190,6 +193,7 @@ sub email {
     system (@args);
     unlink $file;
   }
+  unlink $admin if (-r $admin);
   exit 0;
 }
 
@@ -265,6 +269,7 @@ sub fetch_pkgs {
       }
       if ($status || ! $tried) {
         print "\nFetching of $_ failed. Try updating your catalog with pkgutil -U.\n";
+        unlink $admin if (-r $admin);
         exit 1;
       }
     }
@@ -286,6 +291,7 @@ sub find_file {
     }
     close FILE;
   }
+  unlink $admin if (-r $admin);
   exit 0;
 }
 
@@ -318,6 +324,7 @@ sub gpg {
 
   if (! -x "/opt/csw/bin/gpg") {
     print "GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.\n";
+    unlink $admin if (-r $admin);
     exit 1;
   }
   open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
@@ -336,6 +343,7 @@ sub gpg {
     print "Status GPG: $status\n" if $debug;
   } else {
     print "Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.\n";
+    unlink $admin if (-r $admin);
     exit 1;
   }
 }
@@ -437,6 +445,7 @@ sub inst_pkgs {
         }
       } else {
         print "\nGzip not found, please install CSWgzip.\n";
+        unlink $admin if (-r $admin);
         exit 1;
       }
       ($file) = ($file =~ /(.+)\.gz$/);
@@ -465,6 +474,7 @@ sub install {
       $pkgvers{$tmp} = $vers;
     } else {
       print "Package $tmppkg not in catalog...exiting.\n";
+      unlink $admin if (-r $admin);
       exit 1;
     }
   }
@@ -525,7 +535,6 @@ sub install {
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
   # which packages do we really need to download?
-
   if ($mode != 3 && $mode != 4) {
     foreach (@revpkglist) {
       my $old = check_pkg($_,0);
@@ -564,7 +573,6 @@ sub install {
 
   # what packages do we need to fetch?
   # make sure they are in correct order
-
   foreach my $i (@revpkglist) {
     my $hit = 0;
     foreach (@curpkglist) {
@@ -582,7 +590,6 @@ sub install {
   print "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
 
   # print size of download
-
   if (scalar(@dlpkglist) > 0) {
     foreach (@dlpkglist) {
       $size += parse_catalog($_,5);
@@ -717,6 +724,21 @@ sub md5 {
   print $fh "MD5 for $pkg matched.\n";
 }
 
+# do cleanup and exit with return code
+#   msg - message to stderr
+#   err - error ($!)
+#   rc - return code when exiting
+sub myexit {
+  my ($msg,$err,$rc) = @_;
+
+  $msg = "" unless $msg;
+  $err = "" unless $err;
+  $rc = 0 unless $rc;
+  unlink $admin if (-r $admin);
+  print STDERR "$msg: $err\n" if ($msg || $err);
+  exit $rc;
+}
+
 # parse catalog
 #   pkg  - package to look for, can be both common name and true name
 #   mode - what we want to return, field number from catalog
@@ -825,7 +847,19 @@ sub parse_cl {
   $admin = "$workdir/admin";
   $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
   open (ADMSRC,"<$admin") or die "Can't open $admin: $!\n";
-  die "Another instance of pkgutil is already running!\n($workdir/admin.run found)\n" if (-r "$workdir/admin.run");
+  if (-r "$workdir/admin.run") {
+    my @pslist = `/bin/ps -ef`;
+    my $pkgutilinst = 0;
+    foreach (@pslist) {
+      $pkgutilinst++ if (/\bperl\s.*pkgutil\b/);
+    }
+    if ($pkgutilinst > 1) {
+      die "Another instance of pkgutil is already running!\n";
+    } else {
+      unlink "$workdir/admin.run" if (-r "$workdir/admin.run");
+      print "Stale lock file ($workdir/admin.run) removed\n";
+    } 
+  }
   open (ADMCPY,">$workdir/admin.run") or die "Can't open $workdir/admin.run: $!\n";
   while (<ADMSRC>) {
     print ADMCPY;
