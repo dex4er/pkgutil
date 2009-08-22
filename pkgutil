@@ -364,7 +364,9 @@ sub init {
              "use_md5"		=> "",
              "pkgliststyle"	=> "",
              "maxpkglist"	=> "",
-             "noncsw"           => "");
+             "noncsw"           => "",
+	     "stop_on_hook_soft_error" => ""
+      );
 
   foreach (@conf_file) {
     if (-r $_) {	# if conf file found, parse it
@@ -399,6 +401,7 @@ sub init {
     print "use_gpg: $config{use_gpg}\n";
     print "use_md5: $config{use_md5}\n";
     print "wgetopts: $config{wgetopts}\n";
+    print "stop_on_hook_soft_error: $config{stop_on_hook_soft_error}\n";
   }
 
   $pkgliststyle = $config{pkgliststyle} if $config{pkgliststyle};
@@ -1498,6 +1501,10 @@ These two can enable (default is disabled for both) checking the catalogs integr
 C<wgetopts>
 
 Send options to wget, for example to show more or less information during downloads.
+
+C<stop_on_hook_soft_error>
+
+This option determines whether or not execution will be halted if a hook returns 2 as its exit code.  Execution is always stopped if a hook returns 1.  Set this to true to enable it.
 
 =head1 SEE ALSO
 
