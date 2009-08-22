@@ -23,6 +23,7 @@
 
 use strict;
 use Getopt::Long;
+use Cwd;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
@@ -410,6 +411,73 @@ sub init {
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
+}
+
+sub run_hooks {
+    my $hook_name = shift;
+    my @affected_pkgs = @_;
+
+    my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
+    my ($hook, $hookfile, $oldwd, $status, $code);
+    my @hooks_to_run;
+    my @valid_hooks = (
+	'prebatchinstall',
+	'prebatchupgrade',
+	'prebatchremove',
+	'preinstall',
+	'preupgrade',
+	'preremove',
+	'postbatchinstall',
+	'postbatchupgrade',
+	'postbatchremove',
+	'postinstall',
+	'postupgrade',
+	'postremove'
+	);
+
+    die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
+
+    if (! -d $hook_dir) {
+	print "No $hook_name hook scripts.\n" if $debug;
+    } else {
+	# we only pass a single arg to each hook.  either a filename
+	# containing the list of affected packages or a single package
+	# name
+
+	$oldwd = getcwd();
+	chdir($hook_dir) or die "Couldn't cd to $hook_dir";
+
+	@hooks_to_run = glob("*");
+
+	print "Executing $hook_name hook scripts.\n" if scalar(@hooks_to_run) and $debug;
+
+	foreach my $hookfile (sort { $a <=> $b } (@hooks_to_run)) {
+	    $hook = "$hook_dir/$hookfile";
+	    if (-x $hook) {
+		print "Running $hook.\n" if $debug;
+		system("$hook " . join(' ', @affected_pkgs));
+		$status = $?;
+		$code = $status >> 8;
+
+		print "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
+
+		# this allows a hook to stop execution of any further
+		# package actions.
+		if ($code == 1) {
+		    print STDERR "Hook $hook_name.d/$hookfile returned with code 1.\nDying.\n";
+		    exit 1;
+		} elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
+		    print STDERR "Hook $hook_name.d/$hookfile returned with code 2.\n\tRespecting configuration option stop_on_hook_soft_error.\n";
+		    exit 1;
+		} elsif ($code > 2) {
+
+		    print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway...\n";
+		}
+	    }
+	}
+
+	chdir($oldwd);
+    }
 }
 
 # install packages
