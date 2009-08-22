@@ -481,8 +481,11 @@ sub run_hooks {
 }
 
 # install packages
+#   batchmode - whether we're updating some of the packages or doing new
+#               installs only
 #   pkglist - packages to install
 sub inst_pkgs {
+  my $batchmode = shift;
   my @pkglist = @_;
   my $tmp = "";
   my $pkgadd = "/usr/sbin/pkgadd";
@@ -680,7 +683,7 @@ sub install {
 
   if ($mode == 0) {		# if -d not used, install
     if (scalar(@dlpkglist) > 0) {
-      inst_pkgs(@dlpkglist);
+      inst_pkgs(scalar(@updpkglist) ? 'upgrade' : 'install', @dlpkglist);
     }
   }
   unlink $admin if (-r $admin);
