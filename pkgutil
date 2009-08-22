@@ -621,7 +621,11 @@ sub install {
 
   if ($mode == 2) {		# if -r used
     if (scalar(@revpkglist) > 0) {
-      rem_pkgs(reverse @revpkglist);
+      my @rmpkgs = ();
+      foreach my $p (@revpkglist) {
+	push(@rmpkgs, "$p-" . $pkgvers{$p});
+      }
+      rem_pkgs(reverse @rmpkgs);
     }
   }
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
@@ -1097,6 +1101,7 @@ sub read_catalog {
 #   pkglist - packages to remove
 sub rem_pkgs {
   my @pkgs = @_;
+  my %pkgvers = {};
   my $retval = "";
   my $pkgrm = "/usr/sbin/pkgrm";
   my $pkgforce = "";
@@ -1117,7 +1122,8 @@ sub rem_pkgs {
     push(@cswpkgs,$pkg) unless $skip;
   }
   print "Examining dependencies for:\n";
-  foreach $i (@pkgs) {
+  foreach my $userpkg (@pkgs) {
+    $i = (split(/\-/, $userpkg))[0];
     print "  $i";
     $depinuse = 0;
     foreach $j (@cswpkgs) {
@@ -1134,7 +1140,7 @@ sub rem_pkgs {
       }
       $depinuse ? last : next;
     }
-    push(@rempkgs,$i) unless $depinuse;
+    push(@rempkgs,$userpkg) unless $depinuse;
     $depinuse ? print " (in use)\n" : print " (remove)\n";
   }
   if (scalar(@rempkgs) > 1 && ! $force) {
@@ -1146,12 +1152,13 @@ sub rem_pkgs {
     run_hooks('prebatchremove', @rempkgs);
 
     foreach (@rempkgs) {
-      $retval = check_pkg($_,0);
+      my ($p, $v) = split(/\-/, $_);
+      $retval = check_pkg($p,0);
       if ($retval ne "notinst") {
         die "Option -n selected, stopping here.\n" if $nomod;
-        print "=> Removing $_\n";
+        print "=> Removing $p\n";
 	run_hooks('preremove', ($_));
-        system("$pkgrm $pkgforce $pkgtrace $_`");
+        system("$pkgrm $pkgforce $pkgtrace $p`");
 	run_hooks('postremove', ($_));
       }
     }
