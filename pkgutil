@@ -451,7 +451,7 @@ sub run_hooks {
 
 	print "Executing $hook_name hook scripts.\n" if scalar(@hooks_to_run) and $debug;
 
-	foreach my $hookfile (sort { $a <=> $b } (@hooks_to_run)) {
+	foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
 	    $hook = "$hook_dir/$hookfile";
 	    if (-x $hook) {
 		print "Running $hook.\n" if $debug;
