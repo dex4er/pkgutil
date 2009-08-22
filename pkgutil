@@ -494,15 +494,24 @@ sub inst_pkgs {
   my $file;
   my $name;
   my $pkgtrace = "";
+  my $per_package_hook = "install";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgtrace = "-v" if $trace;
+
+  run_hooks("prebatch$batchmode", @pkglist);
+
   foreach (@pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($force && -r $admin);
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
+      # a small sanity check
+      die "Batch hook 'install' was run, but we've found a package being upgraded.  Bailing out." if ($batchmode eq 'install');
+
+      $per_package_hook = 'upgrade';
+      run_hooks("pre$per_package_hook", $_);
       print "=> Removing old version of $pkgname\n";
       system("$pkgrm $pkgforce $pkgtrace $pkgname`");
     }
@@ -524,9 +533,18 @@ sub inst_pkgs {
       }
       ($file) = ($file =~ /(.+)\.gz$/);
     }
+
+    # we may have already run preupgrade above.  running upgrade _and_ install
+    # is invalid.
+    run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
     unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
+
+    run_hooks("post$per_package_hook", $_);
+    $per_package_hook = 'install'; #reset for next package in the list.
   }
+
+  run_hooks("postbatch$batchmode", @pkglist);
 }
 
 # install (-i) option
@@ -1125,14 +1143,20 @@ sub rem_pkgs {
     exit 1 if ($prompt =~ /^[nN]/);
   }
   if (scalar(@rempkgs) > 0) {
+    run_hooks('prebatchremove', @rempkgs);
+
     foreach (@rempkgs) {
       $retval = check_pkg($_,0);
       if ($retval ne "notinst") {
         die "Option -n selected, stopping here.\n" if $nomod;
         print "=> Removing $_\n";
+	run_hooks('preremove', ($_));
         system("$pkgrm $pkgforce $pkgtrace $_`");
+	run_hooks('postremove', ($_));
       }
     }
+
+    run_hooks('postbatchremove', @rempkgs);
   } else {
     print "Nothing to remove.\n";
   }
