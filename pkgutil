@@ -552,8 +552,9 @@ sub inst_pkgs {
 # install (-i) option
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
 #          4 = stream silent, 5 = transform
+#   deps - option --nodeps set or not
 sub install {
-  my ($mode) = @_;
+  my ($mode,$deps) = @_;
   my $retvalue;
   my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
@@ -572,36 +573,39 @@ sub install {
       exit 1;
     }
   }
-  foreach my $tmppkg2 (@pkglist) {
-    # N.B. This array grows and we keep looping until we've satisfied all
-    # of the dependencies.
-    print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
-    die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
-    my @tmpdeps;
-    if ($tmppkg2 ne "CSWcommon") {
-      $retvalue = parse_catalog($tmppkg2,6);
-      if ($retvalue eq "not in catalog") {
-        system("pkginfo -q $tmppkg2");
-        next if $? == 0;	# already installed... forgive its absence from the catalog
-        print "Package $tmppkg2 not in catalog...exiting.\n";
-        exit 1;
+
+  unless ($deps) {	# skip adding dependencies? (option --nodeps)
+    foreach my $tmppkg2 (@pkglist) {
+      # N.B. This array grows and we keep looping until we've satisfied all
+      # of the dependencies.
+      print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+      die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
+      my @tmpdeps;
+      if ($tmppkg2 ne "CSWcommon") {
+        $retvalue = parse_catalog($tmppkg2,6);
+        if ($retvalue eq "not in catalog") {
+          system("pkginfo -q $tmppkg2");
+          next if $? == 0;	# already installed... forgive its absence from the catalog
+          print "Package $tmppkg2 not in catalog...exiting.\n";
+          exit 1;
+        } else {
+          @tmpdeps = split(/\|/,$retvalue);
+          print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
+        }
       } else {
-        @tmpdeps = split(/\|/,$retvalue);
-        print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
+        next;
       }
-    } else {
+      if ($tmpdeps[0] ne "none") {
+        foreach my $dep (@tmpdeps) {
+          # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
+          if (! exists $pkgvers{$dep}) {
+            $pkgvers{$dep} = parse_catalog($dep,1);
+          }
+          push(@pkglist,$dep);	# append to list, does not include deduplication
+        }
+      }
       next;
     }
-    if ($tmpdeps[0] ne "none") {
-      foreach my $dep (@tmpdeps) {
-        # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
-        if (! exists $pkgvers{$dep}) {
-          $pkgvers{$dep} = parse_catalog($dep,1);
-	}
-        push(@pkglist,$dep);	# append to list, does not include deduplication
-      }
-    }
-    next;
   }
   print "pkglist ", join(",", @pkglist), "\n" if $debug;
 
@@ -894,7 +898,7 @@ sub parse_cl {
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_transform);
+      $opt_describe,$opt_transform,$opt_nodeps);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -923,6 +927,7 @@ sub parse_cl {
              "L|listfile"	=> \$opt_listfile,
              "F|findfile"	=> \$opt_findfile,
              "transform"	=> \$opt_transform,
+             "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   usage() if $opt_help;
@@ -991,10 +996,10 @@ sub parse_cl {
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
-  install(5) if $opt_transform;		# download and transform only
-  install(0) if $opt_install;
-  install(2) if $opt_remove;		# remove instead of install
-  install(1) if $opt_download;		# download only
+  install(5,$opt_nodeps) if $opt_transform;	# download and transform only
+  install(0,$opt_nodeps) if $opt_install;
+  install(2,$opt_nodeps) if $opt_remove;	# remove instead of install
+  install(1,$opt_nodeps) if $opt_download;	# download only
 
   # upgrade is a special case of install
 
@@ -1309,6 +1314,7 @@ sub usage {
   print "\n      --config=file\tUse this configuration file";
   print "\n  -y, --yes\t\tAnswer yes on all prompts";
   print "\n  -n, --nomod\t\tNo modifications are made to the system";
+  print "\n  -N, --nodeps\t\tNo dependencies";
   print "\n  -D, --debug\t\tDebug mode";
   print "\n      --trace\t\tSet trace mode (-v) for pkgadd/pkgrm";
   print "\n  -h, --help\t\tShow this help";
