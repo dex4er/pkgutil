@@ -942,6 +942,10 @@ sub parse_cl {
   if ($opt_workdir) {	# set/create optional working dir
     $workdir = $opt_workdir;
     print "new workdir: $workdir\n" if $debug;
+  } elsif ($>) {	# if -W not used and non-root, use pwd
+    $workdir = getcwd();
+    print "username: " . getpwuid($>) . "\n" if $debug;
+    print "Warning! You're not root and didn't set -W, using current dir ($workdir).\n";
   }
   $pkgdir = "$workdir/packages";
 
