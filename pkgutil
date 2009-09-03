@@ -930,11 +930,13 @@ sub parse_cl {
              "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
+  # simple options
   usage() if $opt_help;
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
   list_file() if $opt_listfile;
   find_file() if $opt_findfile;
+
   init($opt_config) if $opt_config;
   locate_wget();
   locate_gzip();
@@ -945,7 +947,7 @@ sub parse_cl {
   } elsif ($>) {	# if -W not used and non-root, use pwd
     $workdir = getcwd();
     print "username: " . getpwuid($>) . "\n" if $debug;
-    print "Warning! You're not root and didn't set -W, using current dir ($workdir).\n";
+    print "You're not root and didn't set -W, using current dir.\n";
   }
   $pkgdir = "$workdir/packages";
 
