@@ -348,16 +348,15 @@ sub init {
   } else {
     @conf_file = ("/opt/csw/etc/pkgutil.conf","/etc/opt/csw/pkgutil.conf");
   }
-  %config = ("mirror"		=> [],
-             "pkgaddopts"	=> "",
-             "wgetopts"		=> "",
-             "use_gpg"		=> "",
-             "use_md5"		=> "",
-             "pkgliststyle"	=> "",
-             "maxpkglist"	=> "",
-             "noncsw"           => "",
-	     "stop_on_hook_soft_error" => ""
-      );
+  %config = ("mirror"			=> [],
+             "pkgaddopts"		=> "",
+             "wgetopts"			=> "",
+             "use_gpg"			=> "",
+             "use_md5"			=> "",
+             "pkgliststyle"		=> "",
+             "maxpkglist"		=> "",
+             "noncsw"			=> "",
+             "stop_on_hook_soft_error"	=> "");
 
   foreach (@conf_file) {
     if (-r $_) {	# if conf file found, parse it
@@ -403,71 +402,6 @@ sub init {
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
 }
 
-sub run_hooks {
-    my $hook_name = shift;
-    my @affected_pkgs = @_;
-
-    my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
-    my ($hook, $hookfile, $oldwd, $status, $code);
-    my @hooks_to_run;
-    my @valid_hooks = (
-	'prebatchinstall',
-	'prebatchupgrade',
-	'prebatchremove',
-	'preinstall',
-	'preupgrade',
-	'preremove',
-	'postbatchinstall',
-	'postbatchupgrade',
-	'postbatchremove',
-	'postinstall',
-	'postupgrade',
-	'postremove'
-	);
-
-    die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
-
-    if (! -d $hook_dir) {
-	print "No $hook_name hook scripts.\n" if $debug;
-    } else {
-	# we only pass a single arg to each hook.  either a filename
-	# containing the list of affected packages or a single package
-	# name
-
-	$oldwd = getcwd();
-	chdir($hook_dir) or die "Could not cd to $hook_dir";
-
-	@hooks_to_run = glob("*");
-
-	print "Executing $hook_name hook scripts.\n" if scalar(@hooks_to_run) and $debug;
-
-	foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
-	    $hook = "$hook_dir/$hookfile";
-	    if (-x $hook) {
-		print "Running $hook.\n" if $debug;
-		system("$hook " . join(' ', @affected_pkgs));
-		$status = $?;
-		$code = $status >> 8;
-
-		print "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
-
-		# this allows a hook to stop execution of any further
-		# package actions.
-		if ($code == 1) {
-		    myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
-		} elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
-		    myexit("Hook $hook_name.d/$hookfile returned with code 2","respecting configuration option stop_on_hook_soft_error",1);
-		} elsif ($code > 2) {
-
-		    print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway...\n";
-		}
-	    }
-	}
-
-	chdir($oldwd);
-    }
-}
-
 # install packages
 #   batchmode - whether we're updating some of the packages or doing new
 #               installs only
@@ -496,7 +430,7 @@ sub inst_pkgs {
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       # a small sanity check
-      die "Batch hook 'install' was run, but we've found a package being upgraded.  Bailing out." if ($batchmode eq 'install');
+      die "Batch hook 'install' was run, but we've found a package being upgraded. Bailing out." if ($batchmode eq 'install');
 
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
@@ -590,12 +524,12 @@ sub install {
   }
   print "pkglist ", join(",", @pkglist), "\n" if $debug;
 
-  # clean list from excludes.  Delete from the %pkgvers hash:
+  # clean list from excludes. Delete from the %pkgvers hash:
   foreach my $pkg (@exclude) {
     delete $pkgvers{$pkg} if exists $pkgvers{$pkg};
   }
 
-  # now reverse and deduplicate @pkglist.  Need the last instance of each
+  # now reverse and deduplicate @pkglist. Need the last instance of each
   # package if reading @pkglist forwards.
   my %deduped;
   for my $pkg (reverse @pkglist) {
@@ -1156,6 +1090,68 @@ sub rem_pkgs {
     print "Nothing to remove.\n";
   }
   myexit("","",1);
+}
+
+# run hooks
+sub run_hooks {
+  my $hook_name = shift;
+  my @affected_pkgs = @_;
+
+  my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
+  my ($hook,$hookfile,$oldwd,$status,$code);
+  my @hooks_to_run;
+  my @valid_hooks = ('prebatchinstall',
+                     'prebatchupgrade',
+                     'prebatchremove',
+                     'preinstall',
+                     'preupgrade',
+                     'preremove',
+                     'postbatchinstall',
+                     'postbatchupgrade',
+                     'postbatchremove',
+                     'postinstall',
+                     'postupgrade',
+                     'postremove');
+
+  die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
+
+  if (! -d $hook_dir) {
+    print "No $hook_name hook scripts.\n" if $debug;
+  } else {
+    # we only pass a single arg to each hook.  either a filename
+    # containing the list of affected packages or a single package
+    # name
+    $oldwd = getcwd();
+    chdir($hook_dir) or die "Could not cd to $hook_dir";
+
+    @hooks_to_run = glob("*");
+
+    print "Executing $hook_name hook scripts.\n" if scalar(@hooks_to_run) and $debug;
+
+    foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
+      $hook = "$hook_dir/$hookfile";
+      if (-x $hook) {
+        print "Running $hook.\n" if $debug;
+        system("$hook " . join(' ', @affected_pkgs));
+        $status = $?;
+        $code = $status >> 8;
+
+        print "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
+
+        # this allows a hook to stop execution of any further
+        # package actions.
+        if ($code == 1) {
+          myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
+        } elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
+          myexit("Hook $hook_name.d/$hookfile returned with code 2","respecting configuration option stop_on_hook_soft_error",1);
+        } elsif ($code > 2) {
+          print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway...\n";
+        }
+      }
+    }
+
+    chdir($oldwd);
+  }
 }
 
 # build package streams
