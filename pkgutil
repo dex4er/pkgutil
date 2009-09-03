@@ -60,8 +60,7 @@ sub available {
       }
     }
   }
-  unlink $admin if (-r $admin);
-  exit 0;
+  myexit("","",0);
 }
 
 # check catalog
@@ -146,8 +145,7 @@ sub compare {
   if ($mode == 1 || $mode == 2) {
     return @retlist;
   } else {
-    unlink $admin if (-r $admin);
-    exit 0;
+    myexit("","",0);
   }
 }
 
@@ -169,8 +167,7 @@ sub describe {
     }
   }
   close DESC;
-  unlink $admin if (-r $admin);
-  exit 0;
+  myexit("","",0);
 }
 
 # check catalog
@@ -194,8 +191,7 @@ sub email {
     system (@args);
     unlink $file;
   }
-  unlink $admin if (-r $admin);
-  exit 0;
+  myexit("","",0);
 }
 
 # fetch catalog
@@ -241,8 +237,7 @@ sub fetch_pkgs {
     print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
-      unlink $admin if (-r $admin);
-      exit 1;
+      myexit("","",1);
     }
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
@@ -271,9 +266,7 @@ sub fetch_pkgs {
         last unless $status;
       }
       if ($status || ! $tried) {
-        print "\nFetching of $_ failed. Try updating your catalog with pkgutil -U.\n";
-        unlink $admin if (-r $admin);
-        exit 1;
+        myexit("\nFetching of $_ failed. Try updating your catalog with pkgutil -U.","",1);
       }
     }
     md5($_,"$pkgdir/$file",$mode) if $use_md5;
@@ -294,8 +287,7 @@ sub find_file {
     }
     close FILE;
   }
-  unlink $admin if (-r $admin);
-  exit 0;
+  myexit("","",0);
 }
 
 # format size in bytes to more human friendly format with suffixes
@@ -326,9 +318,7 @@ sub gpg {
   my $gpg_signed_catalog = 0;
 
   if (! -x "/opt/csw/bin/gpg") {
-    print "GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.\n";
-    unlink $admin if (-r $admin);
-    exit 1;
+    myexit("GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.","",1);
   }
   open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
   while ($line = <CATALOG>) {
@@ -339,15 +329,13 @@ sub gpg {
   print "GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
     print "Checking catalog integrity with gpg.\n";
-    rename($catalog, $catalog . ".asc") or die "Couldn't rename catalog!\n";
+    rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
     my $status = system("/opt/csw/bin/gpg $catalog.asc");
     die "Catalog signature is not correct!\n" if $status;
-    rename($catalog . ".asc", $catalog) or die "Couldn't rename catalog!\n";
+    rename($catalog . ".asc", $catalog) or die "Could not rename catalog!\n";
     print "Status GPG: $status\n" if $debug;
   } else {
-    print "Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.\n";
-    unlink $admin if (-r $admin);
-    exit 1;
+    myexit("Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.","",1);
   }
 }
 
@@ -447,7 +435,7 @@ sub run_hooks {
 	# name
 
 	$oldwd = getcwd();
-	chdir($hook_dir) or die "Couldn't cd to $hook_dir";
+	chdir($hook_dir) or die "Could not cd to $hook_dir";
 
 	@hooks_to_run = glob("*");
 
@@ -466,11 +454,9 @@ sub run_hooks {
 		# this allows a hook to stop execution of any further
 		# package actions.
 		if ($code == 1) {
-		    print STDERR "Hook $hook_name.d/$hookfile returned with code 1.\nDying.\n";
-		    exit 1;
+		    myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
 		} elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
-		    print STDERR "Hook $hook_name.d/$hookfile returned with code 2.\n\tRespecting configuration option stop_on_hook_soft_error.\n";
-		    exit 1;
+		    myexit("Hook $hook_name.d/$hookfile returned with code 2","respecting configuration option stop_on_hook_soft_error",1);
 		} elsif ($code > 2) {
 
 		    print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway...\n";
@@ -529,9 +515,7 @@ sub inst_pkgs {
           `$gzip -d $pkgdir/$file`;
         }
       } else {
-        print "\nGzip not found, please install CSWgzip.\n";
-        unlink $admin if (-r $admin);
-        exit 1;
+        myexit("\nGzip not found, please install CSWgzip.","",1);
       }
       ($file) = ($file =~ /(.+)\.gz$/);
     }
@@ -568,9 +552,7 @@ sub install {
       push(@pkglist,$tmp);
       $pkgvers{$tmp} = $vers;
     } else {
-      print "Package $tmppkg not in catalog...exiting.\n";
-      unlink $admin if (-r $admin);
-      exit 1;
+      myexit("Package $tmppkg not in catalog...exiting.","",1);
     }
   }
 
@@ -586,8 +568,7 @@ sub install {
         if ($retvalue eq "not in catalog") {
           system("pkginfo -q $tmppkg2");
           next if $? == 0;	# already installed... forgive its absence from the catalog
-          print "Package $tmppkg2 not in catalog...exiting.\n";
-          exit 1;
+          myexit("Package $tmppkg2 not in catalog...exiting.","",1);
         } else {
           @tmpdeps = split(/\|/,$retvalue);
           print "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
@@ -714,8 +695,7 @@ sub install {
       inst_pkgs(scalar(@updpkglist) ? 'upgrade' : 'install', @dlpkglist);
     }
   }
-  unlink $admin if (-r $admin);
-  exit 0;
+  myexit("","",0);
 }
 
 # list files in package
@@ -748,7 +728,7 @@ sub list_file {
       close FILE;
     }
   }
-  exit 0;
+  myexit("","",0);
 }
 
 # find gzip
@@ -808,11 +788,7 @@ sub md5 {
       $md5 = `/opt/csw/bin/gmd5sum $file`;
       ($md5) = ($md5 =~ /^(.*\w) /);
     } else {
-      print "\nMD5 support not available! Install CSWtextutils to get MD5\n";
-      print "support. Another alternative is to install CSWperl and use\n";
-      print "that for pkgutil. Do that by having /opt/csw/bin before\n";
-      print "/usr/bin in your path.\n";
-      exit 1;
+      myexit("\nMD5 support not available! Install CSWtextutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.","",1);
     }
   } else {
     open (FILE,"<$file") or die "Can't open $file: $!\n";
@@ -833,11 +809,10 @@ sub md5 {
 sub myexit {
   my ($msg,$err,$rc) = @_;
 
-  $msg = "" unless $msg;
-  $err = "" unless $err;
+  my $text = ($msg && $err) ? "$msg: $err" : "$msg";
   $rc = 0 unless $rc;
   unlink $admin if (-r $admin);
-  print STDERR "$msg: $err\n" if ($msg || $err);
+  print STDERR "$text\n" if $text;
   exit $rc;
 }
 
@@ -1085,7 +1060,7 @@ sub pkgutilver {
   } else {
     print "$pkgutilver\n";
   }
-  exit 0;
+  myexit("","",0);
 }
 
 # read catalog into hash
@@ -1159,7 +1134,7 @@ sub rem_pkgs {
   if (scalar(@rempkgs) > 1 && ! $force) {
     print scalar(@rempkgs)," packages to remove. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
-    exit 1 if ($prompt =~ /^[nN]/);
+    myexit("","",1) if ($prompt =~ /^[nN]/);
   }
   if (scalar(@rempkgs) > 0) {
     run_hooks('prebatchremove', @rempkgs);
@@ -1180,8 +1155,7 @@ sub rem_pkgs {
   } else {
     print "Nothing to remove.\n";
   }
-  unlink $admin if (-r $admin);
-  exit 1;
+  myexit("","",1);
 }
 
 # build package streams
@@ -1206,8 +1180,7 @@ sub stream {
     if ($target =~ /.:./) {
       ($loc_arch,$loc_rel) = split(/:/,$target);
     } else {
-      print "$target is not a correct arch:rel combo.\n";
-      exit 1;
+      myexit("$target is not a correct arch:rel combo.","",1);
     }
   } else {
     chomp($loc_arch = `uname -p`);	# arch type sparc|i386
@@ -1229,7 +1202,7 @@ sub stream {
   }
   print "Architecture $loc_arch not supported.\n" if (! $ok_arch);
   print "OS release $loc_rel not supported.\n" if (! $ok_rel);
-  exit 1 if (($ok_arch + $ok_rel) < 2);
+  myexit("","",1) if (($ok_arch + $ok_rel) < 2);
 
   foreach (my $i=0; $i < scalar(@mirror); $i++) {
     print "mirror $i: $mirror[$i]\n" if $debug;
@@ -1248,7 +1221,7 @@ sub stream {
 
   check_catalog();
   my @install_order = install($mode);	# download packages needed
-  exit 1 if (scalar(@install_order) == 0);	# empty list, nothing to do
+  myexit("","",1) if (scalar(@install_order) == 0); # empty list, nothing to do
   my $pkglist = join(' ',@install_order);
   print "install order: $pkglist\n" if $debug;
 
@@ -1282,7 +1255,7 @@ sub stream {
     print $fh "pkgadd -d $output $_\n";
   }
 
-  exit 0;
+  myexit("","",0);
 }
 
 # transform downloaded packages
@@ -1331,7 +1304,7 @@ sub usage {
   print "\n      --transform\tTransform (unpack) package\n";
   print "\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
-  exit 0;
+  myexit("","",0);
 }
 
 # comparison of two package versions as per
@@ -1415,7 +1388,7 @@ sub verscmp {
 init();
 parse_cl();
 
-exit 0;
+myexit("","",0);
 
 =head1 NAME
 
