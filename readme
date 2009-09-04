@@ -19,10 +19,29 @@ Official web sites
 ------------------
 
 URL: http://pkgutil.wikidot.com
-URL: http://pkgutil.sourceforge.net
+URL: http://sourceforge.net/projects/pkgutil
 
 Version history
 ---------------
+
+* v1.7. Released 2009-09-XX
+  - Add protection against concurrent pkgutil processes (#3831)
+  - New option -N (nodeps) to skip dependencies, you get only what you
+    specified on the command line
+  - New option --transform to download and transform (unpack) packages
+    (Sebastian Kayser)
+  - New option -L (listfile) to list files in packages. Also works on package
+    files, you can even mix them on the command line
+  - New option -F (findfile) to see which package a file belongs to
+  - New option --describe to describe available packages
+  - New feature: package hooks (Ben Walton)
+  - Loop protection (against circular dependencies in the catalog)
+  - Optional new presentation of the needed packages during install/upgrade,
+    one package per line to enhance readability. Package list is now sorted as
+    well. Set pkgliststyle to 1 in pkgutil.conf
+  - Cyclic dependency detection added to chkcat
+  - Support new catalog format with added field for incompatible packages.
+    Use -f8 in bldcat and chkcat to use the old format
 
 * v1.6.1. Released 2009-06-05
   - Fix -y bug when upgrading pkgutil (#3701) (Sebastian Kayser, Dagobert
