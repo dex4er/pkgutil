@@ -204,7 +204,7 @@ sub fetch_catalog {
 
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   print "Fetching new catalog and descriptions ($url) if available...\n";
-  die "Option -n selected, stopping here.\n" if $nomod;
+  myexit("Option -n selected, stopping here.","",0) if $nomod;
 
   my $desc_file = $filename;
   $desc_file =~ s|/catalog\.?|/descriptions\.|;
@@ -614,7 +614,7 @@ sub install {
     print $fh "Total size: " . format_byte($size) . "\n";
   }
 
-  die "Option -n selected, stopping here.\n" if $nomod;
+  myexit("Option -n selected, stopping here.","",0) if $nomod;
 
   if (scalar(@dlpkglist) > 0) {
     fetch_pkgs($mode,@dlpkglist);
@@ -1077,7 +1077,7 @@ sub rem_pkgs {
       my ($p, $v) = split(/\-/, $_);
       $retval = check_pkg($p,0);
       if ($retval ne "notinst") {
-        die "Option -n selected, stopping here.\n" if $nomod;
+        myexit("Option -n selected, stopping here.","",0) if $nomod;
         print "=> Removing $p\n";
 	run_hooks('preremove', ($_));
         system("$pkgrm $pkgforce $pkgtrace $p`");
