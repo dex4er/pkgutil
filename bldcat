@@ -7,17 +7,38 @@
 
 use strict;
 use Digest::MD5;
+use Getopt::Long;
+Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $tmpdir = "/tmp/bldcat.$$.$^T";
 my $pkgdir = ".";
-my ($deptmp,$status,$pkgname);
-my ($description,$common,$version,$package,$pkgfile,$hash,$size,$deps,$category);
+my ($deptmp,$status,$pkgname,$ideptmp);
+my ($description,$common,$version,$package,$pkgfile,$hash,$size,
+    $deps,$category,$help,$ideps);
 my %oldcatalog;
 my %olddescriptions;
+my $format = 9;
 
-$pkgdir = $ARGV[0] if $ARGV[0];
-if (scalar(@ARGV) > 1) {
-  print STDERR "Usage: $0 [<package dir>]\n";
+GetOptions("h|help"	=> \$help,
+           "f|format=s"	=> \$format) || usage();
+
+usage() if $help;
+if (scalar(@ARGV) > 0) {
+  $pkgdir = $ARGV[0];
+} else {
+  usage();
+}
+
+if ($format != 8) {
+  $format = 9;
+}
+
+sub usage {
+  print "Bldcat, build CSW catalogs.\n\n";
+  print "Usage: bldcat [-fh] <package dir>\n";
+  print "\n  -f, --format=x\tSet catalog format (8|[9])";
+  print "\n  -h, --help\t\tShow this help\n";
+  print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
 }
 
@@ -45,7 +66,7 @@ open (CATALOG,">$pkgdir/catalog.new") || die "Could not write new catalog at $pk
 open (DESCRIPTIONS,">$pkgdir/descriptions.new") || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
 
 foreach my $file (glob "$pkgdir/*") {
-  ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category) = ("","","","","","","","");
+  ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category,$ideps) = ("","","","","","","","","");
   next unless (-r $file);		# must be a readable file
   next unless ($file =~ /\.pkg(\.gz)?$/);	# must end with .pkg or .pkg.gz
 
@@ -67,7 +88,6 @@ foreach my $file (glob "$pkgdir/*") {
   print "Inspecting $file\n";
 
   # unpack package
-
   if (! -d "$tmpdir") {
     mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
   }
@@ -85,28 +105,24 @@ foreach my $file (glob "$pkgdir/*") {
     chomp $line;
 
     # field 1: common name
-
     if ($line =~ /^NAME=/) {
       ($description,$common) = ($line =~ /=((.+?)\s.*)/);
       next;
     }
 
     # field 2: version
-
     if ($line =~ /^VERSION=/) {
       ($version) = ($line =~ /=(.+)$/);
       next;
     }
 
     # field 3: package name
-
     if ($line =~ /^PKG=/) {
       ($package) = ($line =~ /=(.+)$/);
       next;
     }
 
     # field 4: filename
-
     if (! $pkgfile) {
       ($pkgfile) = ($file =~ /\//) ? ($file =~ /\/(.+)$/) : ($file);
     }
@@ -115,13 +131,11 @@ foreach my $file (glob "$pkgdir/*") {
     # Already computed
 
     # field 6: file size
-
     if (! $size) {
       $size = (stat($file))[7];
     }
 
     # field 8: categories
-
     if ($line =~ /^CSW_CATEGORY=/) {
       ($category) = ($line =~ /=(.+)$/);
       $category = join('|',split(/,\s?/,$category));
@@ -131,8 +145,7 @@ foreach my $file (glob "$pkgdir/*") {
   close FILE;
 
   # field 7: dependencies
-
-  $deps = "";
+  $deps = $ideps = "";
   if (-r "$tmpdir/$pkgname/install/depend") {
     open (FILE,"<$tmpdir/$pkgname/install/depend");
     while (<FILE>) {
@@ -143,18 +156,25 @@ foreach my $file (glob "$pkgdir/*") {
           $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
         }
       }
+      if (/^I\s+CSW/) {
+        ($ideptmp) = (/I\s+(\S+)/);
+        if ($ideptmp ne $pkgname) {	# skip if circular
+          $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
+        }
+      }
     }
     close FILE;
   }
 
   # clean up
-
   $status = system("/bin/rm -rf $tmpdir");
   die "Could not delete files in $tmpdir: $!" if $status;
 
   $deps = "none" unless $deps;
   $category = "none" unless $category;
-  print CATALOG "$common $version $package $pkgfile $hash $size $deps $category\n";
+  $ideps = "none" unless $ideps;
+  print CATALOG "$common $version $package $pkgfile $hash $size $deps $category";
+  print CATALOG ($format == 9) ? " $ideps\n" : "\n";
   print DESCRIPTIONS "$description\n";
 }
 
@@ -177,11 +197,25 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat <catalog file>
+bldcat [-fh] <package dir>
 
 =head1 DESCRIPTION
 
 Build a CSW catalog from packages in a directory.
+
+=head1 OPTIONS
+
+=over 5
+
+=item B<-f, --format=x>
+
+Set catalog format. Use 8 for the old 8 field format, default is 9 for the new 9 field format including incompatible packages.
+
+=item B<-h, --help>
+
+Show this help.
+
+=back
 
 =head1 EXAMPLES
 
@@ -195,7 +229,7 @@ Will build a catalog from packages in the current directory.
 
 http://pkgutil.wikidot.com
 
-http://pkgutil.sourceforge.net
+http://sourceforge.net/projects/pkgutil
 
 =head1 AUTHOR
 

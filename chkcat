@@ -17,11 +17,12 @@ my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my (%pkg,%pkgdep);
 my $rc = 0;
+my $format = 9;
 
-usage() if (@ARGV == 0);
 GetOptions("v|verbose"		=> \$verbose,
 	   "h|help"		=> \$help,
 	   "q|quiet"		=> \$quiet,
+	   "f|format=s"		=> \$format,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
@@ -31,12 +32,17 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
+if ($format != 8) {
+  $format = 9;
+}
+
 sub usage {
-  print "Chkcat, check CSW catalog for problems.\n\n";
-  print "Usage: chkcat [-veqh] <catalog file>\n";
+  print "Chkcat, check CSW catalogs for problems.\n\n";
+  print "Usage: chkcat [-veqfh] <catalog file>\n";
   print "\n  -v, --verbose\t\tVerbose mode";
   print "\n  -e, --erroronly\tOnly show errors (supress warnings)";
   print "\n  -q, --quiet\t\tNo output (only return codes)";
+  print "\n  -f, --format=x\tSet catalog format (8|[9])";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
@@ -100,11 +106,11 @@ while (scalar(@tmp) > 0) {
     next;
   }
 
-  # number of fields, should be 8
-  if (scalar(@field) != 8) {
+  # number of fields
+  if (scalar(@field) != $format) {
     retcode(2);
     if (! $quiet) {
-      print "\nERROR! ",scalar(@field)," fields instead of normal 8. [$line]\n";
+      print "\nERROR! ",scalar(@field)," fields instead of normal $format. [$line]\n";
     }
     next;
   }
@@ -332,7 +338,7 @@ chkcat - check CSW catalog for problems
 
 =head1 SYNOPSIS
 
-chkcat [-veqh] <catalog file>
+chkcat [-veqfh] <catalog file>
 
 =head1 DESCRIPTION
 
@@ -353,6 +359,10 @@ Only show errors (supress warnings).
 =item B<-q, --quiet>
 
 No output (only return codes).
+
+=item B<-f, --format=x>
+
+Set catalog format. Use 8 for the old 8 field format, default is 9 for the new 9 field format including incompatible packages.
 
 =item B<-h, --help>
 
@@ -388,7 +398,7 @@ The following exit values are returned:
 
 http://pkgutil.wikidot.com
 
-http://pkgutil.sourceforge.net
+http://sourceforge.net/projects/pkgutil
 
 =head1 AUTHOR
 
