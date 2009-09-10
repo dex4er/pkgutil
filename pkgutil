@@ -27,7 +27,7 @@ use Cwd;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.7b1";
+my $pkgutilver = "1.7b2";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -340,6 +340,7 @@ sub gpg {
 }
 
 # init
+#   conf - custom configuration
 sub init {
   my ($conf) = @_;
   my @conf_file;
@@ -946,6 +947,7 @@ sub pkgutilver {
   my ($pkgpatch,$pkgpatchinst);
 
   if ($mode) {
+    print "- System -\n";
     print "Pkgutil\t\t$pkgutilver\n";
     print "Arch\t\t$solarch\n";
     print "Solaris\t\t$solver\n";
@@ -991,6 +993,16 @@ sub pkgutilver {
     $status = locate_wget(); 
     print "Wget binary\t" . (($status) ? "not found (suggestion: install CSWwget)" : $wget) . "\n";
     print "PATH\t\t$ENV{PATH}\n";
+    print "\n- Configuration -\n";
+    print "maxpkglist\t" . (($config{maxpkglist}) ? $config{maxpkglist} : "not set") . " (default 25000)\n";
+    print "mirror\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t", @{$config{mirror}}) : "not set") . "\n\t\t(default: $defaultmirror)\n";
+    print "noncsw\t\t" . (($config{noncsw}) ? $config{noncsw} : "not set") . " (default: false)\n";
+    print "pkgaddopts\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
+    print "pkgliststyle\t" . (($config{pkgliststyle}) ? $config{pkgliststyle} : "not set") . " (default: 0)\n";
+    print "stop_on_hook_soft_error\t\t" . (($config{stop_on_hook_soft_error}) ? $config{stop_on_hook_soft_error} : "not set") . " (default: false)\n";
+    print "use_gpg\t\t" . (($config{use_gpg}) ? $config{use_gpg} : "not set") . " (default: false)\n";
+    print "use_md5\t\t" . (($config{use_md5}) ? $config{use_md5} : "not set") . " (default: false)\n";
+    print "wgetopts\t" . (($config{wgetopts}) ? $config{wgetopts} : "not set") . " (default: none)\n";
   } else {
     print "$pkgutilver\n";
   }
