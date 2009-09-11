@@ -24,7 +24,9 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v1.7. Released 2009-09-XX
+* v1.7. Released 2009-09-11
+  - Clarify text about config file priority (#2835200) (Ken Stailey)
+  - Add config status to --syscheck option (#2855094) (Dagobert Michelsen)
   - Add protection against concurrent pkgutil processes (#3831)
   - New option -N (nodeps) to skip dependencies, you get only what you
     specified on the command line
