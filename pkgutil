@@ -1502,6 +1502,10 @@ Answer yes on all prompts. Skips prompt when multiple packares are to be downloa
 
 No modifications are made to the system. Stops before downloading catalog/packages. Use it to simulate if catalog needs updating or which packages will be downloaded. Only makes sense with -i, -u and -U.
 
+=item B<-N, --nodeps>
+
+No dependencies, only what you specify on the command line will be used. Useful when using pkgutil as a download tool of specific packages or if you use the testing repo that might pull in unwanted packages.
+
 =item B<-D, --debug>
 
 Debug mode. Adds a lot of info about what's going on. Only use if you're having problems you think is a bug.
@@ -1529,6 +1533,10 @@ List files in packages. Works on both installed packages as well as on (uncompre
 =item B<-F, --findfile>
 
 Find files in installed packages.
+
+=item B<--transform>
+
+Will fetch and transform (unpack) packages.
 
 =back
 

@@ -221,7 +221,7 @@ Show this help.
 
 =head2 Example 1
 
-C<# bldcat catalog>
+C<# bldcat .>
 
 Will build a catalog from packages in the current directory.
 
