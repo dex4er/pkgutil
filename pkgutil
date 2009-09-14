@@ -27,7 +27,7 @@ use Cwd;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 my $debug = 0;
-my $pkgutilver = "1.7";
+my $pkgutilver = "1.8b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -653,12 +653,14 @@ sub list_file {
         next;
       }
     } else {	# argument is a package name
+      my $tmp = parse_catalog($_,2);
+      $tmp = ($tmp eq 'not in catalog') ? $_ : $tmp;
       open (FILE,"<$contents") or die "Can't open $contents: $!\n";
       while(my $line = <FILE>) {
         chomp $line;
         my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
         ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-        print "$file\n" if ($pkg eq $_);
+        print "$file\n" if ($pkg eq $tmp);
       }
       close FILE;
     }
@@ -844,7 +846,6 @@ sub parse_cl {
   usage() if $opt_help;
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
-  list_file() if $opt_listfile;
   find_file() if $opt_findfile;
 
   init($opt_config) if $opt_config;
@@ -906,6 +907,9 @@ sub parse_cl {
   } else {
     check_catalog();
   }
+
+  # complex options
+  list_file() if $opt_listfile;
   stream($opt_target,$opt_output) if $opt_stream;
   email($opt_email) if $opt_email;
   available() if $opt_avail;
