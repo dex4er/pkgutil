@@ -492,12 +492,18 @@ sub install {
   }
 
   unless ($deps) {	# skip adding dependencies? (option --nodeps)
+    my %finished;
     foreach my $tmppkg2 (@pkglist) {
       # N.B. This array grows and we keep looping until we've satisfied all
       # of the dependencies.
       print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
       die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
       my @tmpdeps;
+
+      # skip stuff already checked, avoid loops
+      next if $finished{$tmppkg2};
+      $finished{$tmppkg2} = 1;
+
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
