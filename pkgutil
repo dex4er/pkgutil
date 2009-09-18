@@ -1045,7 +1045,6 @@ sub read_catalog {
 #   pkglist - packages to remove
 sub rem_pkgs {
   my @pkgs = @_;
-  my %pkgvers = {};
   my $retval = "";
   my $pkgrm = "/usr/sbin/pkgrm";
   my $pkgforce = "";
