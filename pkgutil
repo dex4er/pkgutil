@@ -73,7 +73,7 @@ sub check_catalog {
     my $age = 0;
     $age = -M $filename if (-r $filename);
     print "Catalog $url age in days: $age\n" if $debug;
-    fetch_catalog($url, $filename) if ($age > 14 || ! -e $filename || $always);
+    fetch_catalog($url, $filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
     read_catalog($url, $filename); # Once per file
   }
@@ -357,7 +357,8 @@ sub init {
              "pkgliststyle"		=> "",
              "maxpkglist"		=> "",
              "noncsw"			=> "",
-             "stop_on_hook_soft_error"	=> "");
+             "stop_on_hook_soft_error"	=> "",
+             "catalog_update"		=> "14");
 
   foreach (@conf_file) {
     if (-r $_) {	# if conf file found, parse it
@@ -393,6 +394,7 @@ sub init {
     print "use_md5: $config{use_md5}\n";
     print "wgetopts: $config{wgetopts}\n";
     print "stop_on_hook_soft_error: $config{stop_on_hook_soft_error}\n";
+    print "catalog_update: $config{catalog_update}\n";
   }
 
   $pkgliststyle = $config{pkgliststyle} if $config{pkgliststyle};
