@@ -500,9 +500,31 @@ sub install {
       die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
       my @tmpdeps;
 
-      # skip stuff already checked, avoid loops
-      next if $finished{$tmppkg2};
-      $finished{$tmppkg2} = 1;
+      # skip stuff already checked, partly to avoid loops but also to gain speed if possible
+      # uncomment one of the below if you want to try it
+
+      # 1. Suggestion from Joe Baro, avoids loops, skips lots of iterations but reorders install order
+      #next if $finished{$tmppkg2};
+      #$finished{$tmppkg2} = 1;
+
+      # 2. My "deduplicate at every hit" suggestion, reduces iterations but still reorders list
+      #if ($finished{$tmppkg2}) {
+      #  my @tmppkglist = @pkglist;
+      #  my $tmp;
+      #  undef @pkglist;
+      #  while (scalar(@tmppkglist)) {
+      #    $tmp = shift(@tmppkglist);
+      #    if ($tmp eq $tmppkg2) {
+      #      push(@pkglist,@tmppkglist);
+      #      last;
+      #    } else {
+      #      push(@pkglist,$tmp);
+      #    }
+      #  }
+      #}
+      #$finished{$tmppkg2} = 1;
+
+      # end of skip stuff tests
 
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
@@ -542,8 +564,8 @@ sub install {
   for my $pkg (reverse @pkglist) {
     next unless $pkgvers{$pkg}; # not if excluded
     unless (exists $deduped{$pkg}) {
-	push(@revpkglist,$pkg);
-	$deduped{$pkg} = 1;
+      push(@revpkglist,$pkg);
+      $deduped{$pkg} = 1;
     }
   }
 
@@ -557,6 +579,10 @@ sub install {
     }
   }
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
+
+  # temporary for testing loop/speed suggestions
+  print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
+  print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
 
   # which packages do we really need to download?
   if ($mode != 3 && $mode != 4) {
