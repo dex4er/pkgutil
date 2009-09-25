@@ -150,15 +150,15 @@ foreach my $file (glob "$pkgdir/*") {
     open (FILE,"<$tmpdir/$pkgname/install/depend");
     while (<FILE>) {
       chomp;
-      if (/^P\s+CSW/) {
+      if (/^P\s+\S/) {
         ($deptmp) = (/P\s+(\S+)/);
-        if ($deptmp ne $pkgname) {	# skip if circular
+        if ($deptmp ne $pkgname && $deptmp ne "SUNW") { # skip if circular or SUNW
           $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
         }
       }
-      if (/^I\s+CSW/) {
+      if (/^I\s+\S/) {
         ($ideptmp) = (/I\s+(\S+)/);
-        if ($ideptmp ne $pkgname) {	# skip if circular
+        if ($ideptmp ne $pkgname && $ideptmp ne "SUNW") { # skip if circular or SUNW
           $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
         }
       }
