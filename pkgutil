@@ -236,9 +236,7 @@ sub fetch_pkgs {
   if (scalar(@pkglist) > 1 && ! $force) {
     print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
-    if ($prompt =~ /^[nN]/) {
-      myexit("","",1);
-    }
+    myexit("","",1) if ($prompt =~ /^[nN]/);
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   my $i = 1;
@@ -438,7 +436,7 @@ sub inst_pkgs {
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
       print "=> Removing old version of $pkgname\n";
-      system("$pkgrm $pkgforce $pkgtrace $pkgname`");
+      system("$pkgrm $pkgforce $pkgtrace $pkgname");
     }
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
@@ -675,6 +673,23 @@ sub install {
   transform_pkg(@dlpkglist) if ($mode == 5);
 
   return @revpkglist if ($mode == 3 || $mode == 4);	# is -s used
+
+  # remove incompatible packages
+  if (scalar(@ideppkglist) > 0) {
+    my $pkgrm = "/usr/sbin/pkgrm";
+    my $pkgtrace = "";
+    my $pkgforce = "";
+    $pkgforce = "-a $admin -n" if ($force && -r $admin);
+    if (! $force) {
+      print scalar(@ideppkglist)," packages to remove. Do you want to continue? [Y,n] ";
+      chomp (my $prompt = <STDIN>);
+      myexit("","",1) if ($prompt =~ /^[nN]/);
+    }
+    foreach (@ideppkglist) {
+      print "=> Removing incompatible package $p\n";
+      system("$pkgrm $pkgforce $pkgtrace $_");
+    }
+  }
 
   if ($mode == 0) {		# if -d not used, install
     if (scalar(@dlpkglist) > 0) {
