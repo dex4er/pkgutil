@@ -1,4 +1,4 @@
-#!/opt/csw/bin/perl -w
+#!/usr/bin/env perl -w
 
 # bldcat - build a CSW catalog from packages in a directory
 # Copyright (C) 2008-2009 Peter Bonivart
@@ -6,9 +6,11 @@
 # $Id$
 
 use strict;
-use Digest::MD5;
 use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
+
+eval { require Digest::MD5; };
+die "\nMD5 support not available! Install CSWperl and use that\nfor pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
 
 my $tmpdir = "/tmp/bldcat.$$.$^T";
 my $pkgdir = ".";
