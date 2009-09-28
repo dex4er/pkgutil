@@ -586,6 +586,19 @@ sub install {
   print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
   print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
 
+  # incompatible packages (I-dependencies)
+  my @ideppkglist;
+  foreach (@revpkglist) {
+    print "$_: ";
+    my $retvalue = parse_catalog($_,8);
+    if ($retvalue eq "none") {
+      print "no I-deps found\n";
+    } else {
+      print "$retvalue\n";
+      push(@ideppkglist,split(/\|/,$retvalue));
+    }
+  }
+
   # which packages do we really need to download?
   if ($mode != 3 && $mode != 4) {
     foreach (@revpkglist) {
@@ -609,13 +622,17 @@ sub install {
 
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
+  if (scalar(@ideppkglist) > 0) {
+    print $fh "Remove packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+  }
+
   if (scalar(@newpkglist) > 0) {
-    print $fh "New packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+    print $fh "Install packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if (scalar(@updpkglist) > 0) {
-      print "Updated packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      print "Update packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
 
     if (scalar(@curpkglist) > 0) {
