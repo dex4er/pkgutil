@@ -596,6 +596,13 @@ sub install {
       push(@ideppkglist,split(/\|/,$retvalue));
     }
   }
+  my @ideppkglist2;
+  foreach (@ideppkglist) {
+    # check if pkg is present first
+    push(@ideppkglist2,$_) if (check_pkg($_,0) ne "notinst");
+  }
+  @ideppkglist = @ideppkglist2;
+  undef @ideppkglist2;
 
   # which packages do we really need to download?
   if ($mode != 3 && $mode != 4) {
@@ -621,16 +628,16 @@ sub install {
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
   if (scalar(@ideppkglist) > 0) {
-    print $fh "Remove packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+    print $fh "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
   }
 
   if (scalar(@newpkglist) > 0) {
-    print $fh "Install packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+    print $fh "Install NEW packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if (scalar(@updpkglist) > 0) {
-      print "Update packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
 
     if (scalar(@curpkglist) > 0) {
@@ -681,12 +688,12 @@ sub install {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($force && -r $admin);
     if (! $force) {
-      print scalar(@ideppkglist)," packages to remove. Do you want to continue? [Y,n] ";
+      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n] ";
       chomp (my $prompt = <STDIN>);
       myexit("","",1) if ($prompt =~ /^[nN]/);
     }
     foreach (@ideppkglist) {
-      print "=> Removing incompatible package $p\n";
+      print "=> Removing incompatible package $_\n";
       system("$pkgrm $pkgforce $pkgtrace $_");
     }
   }
