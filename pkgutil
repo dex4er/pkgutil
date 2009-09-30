@@ -861,12 +861,24 @@ sub parse_catalog {
   if ($name) {
     # have we a version match?
     if ($vers && exists $pkg{$name}{$vers}) {
-      $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
+      my @tmpcatline = split(/ /,$pkg{$name}{$vers});
+      my $fieldsincatalog = scalar(@tmpcatline);
+      if ($mode == 8 && $fieldsincatalog < 9) {
+        $retvalue = "none";
+      } else {
+        $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
+      }
     } elsif (! $vers) {
       # we may have multiple versions in the catalog, take the highest
       # note this won't work unless at least one has a REV in it
       my $highest = (sort { verscmp($b, $a) } keys %{$pkg{$name}})[0];
-      $retvalue = (split(/ /,$pkg{$name}{$highest}))[$mode];
+      my @tmpcatline = split(/ /,$pkg{$name}{$highest});
+      my $fieldsincatalog = scalar(@tmpcatline);
+      if ($mode == 8 && $fieldsincatalog < 9) {
+        $retvalue = "none";
+      } else {
+        $retvalue = (split(/ /,$pkg{$name}{$highest}))[$mode];
+      }
     } else {
       $retvalue = "not in catalog" if (! $retvalue);
     }
