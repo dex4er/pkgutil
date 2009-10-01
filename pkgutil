@@ -587,15 +587,10 @@ sub install {
   # incompatible packages (I-dependencies)
   my @ideppkglist;
   foreach (@revpkglist) {
-    print "$_: ";
     my $retvalue = parse_catalog($_,8);
-    if ($retvalue eq "none") {
-      print "no I-deps found\n";
-    } else {
-      print "$retvalue\n";
-      push(@ideppkglist,split(/\|/,$retvalue));
-    }
+    push(@ideppkglist,split(/\|/,$retvalue)) if ($retvalue ne "none");
   }
+  # clean the list from packages not installed
   my @ideppkglist2;
   foreach (@ideppkglist) {
     # check if pkg is present first
