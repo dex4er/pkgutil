@@ -1,0 +1,87 @@
+#!/usr/bin/env perl -w
+
+# bldjson - build a JSON catalog from a CSW catalog
+# Copyright (C) 2009 Peter Bonivart
+
+# $Id: bldcat 110 2009-09-28 11:41:19Z bonivart $
+
+use strict;
+use Getopt::Long;
+Getopt::Long::Configure qw(no_ignore_case bundling);
+
+my $pkgdir = ".";
+my $help;
+my %oldcatalog;
+my %olddescriptions;
+
+GetOptions("h|help"	=> \$help) || usage();
+
+usage() if $help;
+if (scalar(@ARGV) > 0) {
+  $pkgdir = $ARGV[0];
+} else {
+  usage();
+}
+
+sub usage {
+  print "Bldjson, convert CSW catalogs to JSON catalogs.\n\n";
+  print "Usage: bldjson [-h] <package dir>\n";
+  print "\n  -h, --help\t\tShow this help\n";
+  print "\nWritten and maintained by Peter Bonivart.\n";
+  exit 1;
+}
+
+if (open (CATALOG,"$pkgdir/catalog")) {
+  while (<CATALOG>) {
+    chomp;
+    my @line = split /\s+/;
+    my $common = $line[0];
+    $oldcatalog{$common} = $_;
+  }
+  close CATALOG;
+}
+
+if (open (DESCRIPTIONS,"$pkgdir/descriptions")) {
+  while (<DESCRIPTIONS>) {
+    chomp;
+    my @line = split / - /;
+    my $common = $line[0];
+    $olddescriptions{$common} = $line[1];
+  }
+  close DESCRIPTIONS;
+}
+
+open (CATALOG,">$pkgdir/catalog.json") || die "Could not write new catalog at $pkgdir/catalog.json: $!";
+
+print CATALOG "{\n";
+print CATALOG "  \"id\"         : 2009100301,\n";
+print CATALOG "  \"catver\"     : \"json1\",\n";
+print CATALOG "  \"hash\"       : \"md5\",\n";
+print CATALOG "  \"pkgutilver\" : \"1.7\",\n";
+print CATALOG "  \"numofpkgs\"  : 1,\n";
+print CATALOG "  \"packages\"   : [\n";
+
+foreach my $pkg (sort keys %oldcatalog) {
+  my @line = split(/ /,$oldcatalog{$pkg});
+  my $desc = $olddescriptions{$pkg};
+  $desc = "$pkg" unless $desc;
+  print CATALOG "    {\n";
+  print CATALOG "      \"pkg\"    : \"$line[2]\",\n";
+  print CATALOG "      \"common\" : \"$line[0]\",\n";
+  print CATALOG "      \"ver\"    : \"$line[1]\",\n";
+  print CATALOG "      \"file\"   : \"$line[3]\",\n";
+  print CATALOG "      \"hash\"   : \"$line[4]\",\n";
+  print CATALOG "      \"size\"   : \"$line[5]\",\n";
+  print CATALOG "      \"pdeps\"  : \"$line[6]\",\n";
+  print CATALOG "      \"ideps\"  : \"$line[8]\",\n";
+  print CATALOG "      \"cats\"   : \"$line[7]\",\n";
+  print CATALOG "      \"desc\"   : \"$desc\"\n";
+  print CATALOG "    },\n";
+}
+
+print CATALOG "  ]\n";
+print CATALOG "}\n";
+
+close CATALOG;
+
+exit 0;
