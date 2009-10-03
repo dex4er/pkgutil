@@ -51,6 +51,8 @@ if (open (DESCRIPTIONS,"$pkgdir/descriptions")) {
   close DESCRIPTIONS;
 }
 
+my $numofpkgs = scalar(keys %oldcatalog);
+
 open (CATALOG,">$pkgdir/catalog.json") || die "Could not write new catalog at $pkgdir/catalog.json: $!";
 
 print CATALOG "{\n";
@@ -58,9 +60,10 @@ print CATALOG "  \"id\"         : 2009100301,\n";
 print CATALOG "  \"catver\"     : \"json1\",\n";
 print CATALOG "  \"hash\"       : \"md5\",\n";
 print CATALOG "  \"pkgutilver\" : \"1.7\",\n";
-print CATALOG "  \"numofpkgs\"  : 1,\n";
+print CATALOG "  \"numofpkgs\"  : $numofpkgs,\n";
 print CATALOG "  \"packages\"   : [\n";
 
+my $i = 1;
 foreach my $pkg (sort keys %oldcatalog) {
   my @line = split(/ /,$oldcatalog{$pkg});
   my $desc = $olddescriptions{$pkg};
@@ -76,7 +79,9 @@ foreach my $pkg (sort keys %oldcatalog) {
   print CATALOG "      \"ideps\"  : \"$line[8]\",\n";
   print CATALOG "      \"cats\"   : \"$line[7]\",\n";
   print CATALOG "      \"desc\"   : \"$desc\"\n";
-  print CATALOG "    },\n";
+  print CATALOG "    }";
+  print CATALOG "," if ($i++ < $numofpkgs);
+  print CATALOG "\n";
 }
 
 print CATALOG "  ]\n";
