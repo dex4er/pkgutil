@@ -1363,7 +1363,7 @@ sub transform_pkg {
 
 # show usage info
 sub usage {
-  print "Pkgutil $pkgutilver, install Solaris packages the easy way.\n\n";
+  print "pkgutil $pkgutilver, install Solaris packages the easy way.\n\n";
   print "Usage: pkgutil [option]... [package](-[version])...\n";
   print "\n  -i, --install\t\tInstall package";
   print "\n  -u, --upgrade\t\tUpgrade package";

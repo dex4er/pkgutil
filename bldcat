@@ -36,7 +36,7 @@ if ($format != 8) {
 }
 
 sub usage {
-  print "Bldcat, build CSW catalogs.\n\n";
+  print "bldcat, build CSW catalogs.\n\n";
   print "Usage: bldcat [-fh] <package dir>\n";
   print "\n  -f, --format=x\tSet catalog format (8|[9])";
   print "\n  -h, --help\t\tShow this help\n";

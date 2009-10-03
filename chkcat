@@ -40,7 +40,7 @@ if ($format != 8) {
 }
 
 sub usage {
-  print "Chkcat, check CSW catalogs for problems.\n\n";
+  print "chkcat, check CSW catalogs for problems.\n\n";
   print "Usage: chkcat [-veqfh] <catalog file>\n";
   print "\n  -v, --verbose\t\tVerbose mode";
   print "\n  -e, --erroronly\tOnly show errors (supress warnings)";

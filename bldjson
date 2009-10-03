@@ -3,7 +3,7 @@
 # bldjson - build a JSON catalog from a CSW catalog
 # Copyright (C) 2009 Peter Bonivart
 
-# $Id: bldcat 110 2009-09-28 11:41:19Z bonivart $
+# $Id$
 
 use strict;
 use Getopt::Long;
@@ -24,7 +24,7 @@ if (scalar(@ARGV) > 0) {
 }
 
 sub usage {
-  print "Bldjson, convert CSW catalogs to JSON catalogs.\n\n";
+  print "bldjson, convert CSW catalogs to JSON catalogs.\n\n";
   print "Usage: bldjson [-h] <package dir>\n";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
