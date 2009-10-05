@@ -706,7 +706,6 @@ sub list_file {
   my $contents = "/var/sadm/install/contents";
 
   foreach (@ARGV) {
-    print "\n";
     if (-r $_ && -f _) {	# argument is a package file
       if ($_ =~ /\.pkg$/) {
         my (@tmp) = `/usr/sbin/pkgchk -l -d $_ all`;
@@ -721,8 +720,12 @@ sub list_file {
         next;
       }
     } else {	# argument is a package name
-      my $tmp = parse_catalog($_,2);
-      $tmp = ($tmp eq 'not in catalog') ? $_ : $tmp;
+      my $tmp;
+      if ($_ =~ /^[A-Z]/) {
+        $tmp = $_;
+      } else {
+        $tmp = parse_catalog($_,2);
+      }
       open (FILE,"<$contents") or die "Can't open $contents: $!\n";
       while(my $line = <FILE>) {
         chomp $line;
