@@ -600,7 +600,8 @@ sub install {
   undef @ideppkglist2;
 
   # which packages do we really need to download?
-  if ($mode != 3 && $mode != 4 && $mode != 5) {
+#  if ($mode != 3 && $mode != 4 && $mode != 5) {
+  if ($mode == 0 || $mode == 2) {
     foreach (@revpkglist) {
       my $old = check_pkg($_,0);
       my $new = $pkgvers{$_};
