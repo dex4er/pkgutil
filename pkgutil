@@ -580,7 +580,7 @@ sub install {
   }
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
-  # temporary for testing loop/speed suggestions
+  ### temporary for testing loop/speed suggestions
   print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
   print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
 
@@ -600,7 +600,7 @@ sub install {
   undef @ideppkglist2;
 
   # which packages do we really need to download?
-  if ($mode != 3 && $mode != 4) {
+  if ($mode != 3 && $mode != 4 && $mode != 5) {
     foreach (@revpkglist) {
       my $old = check_pkg($_,0);
       my $new = $pkgvers{$_};
@@ -614,7 +614,7 @@ sub install {
         }
       }
     }
-  } else {	# if -s or -d then just copy revpkglist to newpkglist
+  } else {	# if -s or --transform then just copy revpkglist to newpkglist
     foreach (@revpkglist) {
       push(@newpkglist,"$_-$pkgvers{$_}");
     }
@@ -622,14 +622,17 @@ sub install {
 
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
+  ### not when --download, --stream or --transform?
   if (scalar(@ideppkglist) > 0) {
     print $fh "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
   }
 
+  ### better wording when using e.g. --transform
   if (scalar(@newpkglist) > 0) {
     print $fh "Install NEW packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
+  ### better wording when using e.g. --transform
   if ($mode != 3 && $mode != 4) {	# not needed if -s
     if (scalar(@updpkglist) > 0) {
       print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
@@ -672,9 +675,10 @@ sub install {
     fetch_pkgs($mode,@dlpkglist);
   }
 
-  transform_pkg(@dlpkglist) if ($mode == 5);
+  transform_pkg(@dlpkglist) if ($mode == 5);	# --transform
 
-  return @revpkglist if ($mode == 3 || $mode == 4);	# is -s used
+  ### test --stream after below I-code was added
+  return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
 
   # remove incompatible packages
   if (scalar(@ideppkglist) > 0) {
@@ -1316,8 +1320,7 @@ sub stream {
   check_catalog();
   my @install_order = install($mode);	# download packages needed
   myexit("","",1) if (scalar(@install_order) == 0); # empty list, nothing to do
-  my $pkglist = join(' ',@install_order);
-  print "install order: $pkglist\n" if $debug;
+  print "install order: " . join(' ',@install_order) . "\n" if $debug;
 
   foreach (@install_order) {		# delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
@@ -1353,6 +1356,7 @@ sub stream {
 }
 
 # transform downloaded packages
+#   pkglist - list of packages to transform (from install sub)
 sub transform_pkg {
   my (@pkglist) = @_;
 
@@ -1360,7 +1364,7 @@ sub transform_pkg {
     my $file = parse_catalog($_,3);
     print "Transforming $_ ($pkgdir)...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not transform $file: $!\n" if $status;
+    die "Could not transform $file: $! (directory may already exist)\n" if $status;
   }
 }
 
