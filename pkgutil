@@ -600,7 +600,6 @@ sub install {
   undef @ideppkglist2;
 
   # which packages do we really need to download?
-#  if ($mode != 3 && $mode != 4 && $mode != 5) {
   if ($mode == 0 || $mode == 2) {
     foreach (@revpkglist) {
       my $old = check_pkg($_,0);
@@ -623,18 +622,21 @@ sub install {
 
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
-  ### not when --download, --stream or --transform?
-  if (scalar(@ideppkglist) > 0) {
-    print $fh "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+  # only present incompatible packages when doing install/upgrade
+  if ($mode == 0) {
+    if (scalar(@ideppkglist) > 0) {
+      print "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+    }
   }
 
-  ### better wording when using e.g. --transform
+  # different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
-    print $fh "Install NEW packages:$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+    print $fh ($mode == 0) ? "Install NEW packages" : "Package list";
+    print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
-  ### better wording when using e.g. --transform
-  if ($mode != 3 && $mode != 4) {	# not needed if -s
+  # only present updated and current packages when doing install/upgrade
+  if ($mode == 0) {
     if (scalar(@updpkglist) > 0) {
       print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
@@ -682,7 +684,7 @@ sub install {
   return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
 
   # remove incompatible packages
-  if (scalar(@ideppkglist) > 0) {
+  if (scalar(@ideppkglist) > 0 && $mode == 0) {
     my $pkgrm = "/usr/sbin/pkgrm";
     my $pkgtrace = "";
     my $pkgforce = "";
