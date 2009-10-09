@@ -998,19 +998,20 @@ sub parse_cl {
 
   # complex options
   list_file() if $opt_listfile;
-  stream($opt_target,$opt_output) if $opt_stream;
+  # download and stream if both -d and -s selected
+  stream($opt_target,$opt_output) if ($opt_stream && $opt_download);
   email($opt_email) if $opt_email;
   available() if $opt_avail;
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
-  install(5,$opt_nodeps) if $opt_transform;	# download and transform only
+  # download and transform if both -d and --transform selected
+  install(5,$opt_nodeps) if ($opt_transform && $opt_download);
   install(0,$opt_nodeps) if $opt_install;
   install(2,$opt_nodeps) if $opt_remove;	# remove instead of install
   install(1,$opt_nodeps) if $opt_download;	# download only
 
   # upgrade is a special case of install
-
   if ($opt_upgrade) {
     if (@ARGV == 0 || $ARGV[0] eq "all" || $ARGV[0] eq "ALL") {
       # need to manipulate ARGV to match installed CSW packages
@@ -1026,7 +1027,7 @@ sub parse_cl {
   }
 
   # arguments but no options
-  print "You need to select an option!\n" if (! $opt_upd_cat);
+  print "You need to select a valid option!\n" if (! $opt_upd_cat);
 }
 
 # show version info
@@ -1384,9 +1385,6 @@ sub usage {
   print "\n  -C           \t\tSame as -c but only show different versions";
   print "\n  -e, --email=address\tSend e-mail with available updates";
   print "\n  -t, --temp=site\tTemporarily use this site as primary for download";
-  print "\n  -s, --stream\t\tBuild a package stream";
-  print "\n  -T, --target=arch:rel\tSpecify architecture and OS release for stream";
-  print "\n  -o, --output=file\tFile name for package stream (used with -s)";
   print "\n  -x, --exclude=package\tPackage to exclude";
   print "\n  -W, --workdir=path\tPath to use for downloads";
   print "\n      --config=file\tUse this configuration file";
@@ -1400,8 +1398,11 @@ sub usage {
   print "\n  -V, --syscheck\tSystem check";
   print "\n  -L, --listfile\tList files in package";
   print "\n  -F, --findfile\tFind files in package";
-  print "\n      --transform\tTransform (unpack) package\n";
-  print "\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
+  print "\n      --transform\tTransform (unpack) package (use with -d)";
+  print "\n  -s, --stream\t\tBuild a package stream (use with -d)";
+  print "\n  -o, --output=file\tFile name for package stream (use with -s)";
+  print "\n  -T, --target=arch:rel\tSpecify architecture and OS release for download";
+  print "\n\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   myexit("","",0);
 }
