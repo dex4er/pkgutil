@@ -470,7 +470,7 @@ sub inst_pkgs {
 
 # install (-i) option
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
-#          4 = stream silent, 5 = transform
+#          4 = stream silent, 5 = extract
 #   deps - option --nodeps set or not
 sub install {
   my ($mode,$deps) = @_;
@@ -614,7 +614,7 @@ sub install {
         }
       }
     }
-  } else {	# if -s or --transform then just copy revpkglist to newpkglist
+  } else {	# if -s or --extract then just copy revpkglist to newpkglist
     foreach (@revpkglist) {
       push(@newpkglist,"$_-$pkgvers{$_}");
     }
@@ -678,7 +678,7 @@ sub install {
     fetch_pkgs($mode,@dlpkglist);
   }
 
-  transform_pkg(@dlpkglist) if ($mode == 5);	# --transform
+  extract_pkg(@dlpkglist) if ($mode == 5);	# --extract
 
   ### test --stream after below I-code was added
   return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
@@ -900,7 +900,7 @@ sub parse_cl {
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_transform,$opt_nodeps);
+      $opt_describe,$opt_extract,$opt_nodeps);
 
   usage() if (@ARGV == 0);
   GetOptions("i|install"	=> \$opt_install,
@@ -928,7 +928,7 @@ sub parse_cl {
              "v|version"	=> \$opt_version,
              "L|listfile"	=> \$opt_listfile,
              "F|findfile"	=> \$opt_findfile,
-             "transform"	=> \$opt_transform,
+             "extract"		=> \$opt_extract,
              "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
@@ -1007,8 +1007,8 @@ sub parse_cl {
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(0) if $opt_compare;
-  # download and transform if both -d and --transform selected
-  install(5,$opt_nodeps) if ($opt_transform && $opt_download);
+  # download and extract if both -d and --extract selected
+  install(5,$opt_nodeps) if ($opt_extract && $opt_download);
   install(0,$opt_nodeps) if $opt_install;
   install(2,$opt_nodeps) if $opt_remove;	# remove instead of install
   install(1,$opt_nodeps) if $opt_download;	# download only
@@ -1359,16 +1359,16 @@ sub stream {
   myexit("","",0);
 }
 
-# transform downloaded packages
-#   pkglist - list of packages to transform (from install sub)
-sub transform_pkg {
+# extract downloaded packages
+#   pkglist - list of packages to extract (from install sub)
+sub extract_pkg {
   my (@pkglist) = @_;
 
   foreach (@pkglist) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
-    print "Transforming $_ ($pkgdir)...\n";
+    print "Extracting $_ ($pkgdir)...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not transform $file: $! (directory may already exist)\n" if $status;
+    die "Could not extract $file: $! (directory may already exist)\n" if $status;
   }
 }
 
@@ -1400,7 +1400,7 @@ sub usage {
   print "\n  -V, --syscheck\tSystem check";
   print "\n  -L, --listfile\tList files in package";
   print "\n  -F, --findfile\tFind files in package";
-  print "\n      --transform\tTransform (unpack) package (use with -d)";
+  print "\n      --extract\t\tExtract package content (use with -d)";
   print "\n  -s, --stream\t\tBuild a package stream (use with -d)";
   print "\n  -o, --output=file\tFile name for package stream (use with -s)";
   print "\n  -T, --target=arch:rel\tSpecify architecture and OS release for download";
@@ -1566,7 +1566,7 @@ Temporarily use this site for download. Must be the complete url where to find t
 
 =item B<-s, --stream>
 
-Build a package stream for a certain architecture and OS release. All dependencies will be included in the stream and the needed command to install them in the correct order will be displayed.
+Build a package stream for a certain architecture and OS release. All dependencies will be included in the stream and the needed command to install them in the correct order will be displayed. Must be used with -d.
 
 =item B<-T, --target=arch:rel>
 
@@ -1628,9 +1628,9 @@ List files in packages. Works on both installed packages as well as on (uncompre
 
 Find files in installed packages.
 
-=item B<--transform>
+=item B<--extract>
 
-Will fetch and transform (unpack) packages.
+Will fetch and extract package content. Must be used with -d.
 
 =back
 
