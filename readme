@@ -24,6 +24,20 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v1.8. Released 2009-xx-xx
+  - Fix transform feature (3904@OpenCSW)
+  - Support I-dependencies
+  - Split package into core pkgutil and extension pkgutilplus
+  - Switch back to default 8 field catalogs for bldcat and chkcat
+  - bldcat and chkcat doesn't require CSWperl, exit with helpful message if
+    Digest::MD5 is missing (3917@OpenCSW)
+  - Catalog update interval user configurable via pkgutil.conf. Set to -1
+    for no automatic updates, 0 for every time pkgutil is run and 1+ for
+    the number of days between updates. 14 would emulate current behavior
+    (Trygve Laugstol)
+  - Remove unused declaration causing noise when using -r (#3903@OpenCSW)
+  - Fix missing options in man/perldoc page
+
 * v1.7. Released 2009-09-11
   - Clarify text about config file priority (#2835200) (Ken Stailey)
   - Add config status to --syscheck option (#2855094) (Dagobert Michelsen)
