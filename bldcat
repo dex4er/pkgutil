@@ -19,7 +19,7 @@ my ($description,$common,$version,$package,$pkgfile,$hash,$size,
     $deps,$category,$help,$ideps);
 my %oldcatalog;
 my %olddescriptions;
-my $format = 9;
+my $format = 8;
 
 GetOptions("h|help"	=> \$help,
            "f|format=s"	=> \$format) || usage();
@@ -31,14 +31,14 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
-if ($format != 8) {
-  $format = 9;
+if ($format != 9) {
+  $format = 8;
 }
 
 sub usage {
   print "bldcat, build CSW catalogs.\n\n";
   print "Usage: bldcat [-fh] <package dir>\n";
-  print "\n  -f, --format=x\tSet catalog format (8|[9])";
+  print "\n  -f, --format=x\tSet catalog format ([8]|9)";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
@@ -211,7 +211,7 @@ Build a CSW catalog from packages in a directory.
 
 =item B<-f, --format=x>
 
-Set catalog format. Use 8 for the old 8 field format, default is 9 for the new 9 field format including incompatible packages.
+Set catalog format. Use 8 for the old 8 field format and 9 for the new 9 field format including incompatible packages.
 
 =item B<-h, --help>
 

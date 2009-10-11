@@ -20,7 +20,7 @@ my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my (%pkg,%pkgdep);
 my $rc = 0;
-my $format = 9;
+my $format = 8;
 
 GetOptions("v|verbose"		=> \$verbose,
 	   "h|help"		=> \$help,
@@ -35,8 +35,8 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
-if ($format != 8) {
-  $format = 9;
+if ($format != 9) {
+  $format = 8;
 }
 
 sub usage {
@@ -45,7 +45,7 @@ sub usage {
   print "\n  -v, --verbose\t\tVerbose mode";
   print "\n  -e, --erroronly\tOnly show errors (supress warnings)";
   print "\n  -q, --quiet\t\tNo output (only return codes)";
-  print "\n  -f, --format=x\tSet catalog format (8|[9])";
+  print "\n  -f, --format=x\tSet catalog format ([8]|9)";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
@@ -365,7 +365,7 @@ No output (only return codes).
 
 =item B<-f, --format=x>
 
-Set catalog format. Use 8 for the old 8 field format, default is 9 for the new 9 field format including incompatible packages.
+Set catalog format. Use 8 for the old 8 field format and 9 for the new 9 field format including incompatible packages.
 
 =item B<-h, --help>
 
