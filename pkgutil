@@ -642,7 +642,7 @@ sub install {
     }
 
     if (scalar(@curpkglist) > 0) {
-      print "Current packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
+      print "CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
     }
   }
 
@@ -663,6 +663,9 @@ sub install {
     push(@dlpkglist,$tmp) unless $hit;
   }
   print "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
+
+  # print info before exiting if there's nothing to do
+  myexit("\nNothing to do.","",0) if (scalar(@dlpkglist) == 0);
 
   # print size of download
   if (scalar(@dlpkglist) > 0) {
