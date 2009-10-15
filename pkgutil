@@ -583,6 +583,7 @@ sub install {
   ### temporary for testing loop/speed suggestions
   print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
   print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
+  ### temporary for testing loop/speed suggestions
 
   # incompatible packages (I-dependencies)
   my @ideppkglist;
@@ -994,6 +995,54 @@ sub parse_cl {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
     $mirror[$i] .= "/" . $arch . "/" . $rel;
   }
+
+  ### insert target code here BEGIN
+  ### is the above needed or could it be intergrated into this part?
+  ###   arch and rel could just as well be loc_arch and loc_rel?
+  ###   that would get rid of the sed
+
+  my @supp_arch = qw(sparc i386);
+  my @supp_rel = qw(5.8 5.9 5.10 5.11);
+  my ($ok_arch,$ok_rel) = (0,0);
+  my ($loc_arch,$loc_rel);
+
+  if ($opt_target) {
+    if ($opt_target =~ /.:./) {
+      ($loc_arch,$loc_rel) = split(/:/,$opt_target);
+    } else {
+      myexit("$opt_target is not a correct arch:rel combo.","",1);
+    }
+  } else {
+    chomp($loc_arch = `uname -p`);	# arch type sparc|i386
+    chomp($loc_rel = `uname -r`);	# os version, e.g. 5.10
+  }
+  print "arch: $loc_arch\nos rel: $loc_rel\n" if $debug;
+
+  foreach (@supp_arch) {
+    if ($loc_arch eq $_) {
+      $ok_arch = 1;
+      last;
+    }
+  }
+  foreach (@supp_rel) {
+    if ($loc_rel eq $_) {
+      $ok_rel = 1;
+      last;
+    }
+  }
+  print "Architecture $loc_arch not supported.\n" unless $ok_arch;
+  print "OS release $loc_rel not supported.\n" unless $ok_rel;
+  myexit("","",1) if (($ok_arch + $ok_rel) < 2);
+
+  foreach (my $i=0; $i < scalar(@mirror); $i++) {
+    print "mirror $i (bef): $mirror[$i]\n" if $debug;
+    $mirror[$i] =~ s!\b$arch\b!$loc_arch!;
+    $mirror[$i] =~ s!\b$rel\b!$loc_rel!;
+    print "mirror $i (aft): $mirror[$i]\n" if $debug;
+  }
+
+  ### insert target code here END
+
   print "primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
     check_catalog(1);	# Reread everything
@@ -1325,7 +1374,7 @@ sub stream {
   print STDERR "output: $output\ntransfile: $transfile\n" if $debug;
 
   check_catalog();
-  my @install_order = install($mode);	# download packages needed
+  my @install_order = install($mode,0);	# download packages needed
   myexit("","",1) if (scalar(@install_order) == 0); # empty list, nothing to do
   print "install order: " . join(' ',@install_order) . "\n" if $debug;
 
