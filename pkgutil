@@ -512,17 +512,6 @@ sub install {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
   my(%pkgvers, @pkglist); # @pkglist is specifically in the correct order.
 
-  # installing local packages if all args are package files
-  my $notalocpkg = 0;
-  foreach (@ARGV) {
-    $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
-    print "$_ : $notalocpkg\n" if $debug;
-  }
-  unless ($notalocpkg) {
-    print "Installing your local packages...\n";
-    inst_loc_pkgs(@ARGV);
-  }
-
   print $fh "Parsing catalog, may take a while...\n";
   foreach my $tmppkg (@ARGV) {
     my $tmp = parse_catalog($tmppkg,2);
@@ -988,6 +977,19 @@ sub parse_cl {
   pkgutilver(0) if $opt_version;
   pkgutilver(1) if $opt_syscheck;
   find_file() if $opt_findfile;
+
+  # installing local packages if all args are package files
+  if ($opt_install) {
+    my $notalocpkg = 0;
+    foreach (@ARGV) {
+      $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
+      print "$_ : $notalocpkg\n" if $debug;
+    }
+    unless ($notalocpkg) {
+      print "Installing your local packages...\n";
+      inst_loc_pkgs(@ARGV);
+    }
+  }
 
   init($opt_config) if $opt_config;
   locate_wget();
