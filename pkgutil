@@ -400,9 +400,46 @@ sub init {
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
 }
 
+# install local packages
+#   pkglist - packages to install
+sub inst_loc_pkgs {
+  my @pkglist = @_;
+  my $pkgadd = "/usr/sbin/pkgadd";
+  my $pkgaddopts = "";
+  my $file;
+  my $pkgtrace = "";
+  my $per_package_hook = "install";
+
+  $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
+  $pkgtrace = "-v" if $trace;
+
+  foreach (@pkglist) {
+    my $pkgforce = "";
+    $pkgforce = "-a $admin -n" if ($force && -r $admin);
+    print "=> Installing $_\n";
+    $file = $_;
+    if ($_ =~ /\.gz$/) {		# not all packages are compressed
+      my $status = locate_gzip();
+      ($file) = ($file =~ /(.+)\.gz$/);
+      if (! $status) {
+        if ($force) {
+          `$gzip -c -f -d $_ > $file`;
+        } else {
+          `$gzip -c -d $_ > $file`;
+        }
+      } else {
+        myexit("\nGzip not found, please install CSWgzip.","",1);
+      }
+    }
+    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file`");
+    unlink "$file" or die "Can't delete $file: $!\n";
+  }
+  myexit("","",0);
+}
+
 # install packages
 #   batchmode - whether we're updating some of the packages or doing new
-#               installs only
+#               installs only (values: upgrade or install)
 #   pkglist - packages to install
 sub inst_pkgs {
   my $batchmode = shift;
@@ -452,16 +489,15 @@ sub inst_pkgs {
       ($file) = ($file =~ /(.+)\.gz$/);
     }
 
-    # we may have already run preupgrade above.  running upgrade _and_ install
-    # is invalid.
+    # we may have already run preupgrade above. running upgrade _and_ install
+    # is invalid
     run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
     unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
 
     run_hooks("post$per_package_hook", $_);
-    $per_package_hook = 'install'; #reset for next package in the list.
+    $per_package_hook = 'install'; # reset for next package in the list
   }
-
   run_hooks("postbatch$batchmode", @pkglist);
 }
 
@@ -475,6 +511,17 @@ sub install {
   my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
   my(%pkgvers, @pkglist); # @pkglist is specifically in the correct order.
+
+  # installing local packages if all args are package files
+  my $notalocpkg = 0;
+  foreach (@ARGV) {
+    $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
+    print "$_ : $notalocpkg\n" if $debug;
+  }
+  unless ($notalocpkg) {
+    print "Installing your local packages...\n";
+    inst_loc_pkgs(@ARGV);
+  }
 
   print $fh "Parsing catalog, may take a while...\n";
   foreach my $tmppkg (@ARGV) {
