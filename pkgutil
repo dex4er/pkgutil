@@ -41,9 +41,6 @@ my $admin;
 my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
-chomp(my $arch = `uname -p`);
-chomp(my $rel = `uname -r`);
-
 # show available packages in catalog
 sub available {
   foreach my $common (sort keys %commonpkg) {
@@ -500,31 +497,34 @@ sub install {
       die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
       my @tmpdeps;
 
-      # skip stuff already checked, partly to avoid loops but also to gain speed if possible
-      # uncomment one of the below if you want to try it
+      ## Skip stuff already checked, partly to avoid loops but also to gain
+      ## speed if possible
+      ## Uncomment one of the below if you want to try it
 
-      # 1. Suggestion from Joe Baro, avoids loops, skips lots of iterations but reorders install order
-      #next if $finished{$tmppkg2};
-      #$finished{$tmppkg2} = 1;
+      ## 1. Suggestion from Joe Baro, avoids loops, skips lots of iterations
+      ##    but reorders install order
+      ##next if $finished{$tmppkg2};
+      ##$finished{$tmppkg2} = 1;
 
-      # 2. My "deduplicate at every hit" suggestion, reduces iterations but still reorders list
-      #if ($finished{$tmppkg2}) {
-      #  my @tmppkglist = @pkglist;
-      #  my $tmp;
-      #  undef @pkglist;
-      #  while (scalar(@tmppkglist)) {
-      #    $tmp = shift(@tmppkglist);
-      #    if ($tmp eq $tmppkg2) {
-      #      push(@pkglist,@tmppkglist);
-      #      last;
-      #    } else {
-      #      push(@pkglist,$tmp);
-      #    }
-      #  }
-      #}
-      #$finished{$tmppkg2} = 1;
+      ## 2. My "deduplicate at every hit" suggestion, reduces iterations but
+      ##    still reorders list
+      ##if ($finished{$tmppkg2}) {
+      ##  my @tmppkglist = @pkglist;
+      ##  my $tmp;
+      ##  undef @pkglist;
+      ##  while (scalar(@tmppkglist)) {
+      ##    $tmp = shift(@tmppkglist);
+      ##    if ($tmp eq $tmppkg2) {
+      ##      push(@pkglist,@tmppkglist);
+      ##      last;
+      ##    } else {
+      ##      push(@pkglist,$tmp);
+      ##    }
+      ##  }
+      ##}
+      ##$finished{$tmppkg2} = 1;
 
-      # end of skip stuff tests
+      ## end of skip stuff tests
 
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
@@ -580,10 +580,10 @@ sub install {
   }
   print "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
-  ### temporary for testing loop/speed suggestions
-  print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
-  print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
-  ### temporary for testing loop/speed suggestions
+  ## temporary for testing loop/speed suggestions
+  ##print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
+  ##print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
+  ## temporary for testing loop/speed suggestions
 
   # incompatible packages (I-dependencies)
   my @ideppkglist;
@@ -684,7 +684,7 @@ sub install {
 
   extract_pkg(@dlpkglist) if ($mode == 5);	# --extract
 
-  ### test --stream after below I-code was added
+  ## test --stream after below I-code was added
   return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
 
   # remove incompatible packages
@@ -991,22 +991,12 @@ sub parse_cl {
   # Prepend temp mirrors so they are selected first
   unshift(@mirror,@opt_temp) if @opt_temp;
 
-  foreach (my $i=0; $i < scalar(@mirror); $i++) {
-    ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
-    $mirror[$i] .= "/" . $arch . "/" . $rel;
-  }
-
-  ### insert target code here BEGIN
-  ### is the above needed or could it be intergrated into this part?
-  ###   arch and rel could just as well be loc_arch and loc_rel?
-  ###   that would get rid of the sed
-
   my @supp_arch = qw(sparc i386);
   my @supp_rel = qw(5.8 5.9 5.10 5.11);
   my ($ok_arch,$ok_rel) = (0,0);
   my ($loc_arch,$loc_rel);
 
-  if ($opt_target) {
+  if ($opt_target && $opt_download) {
     if ($opt_target =~ /.:./) {
       ($loc_arch,$loc_rel) = split(/:/,$opt_target);
     } else {
@@ -1035,13 +1025,9 @@ sub parse_cl {
   myexit("","",1) if (($ok_arch + $ok_rel) < 2);
 
   foreach (my $i=0; $i < scalar(@mirror); $i++) {
-    print "mirror $i (bef): $mirror[$i]\n" if $debug;
-    $mirror[$i] =~ s!\b$arch\b!$loc_arch!;
-    $mirror[$i] =~ s!\b$rel\b!$loc_rel!;
-    print "mirror $i (aft): $mirror[$i]\n" if $debug;
+    ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
+    $mirror[$i] .= "/" . $loc_arch . "/" . $loc_rel;
   }
-
-  ### insert target code here END
 
   print "primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
@@ -1053,7 +1039,7 @@ sub parse_cl {
   # complex options
   list_file() if $opt_listfile;
   # download and stream if both -d and -s selected
-  stream($opt_target,$opt_output) if ($opt_stream && $opt_download);
+  stream($loc_arch,$loc_rel,$opt_output) if ($opt_stream && $opt_download);
   email($opt_email) if $opt_email;
   available() if $opt_avail;
   describe() if $opt_describe;
@@ -1316,11 +1302,8 @@ sub run_hooks {
 #   target - arch and os release
 #   output - file name for package stream
 sub stream {
-  my ($target,$output) = @_;
-  my @supp_arch = qw(sparc i386);
-  my @supp_rel = qw(5.8 5.9 5.10 5.11);
-  my ($fh,$mode,$loc_arch,$loc_rel,$transfile);
-  my ($ok_arch,$ok_rel) = (0,0);
+  my ($arch,$rel,$output) = @_;
+  my ($fh,$mode,$transfile);
 
   if ($output) {
     $fh = ($output eq "-" ? *STDERR : *STDOUT);
@@ -1330,50 +1313,14 @@ sub stream {
     $mode = 3;
   }
  
-  if ($target) {
-    if ($target =~ /.:./) {
-      ($loc_arch,$loc_rel) = split(/:/,$target);
-    } else {
-      myexit("$target is not a correct arch:rel combo.","",1);
-    }
-  } else {
-    chomp($loc_arch = `uname -p`);	# arch type sparc|i386
-    chomp($loc_rel = `uname -r`);	# os version, e.g. 5.10
-  }
-  print "arch: $loc_arch\nos rel: $loc_rel\n" if $debug;
-
-  foreach (@supp_arch) {
-    if ($loc_arch eq $_) {
-      $ok_arch = 1;
-      last;
-    }
-  }
-  foreach (@supp_rel) {
-    if ($loc_rel eq $_) {
-      $ok_rel = 1;
-      last;
-    }
-  }
-  print "Architecture $loc_arch not supported.\n" if (! $ok_arch);
-  print "OS release $loc_rel not supported.\n" if (! $ok_rel);
-  myexit("","",1) if (($ok_arch + $ok_rel) < 2);
-
-  foreach (my $i=0; $i < scalar(@mirror); $i++) {
-    print "mirror $i: $mirror[$i]\n" if $debug;
-    $mirror[$i] =~ s!\b$arch\b!$loc_arch!;
-    $mirror[$i] =~ s!\b$rel\b!$loc_rel!;
-    print "mirror $i: $mirror[$i]\n" if $debug;
-  }
-
   if ($output) {
     $transfile = ($output eq "-" ? "/dev/fd/1" : "$pkgdir/$output");
   } else {
-    $output = "$ARGV[0].$loc_arch.$loc_rel.pkg";
+    $output = "$ARGV[0].$arch.$rel.pkg";
     $transfile = "$pkgdir/$output";
   }
   print STDERR "output: $output\ntransfile: $transfile\n" if $debug;
 
-  check_catalog();
   my @install_order = install($mode,0);	# download packages needed
   myexit("","",1) if (scalar(@install_order) == 0); # empty list, nothing to do
   print "install order: " . join(' ',@install_order) . "\n" if $debug;
@@ -1622,7 +1569,7 @@ Build a package stream for a certain architecture and OS release. All dependenci
 
 =item B<-T, --target=arch:rel>
 
-Specify architecture and OS release for stream, e.g. i386:5.9 or sparc:5.10. Used with -s. If not specified defaults to architecture and release of the host running pkgutil.
+Specify architecture and OS release when downloading, e.g. i386:5.9 or sparc:5.10. If not specified defaults to architecture and release of the host running pkgutil.
 
 =item B<-o, --output=file>
 
