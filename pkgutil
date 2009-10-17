@@ -432,7 +432,9 @@ sub inst_loc_pkgs {
       }
     }
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file`");
-    unlink "$file" or die "Can't delete $file: $!\n";
+    if ($_ =~ /\.gz$/) {		# not all packages are compressed
+      unlink "$file" or die "Can't delete $file: $!\n";
+    }
   }
   myexit("","",0);
 }
