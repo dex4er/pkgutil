@@ -257,11 +257,16 @@ sub fetch_pkgs {
         $tried = 1;
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
+	  run_hooks("prefetch", "$tmpcatsrc/$file");
           $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
         } else {
+	  run_hooks("prefetch", "$_/$file");
           $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
-        last unless $status;
+	unless $status {
+	  run_hooks("postfetch", "$_/$file");
+	  last;
+	}
       }
       if ($status || ! $tried) {
         myexit("\nFetching of $_ failed. Try updating your catalog with pkgutil -U.","",1);
