@@ -1293,7 +1293,7 @@ sub rem_pkgs {
 # run hooks
 sub run_hooks {
   my $hook_name = shift;
-  my @affected_pkgs = @_;
+  my @hook_args = @_;
 
   my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
   my ($hook,$hookfile,$oldwd,$status,$code);
@@ -1316,9 +1316,6 @@ sub run_hooks {
   if (! -d $hook_dir) {
     print "No $hook_name hook scripts.\n" if $debug;
   } else {
-    # we only pass a single arg to each hook.  either a filename
-    # containing the list of affected packages or a single package
-    # name
     $oldwd = getcwd();
     chdir($hook_dir) or die "Could not cd to $hook_dir";
 
@@ -1330,7 +1327,12 @@ sub run_hooks {
       $hook = "$hook_dir/$hookfile";
       if (-x $hook) {
         print "Running $hook.\n" if $debug;
-        system("$hook " . join(' ', @affected_pkgs));
+
+	# @hook_args is (in most cases) a list of
+	# CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
+	# cases, it might be single or multipel URL's of packages
+	# being pulled down, etc
+        system("$hook " . join(' ', @hook_args));
         $status = $?;
         $code = $status >> 8;
 
