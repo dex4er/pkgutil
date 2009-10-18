@@ -1309,7 +1309,9 @@ sub run_hooks {
                      'postbatchremove',
                      'postinstall',
                      'postupgrade',
-                     'postremove');
+                     'postremove',
+		     'prefetch',
+		     'postfetch');
 
   die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
 
