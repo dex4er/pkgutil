@@ -257,16 +257,16 @@ sub fetch_pkgs {
         $tried = 1;
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
-	  run_hooks("prefetch", "$tmpcatsrc/$file");
+          run_hooks("prefetch", "$tmpcatsrc/$file");
           $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
         } else {
-	  run_hooks("prefetch", "$_/$file");
+          run_hooks("prefetch", "$_/$file");
           $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
-	unless $status {
-	  run_hooks("postfetch", "$_/$file");
-	  last;
-	}
+        unless ($status) {
+          run_hooks("postfetch", "$_/$file");
+          last;
+        }
       }
       if ($status || ! $tried) {
         myexit("\nFetching of $_ failed. Try updating your catalog with pkgutil -U.","",1);
@@ -416,7 +416,6 @@ sub inst_loc_pkgs {
   my $pkgaddopts = "";
   my $file;
   my $pkgtrace = "";
-  my $per_package_hook = "install";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgtrace = "-v" if $trace;
@@ -1337,7 +1336,7 @@ sub run_hooks {
 
 	# @hook_args is (in most cases) a list of
 	# CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
-	# cases, it might be single or multipel URL's of packages
+	# cases, it might be single or multiple URL's of packages
 	# being pulled down, etc
         system("$hook " . join(' ', @hook_args));
         $status = $?;
