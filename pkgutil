@@ -952,6 +952,8 @@ sub parse_cl {
       $opt_describe,$opt_extract,$opt_nodeps);
 
   usage() if (@ARGV == 0);
+  # this call gives hooks a chance to look at the unaltered argument list.
+  run_hooks("preargproc", @ARGV);
   GetOptions("i|install"	=> \$opt_install,
              "u|upgrade"	=> \$opt_upgrade,
              "r|remove"		=> \$opt_remove,
@@ -980,6 +982,9 @@ sub parse_cl {
              "extract"		=> \$opt_extract,
              "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
+  # running the hook now should pass only things that remain in ARGV,
+  # which should be a list of package names.
+  run_hooks("postargproc", @ARGV);
 
   # simple options
   usage() if $opt_help;
