@@ -1315,7 +1315,9 @@ sub run_hooks {
                      'postupgrade',
                      'postremove',
 		     'prefetch',
-		     'postfetch');
+		     'postfetch',
+		     'preargproc',
+		     'postargproc');
 
   die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
 
