@@ -12,9 +12,14 @@ URL: http://sourceforge.net/projects/pkgutil
 Utilities
 ---------
 
-bldcat	Builds CSW catalogs from package files.
+- bldcat -
+Builds CSW catalogs from package files.
 
-chkcat	Checks CSW catalogs for standard compliance.
+- chkcat -
+Checks CSW catalogs for standard compliance.
+
+- pkgutillog -
+Script using hooks to log pkgutil actions. Uses syslog (info.notice).
 
 -- 
 $Id$
