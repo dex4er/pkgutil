@@ -257,10 +257,10 @@ sub fetch_pkgs {
         $tried = 1;
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
-          run_hooks("prefetch", "$tmpcatsrc/$file");
+          run_hooks("prefetch", "$tmpcatsrc/$file", $pkg);
           $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
         } else {
-          run_hooks("prefetch", "$_/$file");
+          run_hooks("prefetch", "$_/$file", $pkg);
           $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
         unless ($status) {
