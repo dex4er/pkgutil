@@ -953,6 +953,7 @@ sub parse_cl {
 
   usage() if (@ARGV == 0);
   # this call gives hooks a chance to look at the unaltered argument list.
+  print "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
   run_hooks("preargproc", @ARGV);
   GetOptions("i|install"	=> \$opt_install,
              "u|upgrade"	=> \$opt_upgrade,
@@ -982,9 +983,6 @@ sub parse_cl {
              "extract"		=> \$opt_extract,
              "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
-  # running the hook now should pass only things that remain in ARGV,
-  # which should be a list of package names.
-  run_hooks("postargproc", @ARGV);
 
   # simple options
   usage() if $opt_help;
@@ -1098,6 +1096,15 @@ sub parse_cl {
   } else {
     check_catalog();
   }
+
+  # running the hook now should pass only things that remain in ARGV,
+  # which should be a list of package names.
+  my @norm_argv;
+  foreach (@ARGV) {
+    push(@norm_argv,parse_catalog($_,2));
+  }
+  print "postargproc: " . join(' ',@norm_argv) . "\n" if $debug;
+  run_hooks("postargproc", @norm_argv);
 
   # complex options
   list_file() if $opt_listfile;
