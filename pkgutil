@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.8b1";
+my $pkgutilver = "1.8b2";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -729,7 +729,6 @@ sub install {
 
   extract_pkg(@dlpkglist) if ($mode == 5);	# --extract
 
-  ## test --stream after below I-code was added
   return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
 
   # remove incompatible packages
