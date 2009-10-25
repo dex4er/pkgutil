@@ -240,17 +240,17 @@ sub fetch_pkgs {
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   my $i = 1;
-  foreach (@pkglist) {
-    $file = parse_catalog($_,3);
-    if (-r "$pkgdir/$file" && -s _ != parse_catalog($_,5)) {	# broken/empty files may be present
-      print $fh "Removing non-matching local file for $_.\n";
+  foreach my $pkg (@pkglist) {
+    $file = parse_catalog($pkg,3);
+    if (-r "$pkgdir/$file" && -s _ != parse_catalog($pkg,5)) {	# broken/empty files may be present
+      print $fh "Removing non-matching local file for $pkg.\n";
       unlink "$pkgdir/$file";
     }
     if (-r "$pkgdir/$file") {
       $i++;
-      print $fh "A local copy of $_ exists and is of matching size.\n";
+      print $fh "A local copy of $pkg exists and is of matching size.\n";
     } else {
-      print $fh "Fetching $_ (" . $i++ . "/" . scalar(@pkglist) . ")...\n";
+      print $fh "Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ")...\n";
       locate_wget() unless (-x $wget);	# if wget disappeared locate alt.
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
@@ -264,7 +264,7 @@ sub fetch_pkgs {
           $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
         unless ($status) {
-          run_hooks("postfetch", "$_/$file");
+          run_hooks("postfetch", "$_/$file", $pkg);
           last;
         }
       }
@@ -272,7 +272,7 @@ sub fetch_pkgs {
         myexit("\nFetching of $_ failed. Try updating your catalog with pkgutil -U.","",1);
       }
     }
-    md5($_,"$pkgdir/$file",$mode) if $use_md5;
+    md5($pkg,"$pkgdir/$file",$mode) if $use_md5;
   }
 }
 
