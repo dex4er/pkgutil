@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# pkgutillog - log pkgutil commands via preargproc hook mechanism
+# Copyright (C) 2009 Peter Bonivart
+
+# $Id$
+
+PKGUTILVER=`/usr/bin/grep Id /opt/csw/bin/pkgutil | cut -d' ' -f4`
+
+/usr/bin/logger -tpkgutillog "(r${PKGUTILVER}) pkgutil $*"
