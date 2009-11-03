@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.8";
+my $pkgutilver = "1.9b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -501,6 +501,11 @@ sub inst_pkgs {
     # we may have already run preupgrade above. running upgrade _and_ install
     # is invalid
     run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
+
+    # support response (pkgask) files
+    $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
+    print "pkgaddopts: $pkgaddopts\n" if $debug;
+    
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
     unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
 
