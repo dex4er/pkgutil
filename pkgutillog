@@ -5,6 +5,6 @@
 
 # $Id$
 
-PKGUTILVER=`/usr/bin/grep Id /opt/csw/bin/pkgutil | cut -d' ' -f4`
+PKGUTILVER=`/usr/bin/grep "Id: pkgutil " /opt/csw/bin/pkgutil | cut -d' ' -f4`
 
 /usr/bin/logger -tpkgutillog "(r${PKGUTILVER}) pkgutil $*"
