@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v1.8. Released 2009-xx-xx
+* v1.8. Released 2009-10-30
   - Fix transform feature (3904@OpenCSW)
   - Support I-dependencies
   - Split package into core pkgutil and extension pkgutilplus
