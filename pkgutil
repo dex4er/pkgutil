@@ -467,7 +467,8 @@ sub inst_pkgs {
 
   run_hooks("prebatch$batchmode", @pkglist);
 
-  foreach (@pkglist) {
+  # removing old version of all packages being upgraded
+  foreach (reverse @pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($force && -r $admin);
     my ($pkgname) = ($_ =~ /^(.+)-/);
@@ -481,6 +482,12 @@ sub inst_pkgs {
       print "=> Removing old version of $pkgname\n";
       system("$pkgrm $pkgforce $pkgtrace $pkgname");
     }
+  }
+
+  # install all packages being upgraded/installed
+  foreach (@pkglist) {
+    my $pkgforce = "";
+    $pkgforce = "-a $admin -n" if ($force && -r $admin);
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
     print "=> Installing $_\n";
