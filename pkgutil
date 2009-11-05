@@ -41,7 +41,7 @@ my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
-my ($line,$tmp,$wget,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
+my ($line,$tmp,$wget,$yes,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # show available packages in catalog
@@ -233,7 +233,7 @@ sub fetch_pkgs {
   my ($file,$status);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
-  if (scalar(@pkglist) > 1 && ! $force) {
+  if (scalar(@pkglist) > 1 && ! $yes) {
     print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     myexit("","",1) if ($prompt =~ /^[nN]/);
@@ -422,14 +422,14 @@ sub inst_loc_pkgs {
 
   foreach (@pkglist) {
     my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($force && -r $admin);
+    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     print "=> Installing $_\n";
     $file = $_;
     if ($_ =~ /\.gz$/) {		# not all packages are compressed
       my $status = locate_gzip();
       ($file) = ($file =~ /(.+)\.gz$/);
       if (! $status) {
-        if ($force) {
+        if ($yes) {
           `$gzip -c -f -d $_ > $file`;
         } else {
           `$gzip -c -d $_ > $file`;
@@ -470,7 +470,7 @@ sub inst_pkgs {
   # removing old version of all packages being upgraded
   foreach (reverse @pkglist) {
     my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($force && -r $admin);
+    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
@@ -487,14 +487,14 @@ sub inst_pkgs {
   # install all packages being upgraded/installed
   foreach (@pkglist) {
     my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($force && -r $admin);
+    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
     print "=> Installing $_\n";
     if ($file =~ /\.gz$/) {		# not all packages are compressed
       my $status = locate_gzip();
       if (! $status) {
-        if ($force) {
+        if ($yes) {
           `$gzip -f -d $pkgdir/$file`;
         } else {
           `$gzip -d $pkgdir/$file`;
@@ -748,8 +748,8 @@ sub install {
     my $pkgrm = "/usr/sbin/pkgrm";
     my $pkgtrace = "";
     my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($force && -r $admin);
-    if (! $force) {
+    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
+    if (! $yes) {
       print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n] ";
       chomp (my $prompt = <STDIN>);
       myexit("","",1) if ($prompt =~ /^[nN]/);
@@ -978,7 +978,7 @@ sub parse_cl {
              "U|catalog"	=> \$opt_upd_cat,
              "e|email=s"	=> \$opt_email,
              "t|temp=s"		=> \@opt_temp,
-             "y|yes"		=> \$force,
+             "y|yes"		=> \$yes,
              "s|stream"		=> \$opt_stream,
              "T|target=s"	=> \$opt_target,
              "o|output=s"	=> \$opt_output,
@@ -1256,7 +1256,7 @@ sub rem_pkgs {
   my ($pkg,$i,$j,$k,$l,$depinuse,$skip);
   my (@cswpkgs,@deptmp,@rempkgs);
 
-  $pkgforce = "-a $admin -n" if $force;
+  $pkgforce = "-a $admin -n" if $yes;
   $pkgtrace = "-v" if $trace;
   print "Looking at installed CSW packages...\n";
   my @cswpkgstmp = `/bin/pkginfo | grep CSW`;
@@ -1290,7 +1290,7 @@ sub rem_pkgs {
     push(@rempkgs,$userpkg) unless $depinuse;
     $depinuse ? print " (in use)\n" : print " (remove)\n";
   }
-  if (scalar(@rempkgs) > 1 && ! $force) {
+  if (scalar(@rempkgs) > 1 && ! $yes) {
     print scalar(@rempkgs)," packages to remove. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     myexit("","",1) if ($prompt =~ /^[nN]/);

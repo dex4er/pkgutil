@@ -24,6 +24,12 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v1.9. Released 2009-xx-xx
+  - Remove all upgrade packages first (2890862@SF) (David Everly)
+  - Add support for response (pkgask) files (2890896@SF) (David Everly)
+  - Enhance description of noncsw option in pkgutil.conf (3990@OpenCSW)
+    (Sebastian Kayser)
+
 * v1.8. Released 2009-10-30
   - Fix transform feature (3904@OpenCSW)
   - Support I-dependencies
