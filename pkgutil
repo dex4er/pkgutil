@@ -41,7 +41,8 @@ my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
-my ($line,$tmp,$wget,$yes,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash,$size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
+my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash);
+my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # show available packages in catalog
@@ -665,7 +666,8 @@ sub install {
       if ($old eq "notinst") {	# new package needed
         push(@newpkglist,"$_-$new");
       } else {			# package already installed
-        if (verscmp($new,$old) == 1) {
+        my $cmpval = verscmp($new,$old);
+        if ($cmpval == 1 || ($cmpval != 0 && $force)) {	# older or --force
           push(@updpkglist,"$_-$new");	# updated package needed
         } else {
           push(@curpkglist,"$_-$old");	# package is current
@@ -979,6 +981,7 @@ sub parse_cl {
              "e|email=s"	=> \$opt_email,
              "t|temp=s"		=> \@opt_temp,
              "y|yes"		=> \$yes,
+             "f|force"		=> \$force,
              "s|stream"		=> \$opt_stream,
              "T|target=s"	=> \$opt_target,
              "o|output=s"	=> \$opt_output,
@@ -1477,6 +1480,7 @@ sub usage {
   print "\n  -W, --workdir=path\tPath to use for downloads";
   print "\n      --config=file\tUse this configuration file";
   print "\n  -y, --yes\t\tAnswer yes on all prompts";
+  print "\n  -f, --force\t\tForce updates (sync with mirror)";
   print "\n  -n, --nomod\t\tNo modifications are made to the system";
   print "\n  -N, --nodeps\t\tNo dependencies";
   print "\n  -D, --debug\t\tDebug mode";
@@ -1518,7 +1522,7 @@ sub verscmp {
       $update = -1;
       $skip = 1;
     } elsif ($p2rev !~ /REV=/ && $p1rev =~ /REV=/) {
-      # Reverse case (intalled REV, catalog no REV => "downgrade")
+      # Reverse case (installed REV, catalog no REV => "downgrade")
       $update = 1;
       $skip = 1;
     }
@@ -1677,6 +1681,10 @@ Use this configuration file instead of the default ones.
 =item B<-y, --yes>
 
 Answer yes on all prompts. Skips prompt when multiple packares are to be downloaded. Makes pkgrm/pkgadd operations more silent and without prompts. Only makes sense with -i and -u.
+
+=item B<-f, --force>
+
+Force updates regardless of version compare result, as long as local and mirror version is not the same an update is carried out. This can be used as a rollback from the testing mirror to current or from current to stable for example.
 
 =item B<-n, --nomod>
 

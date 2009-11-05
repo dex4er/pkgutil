@@ -208,7 +208,7 @@ while (scalar(@tmp) > 0) {
       print "\nERROR! Cyclic dependency detected in package $field[2].\n" unless $quiet;
       last;
     }
-    if ($deplen++ > 1000) {
+    if ($deplen++ > 25000) {
       retcode(1);
       print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
       last;
