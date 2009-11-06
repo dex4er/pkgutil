@@ -237,7 +237,7 @@ sub fetch_pkgs {
   if (scalar(@pkglist) > 1 && ! $yes) {
     print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
-    myexit("","",1) if ($prompt =~ /^[nN]/);
+    myexit("","",0) if ($prompt =~ /^[nN]/);
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   my $i = 1;
@@ -754,7 +754,7 @@ sub install {
     if (! $yes) {
       print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n] ";
       chomp (my $prompt = <STDIN>);
-      myexit("","",1) if ($prompt =~ /^[nN]/);
+      myexit("","",0) if ($prompt =~ /^[nN]/);
     }
     foreach (@ideppkglist) {
       print "=> Removing incompatible package $_\n";
@@ -1296,7 +1296,7 @@ sub rem_pkgs {
   if (scalar(@rempkgs) > 1 && ! $yes) {
     print scalar(@rempkgs)," packages to remove. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
-    myexit("","",1) if ($prompt =~ /^[nN]/);
+    myexit("","",0) if ($prompt =~ /^[nN]/);
   }
   if (scalar(@rempkgs) > 0) {
     run_hooks('prebatchremove', @rempkgs);
@@ -1317,7 +1317,7 @@ sub rem_pkgs {
   } else {
     print "Nothing to remove.\n";
   }
-  myexit("","",1);
+  myexit("","",0);
 }
 
 # run hooks
