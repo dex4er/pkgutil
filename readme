@@ -25,6 +25,8 @@ Version history
 ---------------
 
 * v1.9. Released 2009-xx-xx
+  - Add --force option to sync with mirror. You can install or update to
+    the version on the mirror even if your local version is newer, 
   - Remove all upgrade packages first (2890862@SF) (David Everly)
   - Add support for response (pkgask) files (2890896@SF) (David Everly)
   - Enhance description of noncsw option in pkgutil.conf (3990@OpenCSW)
