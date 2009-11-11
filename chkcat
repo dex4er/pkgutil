@@ -18,7 +18,7 @@ my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,
     $erroronly,$pkgver);
 my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
-my (%pkg,%pkgdep);
+my (%pkg,%pkgdep,%config);
 my $rc = 0;
 my $format = 8;
 
@@ -51,11 +51,38 @@ sub usage {
   exit 1;
 }
 
+sub init {
+  my $conf = "/etc/opt/csw/pkgutil.conf";
+  if (-r $conf) {
+    %config = ("maxpkglist" => "");
+
+    open (CONFIG,"<$conf") or die "Can't open $conf: $!\n";
+    while (<CONFIG>) {
+      chomp;  # remove newline
+      s/#.*//;        # remove comments
+      s/^\s+//;       # remove leading white
+      s/\s+$//;       # remove trailing white
+      next unless length;     # next if nothing left
+      my ($var,$value) = split(/\s*=\s*/,$_,2);
+      my $r = ref($config{$var});
+      if (! $r) {
+       $config{$var} = $value;
+      } elsif ($r eq 'ARRAY') {
+        push(@{$config{$var}},$value);
+      }
+    }
+    close CONFIG;
+  }
+}
+
 sub retcode {
   my ($rctmp) = @_;
 
   $rc = $rctmp if ($rctmp > $rc);
 }
+
+# read configuration file (/etc/opt/csw/pkgutil.conf)
+init();
 
 (-r $catalog) || die "Can't open $catalog";	# must be a readable file
 
@@ -208,7 +235,8 @@ while (scalar(@tmp) > 0) {
       print "\nERROR! Cyclic dependency detected in package $field[2].\n" unless $quiet;
       last;
     }
-    if ($deplen++ > 25000) {
+    my $deplenmax = $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
+    if ($deplen++ > $deplenmax) {
       retcode(1);
       print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
       last;

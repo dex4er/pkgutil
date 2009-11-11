@@ -35,7 +35,7 @@ my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
 my $pkgliststyle = 0;
-my $maxpkglist = 25000;
+my $maxpkglist = 250000;
 my @mirror;
 my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
