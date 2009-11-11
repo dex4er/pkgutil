@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.9b1";
+my $pkgutilver = "1.9b2";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -108,16 +108,21 @@ sub check_pkg {
 # compare current to available packages
 #   mode - 0 = print full list, 1 = return list of old packages
 #          2 = return full list of old packages, 3 = same as 0 but only diffs
+#          4 = compare a single package (much faster, used with Puppet)
 sub compare {
   my ($mode) = @_;
   my (@cswpkgs,@retlist);
   my ($pkg,$local_ver,$remote_ver,$tmp);
 
   print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
-  if ($noncsw) {
-    @cswpkgs = `/bin/pkginfo`;
+  if ($mode == 4) {
+    $cswpkgs[0] = "a " . parse_catalog($ARGV[0],2) . " ";
   } else {
-    @cswpkgs = `/bin/pkginfo | grep CSW`;
+    if ($noncsw) {
+      @cswpkgs = `/bin/pkginfo`;
+    } else {
+      @cswpkgs = `/bin/pkginfo | grep CSW`;
+    }
   }
   foreach $pkg (@cswpkgs) {
     ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
@@ -962,7 +967,7 @@ sub parse_cl {
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_extract,$opt_nodeps);
+      $opt_describe,$opt_extract,$opt_nodeps,$opt_single);
 
   usage() if (@ARGV == 0);
   # this call gives hooks a chance to look at the unaltered argument list.
@@ -995,6 +1000,7 @@ sub parse_cl {
              "L|listfile"	=> \$opt_listfile,
              "F|findfile"	=> \$opt_findfile,
              "extract"		=> \$opt_extract,
+             "single"		=> \$opt_single,
              "N|nodeps"		=> \$opt_nodeps,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
@@ -1128,6 +1134,7 @@ sub parse_cl {
   available() if $opt_avail;
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
+  compare(4) if ($opt_compare && $opt_single);
   compare(0) if $opt_compare;
   # download and extract if both -d and --extract selected
   install(5,$opt_nodeps) if ($opt_extract && $opt_download);
@@ -1494,6 +1501,7 @@ sub usage {
   print "\n  -s, --stream\t\tBuild a package stream (use with -d)";
   print "\n  -o, --output=file\tFile name for package stream (use with -s)";
   print "\n  -T, --target=arch:rel\tSpecify architecture and OS release for download";
+  print "\n      --single\t\tSingle package check (use with -c)";
   print "\n\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   myexit("","",0);
@@ -1725,6 +1733,10 @@ Find files in installed packages.
 =item B<--extract>
 
 Will fetch and extract package content. Must be used with -d.
+
+=item B<--single>
+
+Single package check. This is much faster than checking all installed packages, note that using something like "-c foo" still checks all packages, it just filters the output to only show lines containing foo. Must be used with -c.
 
 =back
 
