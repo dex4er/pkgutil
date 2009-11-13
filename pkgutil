@@ -270,9 +270,9 @@ sub fetch_pkgs {
           run_hooks("prefetch", "$_/$file", $pkg);
 
           ## testing curl as download method
-          ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
+          fetch_pkgs_curl("$_/$file","$pkgdir/$file");
 
-          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+##          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
         unless ($status) {
           run_hooks("postfetch", "$_/$file", $pkg);
@@ -287,39 +287,55 @@ sub fetch_pkgs {
   }
 }
 
+## global vars
+my ($progress,$last);
+
 ## experimental code for curl downloads
-##sub fetch_pkgs_curl {
-##  my ($pkg,$file) = @_;
+sub fetch_pkgs_curl {
+  my ($url,$file) = @_;
+
+print "url: $url\n";
+print "file: $file\n";
 
 ## only if available - eval?
-##  use WWW::Curl::Easy;
+  use WWW::Curl::Easy;
 
-##  # Setting the options
-##  my $curl = new WWW::Curl::Easy;
+  my $curl = new WWW::Curl::Easy;
 
-##print "pkg:$pkg:\n";
-##print "file:$file:\n";
+  # Setting the options
+  $curl->setopt(CURLOPT_NOPROGRESS, 1);
+  $curl->setopt(CURLOPT_NOPROGRESS, 0);
+  $curl->setopt(CURLOPT_PROGRESSFUNCTION, \&curl_progress_callback);
+  $curl->setopt(CURLOPT_HEADER, 0);
+  $curl->setopt(CURLOPT_URL, $url);
+  open(my $fp,">$file") or die "Can't open $file: $!\n";
+  $curl->setopt(CURLOPT_WRITEDATA, $fp);
 
-## test built-in progressbar
-##  $curl->setopt(CURLOPT_HEADER,0);
-##  $curl->setopt(CURLOPT_URL, $pkg);
+  # Starts the actual request
+  my $retcode = $curl->perform;
 
-##  $curl->setopt(CURLOPT_WRITEDATA,$file);
+print "progress: $progress\n";
+print "last: $last\n";
 
-##  # Starts the actual request
-##  my $retcode = $curl->perform;
+  # Looking at the results...
+  if ($retcode == 0) {
+    print("Transfer went ok\n");
+    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
+    # judge result and next action based on $response_code
+    print("Received response: $response_code\n");
+  } else {
+    print("Error: " . $curl->strerror($retcode) . " ($retcode)\n");
+  }
+  close $file;
+exit;
+}
 
-##  # Looking at the results...
-##  if ($retcode == 0) {
-##    print("Transfer went ok\n");
-##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
-##    # judge result and next action based on $response_code
-##    print("Received response: $response_code\n");
-##  } else {
-##    print("An error happened: ".$curl->strerror($retcode)." ($retcode)\n");
-##  }
-##exit;
-##}
+sub curl_progress_callback {
+  my ($clientp,$dltotal,$dlnow,$ultotal,$ulnow) = @_;
+  $last = $dlnow;
+  $progress++;
+  return 0;
+}
 
 # find files in package
 sub find_file {
