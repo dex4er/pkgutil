@@ -25,6 +25,9 @@ Version history
 ---------------
 
 * v1.9. Released 2009-xx-xx
+  - Default maxpkglist (loop detection) value raised to 250000 to
+    decrease risk of false alarm (Sebastian)
+  - Add --single (used with -c) to quickly check one package (Maciej)
   - Add --force option to sync with mirror. You can install or update to
     the version on the mirror even if your local version is newer, 
   - Remove all upgrade packages first (2890862@SF) (David Everly)

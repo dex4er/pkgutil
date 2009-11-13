@@ -268,6 +268,10 @@ sub fetch_pkgs {
           $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
         } else {
           run_hooks("prefetch", "$_/$file", $pkg);
+
+          ## testing curl as download method
+          ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
+
           $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
         unless ($status) {
@@ -282,6 +286,40 @@ sub fetch_pkgs {
     md5($pkg,"$pkgdir/$file",$mode) if $use_md5;
   }
 }
+
+## experimental code for curl downloads
+##sub fetch_pkgs_curl {
+##  my ($pkg,$file) = @_;
+
+## only if available - eval?
+##  use WWW::Curl::Easy;
+
+##  # Setting the options
+##  my $curl = new WWW::Curl::Easy;
+
+##print "pkg:$pkg:\n";
+##print "file:$file:\n";
+
+## test built-in progressbar
+##  $curl->setopt(CURLOPT_HEADER,0);
+##  $curl->setopt(CURLOPT_URL, $pkg);
+
+##  $curl->setopt(CURLOPT_WRITEDATA,$file);
+
+##  # Starts the actual request
+##  my $retcode = $curl->perform;
+
+##  # Looking at the results...
+##  if ($retcode == 0) {
+##    print("Transfer went ok\n");
+##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
+##    # judge result and next action based on $response_code
+##    print("Received response: $response_code\n");
+##  } else {
+##    print("An error happened: ".$curl->strerror($retcode)." ($retcode)\n");
+##  }
+##exit;
+##}
 
 # find files in package
 sub find_file {
