@@ -337,7 +337,7 @@ sub curl_progress_callback {
   return 0;
 }
 
-# find files in package
+# find files in package (-F)
 sub find_file {
   my $contents = "/var/sadm/install/contents";
 
@@ -347,7 +347,7 @@ sub find_file {
       chomp $line;
       my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
       ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-      print "$file\t$pkg\n" if ($file =~ /$_/);
+      print "$file\t$pkg\n" if ($file =~ /\Q$_\E/);
     }
     close FILE;
   }
