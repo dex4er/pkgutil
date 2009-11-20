@@ -270,9 +270,9 @@ sub fetch_pkgs {
           run_hooks("prefetch", "$_/$file", $pkg);
 
           ## testing curl as download method
-          fetch_pkgs_curl("$_/$file","$pkgdir/$file");
+          ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
 
-##          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
         }
         unless ($status) {
           run_hooks("postfetch", "$_/$file", $pkg);
@@ -288,54 +288,54 @@ sub fetch_pkgs {
 }
 
 ## global vars
-my ($progress,$last);
+##my ($progress,$last);
 
 ## experimental code for curl downloads
-sub fetch_pkgs_curl {
-  my ($url,$file) = @_;
+##sub fetch_pkgs_curl {
+##  my ($url,$file) = @_;
 
-print "url: $url\n";
-print "file: $file\n";
+##print "url: $url\n";
+##print "file: $file\n";
 
 ## only if available - eval?
-  use WWW::Curl::Easy;
+##  use WWW::Curl::Easy;
 
-  my $curl = new WWW::Curl::Easy;
+##  my $curl = new WWW::Curl::Easy;
 
-  # Setting the options
-  $curl->setopt(CURLOPT_NOPROGRESS, 1);
-  $curl->setopt(CURLOPT_NOPROGRESS, 0);
-  $curl->setopt(CURLOPT_PROGRESSFUNCTION, \&curl_progress_callback);
-  $curl->setopt(CURLOPT_HEADER, 0);
-  $curl->setopt(CURLOPT_URL, $url);
-  open(my $fp,">$file") or die "Can't open $file: $!\n";
-  $curl->setopt(CURLOPT_WRITEDATA, $fp);
+##  # Setting the options
+##  $curl->setopt(CURLOPT_NOPROGRESS, 1);
+##  $curl->setopt(CURLOPT_NOPROGRESS, 0);
+##  $curl->setopt(CURLOPT_PROGRESSFUNCTION, \&curl_progress_callback);
+##  $curl->setopt(CURLOPT_HEADER, 0);
+##  $curl->setopt(CURLOPT_URL, $url);
+##  open(my $fp,">$file") or die "Can't open $file: $!\n";
+##  $curl->setopt(CURLOPT_WRITEDATA, $fp);
 
-  # Starts the actual request
-  my $retcode = $curl->perform;
+##  # Starts the actual request
+##  my $retcode = $curl->perform;
 
-print "progress: $progress\n";
-print "last: $last\n";
+##print "progress: $progress\n";
+##print "last: $last\n";
 
-  # Looking at the results...
-  if ($retcode == 0) {
-    print("Transfer went ok\n");
-    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
-    # judge result and next action based on $response_code
-    print("Received response: $response_code\n");
-  } else {
-    print("Error: " . $curl->strerror($retcode) . " ($retcode)\n");
-  }
-  close $file;
-exit;
-}
+##  # Looking at the results...
+##  if ($retcode == 0) {
+##    print("Transfer went ok\n");
+##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
+##    # judge result and next action based on $response_code
+##    print("Received response: $response_code\n");
+##  } else {
+##    print("Error: " . $curl->strerror($retcode) . " ($retcode)\n");
+##  }
+##  close $file;
+##exit;
+##}
 
-sub curl_progress_callback {
-  my ($clientp,$dltotal,$dlnow,$ultotal,$ulnow) = @_;
-  $last = $dlnow;
-  $progress++;
-  return 0;
-}
+##sub curl_progress_callback {
+##  my ($clientp,$dltotal,$dlnow,$ultotal,$ulnow) = @_;
+##  $last = $dlnow;
+##  $progress++;
+##  return 0;
+##}
 
 # find files in package (-F)
 sub find_file {
@@ -475,6 +475,8 @@ sub inst_loc_pkgs {
   my @pkglist = @_;
   my $pkgadd = "/usr/sbin/pkgadd";
   my $pkgaddopts = "";
+  my $pkgrm = "/usr/sbin/pkgrm";
+  my $pkginfo = "/usr/bin/pkginfo";
   my $file;
   my $pkgtrace = "";
 
@@ -484,6 +486,7 @@ sub inst_loc_pkgs {
   foreach (@pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
+    
     print "=> Installing $_\n";
     $file = $_;
     if ($_ =~ /\.gz$/) {		# not all packages are compressed
@@ -499,7 +502,18 @@ sub inst_loc_pkgs {
         myexit("\nGzip not found, please install CSWgzip.","",1);
       }
     }
-    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file`");
+
+    # remove first if the package is already installed
+    my $pkgname = `$pkginfo -d $file`;
+    ($pkgname) = ($pkgname =~ /\s(.+?)\s/);
+    my $tmp = check_pkg($pkgname,0);
+    if ($tmp ne "notinst") {
+      print "=> Removing currently installed $pkgname\n";
+      system("$pkgrm $pkgforce $pkgtrace $pkgname");
+    }
+
+    # install
+    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file");
     if ($_ =~ /\.gz$/) {		# not all packages are compressed
       unlink "$file" or die "Can't delete $file: $!\n";
     }
@@ -1025,9 +1039,11 @@ sub parse_cl {
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single);
 
   usage() if (@ARGV == 0);
+
   # this call gives hooks a chance to look at the unaltered argument list.
   print STDERR "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
   run_hooks("preargproc", @ARGV);
+
   GetOptions("i|install"	=> \$opt_install,
              "u|upgrade"	=> \$opt_upgrade,
              "r|remove"		=> \$opt_remove,
@@ -1066,7 +1082,7 @@ sub parse_cl {
   find_file() if $opt_findfile;
 
   # installing local packages if all args are package files
-  if ($opt_install) {
+  if ($opt_install || $opt_upgrade) {
     my $notalocpkg = 0;
     foreach (@ARGV) {
       $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
