@@ -1909,6 +1909,10 @@ C<stop_on_hook_soft_error>
 
 This option determines whether or not execution will be halted if a hook returns 2 as its exit code.  Execution is always stopped if a hook returns 1.  Set this to true to enable it.
 
+=head1 PKGASK RESPONSE FILES
+
+Pkgutil supports pkgask response files and will use them if you provide them. Create a pkgask directory in your work directory (normally /var/opt/csw/pkgutil) and put your response files there.
+
 =head1 SEE ALSO
 
 http://pkgutil.wikidot.com
