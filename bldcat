@@ -98,7 +98,7 @@ foreach my $file (glob "$pkgdir/*") {
   die "Could not transform $file: $!" if $status;
 
   foreach (glob "$tmpdir/*") {
-    ($pkgname) = (/([\w\+-]+)$/) if (-d);
+    ($pkgname) = (/([\w\+-\.]+)$/) if (-d);
   }
 
   open (FILE,"<$tmpdir/$pkgname/pkginfo") || die "Could not open $tmpdir/$pkgname/pkginfo: $!";
