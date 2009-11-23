@@ -25,15 +25,19 @@ Version history
 ---------------
 
 * v1.9. Released 2009-xx-xx
+  - Add exclude_pattern option to pkgutil.conf, use simple patterns
+    to exclude packages (Maciej Blizinski)
   - Default maxpkglist (loop detection) value raised to 250000 to
-    decrease risk of false alarm (Sebastian)
-  - Add --single (used with -c) to quickly check one package (Maciej)
+    decrease risk of false alarm (Sebastian Kayser)
+  - Add --single (used with -c) to quickly check one package
+    (Maciej Blizinski)
   - Add --force option to sync with mirror. You can install or update to
-    the version on the mirror even if your local version is newer, 
+    the version on the mirror even if your local version is newer
   - Remove all upgrade packages first (2890862@SF) (David Everly)
   - Add support for response (pkgask) files (2890896@SF) (David Everly)
   - Enhance description of noncsw option in pkgutil.conf (3990@OpenCSW)
     (Sebastian Kayser)
+  - Fix -F bug (4039@OpenCSW) (Sebastian Kayser)
 
 * v1.8. Released 2009-10-30
   - Fix transform feature (3904@OpenCSW)

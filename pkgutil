@@ -1864,6 +1864,14 @@ There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing you no
 
 The settings that can be used are:
 
+C<catalog_update>
+
+Number of days between automatic catalog updates. Special cases are -1 if you want to disable automatic updates and 0 if you always want to update the catalog. Default is 14.
+
+C<exclude_pattern>
+
+Space separated list of simple patterns that will exclude matching packages when updating or installing. If you, e.g., never want cups related packages updated accidentally you can add the string cups here, this will exclude all package names that contain that string. Default is blank.
+
 C<maxpkglist>
 
 During dependency calculation the recursive algorithm needs to be protected against cyclic dependencies in the catalog (packages that list each other as dependencies) or pkgutil will not stop until memory is exhausted. This sets the maximum number of recursions before pkgutil stops.
@@ -1917,9 +1925,13 @@ Peter Bonivart <bonivart@opencsw.org>
 
 =head1 CREDITS
 
+Maciej Blizinski
+
 Dennis Clarke
 
 Ihsan Dogan
+
+David Everly
 
 Don Jackson
 
