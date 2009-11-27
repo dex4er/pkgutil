@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.9b3";
+my $pkgutilver = "1.9";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -76,7 +76,7 @@ sub check_catalog {
     print STDERR "Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url, $filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
-    read_catalog($url, $filename); # Once per file
+    read_catalog($url, $filename); # once per file
   }
 }
 
@@ -491,7 +491,7 @@ sub inst_loc_pkgs {
     
     print "=> Installing $_\n";
     $file = $_;
-    if ($_ =~ /\.gz$/) {		# not all packages are compressed
+    if ($_ =~ /\.gz$/) {	# not all packages are compressed
       my $status = locate_gzip();
       ($file) = ($file =~ /(.+)\.gz$/);
       if (! $status) {
@@ -608,7 +608,7 @@ sub install {
   my $retvalue;
   my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
-  my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order.
+  my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
 
   print $fh "Parsing catalog, may take a while...\n";
   foreach my $tmppkg (@ARGV) {
@@ -626,7 +626,7 @@ sub install {
     my %finished;
     foreach my $tmppkg2 (@pkglist) {
       # N.B. This array grows and we keep looping until we've satisfied all
-      # of the dependencies.
+      # of the dependencies
       print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
       die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
       my @tmpdeps;
@@ -664,7 +664,7 @@ sub install {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
           system("pkginfo -q $tmppkg2");
-          next if $? == 0;	# already installed... forgive its absence from the catalog
+          next if $? == 0;	# already installed...forgive its absence from the catalog
           myexit("Package $tmppkg2 not in catalog...exiting.","",1);
         } else {
           @tmpdeps = split(/\|/,$retvalue);
@@ -792,7 +792,7 @@ sub install {
     }
   }
 
-  # different text for install/upgrade vs. the rest
+  # show excluded packages
   if (scalar(@excludelist) > 0) {
     print $fh "EXCLUDED packages:$pkgsep", join("$pkgsep", sort @excludelist), "\n";
   }
@@ -931,7 +931,7 @@ sub locate_wget {
   return 1 if (! $wget);
 }
 
-# make a filename from the URL - /es to _es.
+# make a filename from the URL - /es to _es
 #   url - url to mangle
 sub mangle_url {
   my($url) = @_;
@@ -999,7 +999,7 @@ sub parse_catalog {
   my $tryname = join('-', @p);
 
   # first check the whole name without stripping off a "version"
-  # e.g. CSWdovecot-devel:
+  # e.g. CSWdovecot-devel
   if ($pkg{$pkg}) {
     # SysV, no version (e.g. CSWdovecot-devel)
     $name = $pkg;
@@ -1057,7 +1057,7 @@ sub parse_cl {
 
   usage() if (@ARGV == 0);
 
-  # this call gives hooks a chance to look at the unaltered argument list.
+  # this call gives hooks a chance to look at the unaltered argument list
   print STDERR "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
   run_hooks("preargproc", @ARGV);
 
@@ -1206,7 +1206,7 @@ sub parse_cl {
   }
 
   # running the hook now should pass only things that remain in ARGV,
-  # which should be a list of package names.
+  # which should be a list of package names
   my @norm_argv;
   foreach (@ARGV) {
     push(@norm_argv,parse_catalog($_,2));
@@ -1470,7 +1470,7 @@ sub run_hooks {
         print STDERR "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
 
         # this allows a hook to stop execution of any further
-        # package actions.
+        # package actions
         if ($code == 1) {
           myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
         } elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
