@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.9";
+my $pkgutilver = "1.9.1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -590,7 +590,7 @@ sub inst_pkgs {
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
     print STDERR "pkgaddopts: $pkgaddopts\n" if $debug;
     
-    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name`");
+    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
     unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
 
     run_hooks("post$per_package_hook", $_);
@@ -1405,7 +1405,7 @@ sub rem_pkgs {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
         print "=> Removing $p\n";
 	run_hooks('preremove', ($_));
-        system("$pkgrm $pkgforce $pkgtrace $p`");
+        system("$pkgrm $pkgforce $pkgtrace $p");
 	run_hooks('postremove', ($_));
       }
     }
