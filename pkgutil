@@ -194,7 +194,8 @@ sub email {
     close FILE;
     chomp(my $host = `uname -n`);
     my $subject = "$host: CSW updates available";
-    my @args = ("/bin/mailx -s \"$subject\" $email < $file");
+##    my @args = ("/bin/mailx -s \"$subject\" $email < $file");
+    my @args = ("/bin/mailx","-s \"$subject\"","$email","< $file");
     system (@args);
     unlink $file;
   }
@@ -217,18 +218,23 @@ sub fetch_catalog {
   $desc_file =~ s|/catalog\.?|/descriptions\.|;
   if ($url =~ /^file:/) {
     my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
-    $status = system("/bin/cp $tmpcatsrc/catalog $filename");
+##    $status = system("/bin/cp $tmpcatsrc/catalog $filename");
+    $status = system("/bin/cp","$tmpcatsrc/catalog","$filename");
     die "\nFetching of catalog failed.\n" if $status;
-    $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
+##    $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
+    $status = system("/bin/cp","$tmpcatsrc/descriptions","$desc_file");
     die "\nFetching of descriptions failed.\n" if $status;
   } else {
     locate_wget() unless (-x $wget);	# if wget disappeared locate alt.
-    $status = system("$wget $wgetopts -O $filename $url/catalog");
+##    $status = system("$wget $wgetopts -O $filename $url/catalog");
+    $status = system("$wget","$wgetopts","-O $filename","$url/catalog");
     die "\nFetching of catalog failed.\n" if $status;
-    $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
+##    $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
+    $status = system("$wget","$wgetopts","-O $desc_file","$url/descriptions");
     die "\nFetching of descriptions failed.\n" if $status;
   }
-  system("/bin/touch $filename") if (-w $filename);
+##  system("/bin/touch $filename") if (-w $filename);
+  system("/bin/touch","$filename") if (-w $filename);
 }
 
 # get wanted package and its dependencies
@@ -265,14 +271,16 @@ sub fetch_pkgs {
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
           run_hooks("prefetch", "$tmpcatsrc/$file", $pkg);
-          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
+##          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
+          $status = system("/bin/cp","$tmpcatsrc/$file","$pkgdir/$file");
         } else {
           run_hooks("prefetch", "$_/$file", $pkg);
 
           ## testing curl as download method
           ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
 
-          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+##          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+          $status = system("$wget","$wgetopts","-O $pkgdir/$file","$_/$file");
         }
         unless ($status) {
           run_hooks("postfetch", "$_/$file", $pkg);
@@ -394,7 +402,8 @@ sub gpg {
   if ($gpg_signed_catalog) {
     print "Checking catalog integrity with gpg.\n";
     rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
-    my $status = system("/opt/csw/bin/gpg $catalog.asc");
+##    my $status = system("/opt/csw/bin/gpg $catalog.asc");
+    my $status = system("/opt/csw/bin/gpg","$catalog.asc");
     die "Catalog signature is not correct!\n" if $status;
     rename($catalog . ".asc", $catalog) or die "Could not rename catalog!\n";
     print STDERR "Status GPG: $status\n" if $debug;
@@ -511,11 +520,13 @@ sub inst_loc_pkgs {
     my $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       print "=> Removing currently installed $pkgname\n";
-      system("$pkgrm $pkgforce $pkgtrace $pkgname");
+##      system("$pkgrm $pkgforce $pkgtrace $pkgname");
+      system("$pkgrm","$pkgforce","$pkgtrace","$pkgname");
     }
 
     # install
-    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file");
+##    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file");
+    system("$pkgadd","$pkgforce","$pkgtrace","$pkgaddopts","-d $file");
     if ($_ =~ /\.gz$/) {		# not all packages are compressed
       unlink "$file" or die "Can't delete $file: $!\n";
     }
@@ -557,7 +568,8 @@ sub inst_pkgs {
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
       print "=> Removing old version of $pkgname\n";
-      system("$pkgrm $pkgforce $pkgtrace $pkgname");
+##      system("$pkgrm $pkgforce $pkgtrace $pkgname");
+      system("$pkgrm","$pkgforce","$pkgtrace","$pkgname");
     }
   }
 
@@ -590,7 +602,8 @@ sub inst_pkgs {
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
     print STDERR "pkgaddopts: $pkgaddopts\n" if $debug;
     
-    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
+##    system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
+    system("$pkgadd","$pkgforce","$pkgtrace","$pkgaddopts","-d $pkgdir/$file","$name");
     unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
 
     run_hooks("post$per_package_hook", $_);
@@ -663,7 +676,8 @@ sub install {
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
-          system("pkginfo -q $tmppkg2");
+##          system("pkginfo -q $tmppkg2");
+          system("pkginfo","-q $tmppkg2");
           next if $? == 0;	# already installed...forgive its absence from the catalog
           myexit("Package $tmppkg2 not in catalog...exiting.","",1);
         } else {
@@ -849,7 +863,8 @@ sub install {
     }
     foreach (@ideppkglist) {
       print "=> Removing incompatible package $_\n";
-      system("$pkgrm $pkgforce $pkgtrace $_");
+##      system("$pkgrm $pkgforce $pkgtrace $_");
+      system("$pkgrm","$pkgforce","$pkgtrace","$_");
     }
   }
 
@@ -1151,7 +1166,8 @@ sub parse_cl {
   close ADMCPY;
   $admin = "$workdir/admin.run";
 
-  my $status = system("/bin/mkdir -p $pkgdir");
+##  my $status = system("/bin/mkdir -p $pkgdir");
+  my $status = system("/bin/mkdir","-p $pkgdir");
   die "Could not create $pkgdir: $!\n" if $status;
 
   # Get mirrors together
@@ -1405,7 +1421,8 @@ sub rem_pkgs {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
         print "=> Removing $p\n";
 	run_hooks('preremove', ($_));
-        system("$pkgrm $pkgforce $pkgtrace $p");
+##        system("$pkgrm $pkgforce $pkgtrace $p");
+        system("$pkgrm","$pkgforce","$pkgtrace","$p");
 	run_hooks('postremove', ($_));
       }
     }
@@ -1463,7 +1480,8 @@ sub run_hooks {
 	# CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
 	# cases, it might be single or multiple URL's of packages
 	# being pulled down, etc
-        system("$hook " . join(' ', @hook_args));
+##        system("$hook " . join(' ', @hook_args));
+        system("$hook",@hook_args));
         $status = $?;
         $code = $status >> 8;
 
@@ -1513,26 +1531,31 @@ sub stream {
   print STDERR "install order: " . join(' ',@install_order) . "\n" if $debug;
 
   foreach (@install_order) {		# delete package directories
-    my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
+##    my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
+    my $status = system("/bin/rm","-rf $pkgdir/$_") if (-d "$pkgdir/$_");
     die "Could not delete $pkgdir/$_: $!\n" if $status;
   }
 
   foreach (@install_order) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
     print $fh "Transforming $_...\n";
-    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+##    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+    my $status = system("$gzip","-c","-f","-d $pkgdir/$file","|","/bin/pkgtrans","/dev/fd/0","$pkgdir","all","2>","/dev/null");
     die "Could not transform $file: $!\n" if $status;
   }
 
   # pkgtrans all of them into one package stream
   print $fh "Transforming packages into stream ($transfile)...\n";
-  my $status = system("/bin/touch $transfile");
+##  my $status = system("/bin/touch $transfile");
+  my $status = system("/bin/touch","$transfile");
   die "Could not create stream file: $!\n" if $status;
-  $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
+##  $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
+  $status = system("/bin/pkgtrans","-s $pkgdir","$transfile","all","2>","/dev/null");
   die "Could not transform packages into stream: $!\n" if $status;
 
   foreach (@install_order) {		# delete package directories
-    my $status = system("/bin/rm -rf $pkgdir/$_");
+##    my $status = system("/bin/rm -rf $pkgdir/$_");
+    my $status = system("/bin/rm","-rf $pkgdir/$_");
     die "Could not delete $pkgdir/$_: $!\n" if $status;
   }
 
@@ -1553,7 +1576,8 @@ sub extract_pkg {
   foreach (@pkglist) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
     print "Extracting $_ ($pkgdir)...\n";
-    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+##    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+    my $status = system("$gzip","-c","-f","-d $pkgdir/$file","|","/bin/pkgtrans","/dev/fd/0","$pkgdir","all","2>","/dev/null");
     die "Could not extract $file: $! (directory may already exist)\n" if $status;
   }
 }
