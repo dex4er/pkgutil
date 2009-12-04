@@ -1099,7 +1099,7 @@ sub parse_cl {
   find_file() if $opt_findfile;
 
   # installing local packages if all args are package files
-  if ($opt_install || $opt_upgrade) {
+  if (scalar(@ARGV) && ($opt_install || $opt_upgrade)) {
     my $notalocpkg = 0;
     foreach (@ARGV) {
       $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
