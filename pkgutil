@@ -54,7 +54,7 @@ sub available {
       my $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$vers,format_byte($size));
       if (scalar(@ARGV) > 0) {
         foreach (@ARGV) {
-          print $tmp if ("$pkgname-$vers" =~ /$_/i || "$common-$vers" =~ /$_/i);
+          print $tmp if ("$pkgname-$vers" =~ /$_/ || "$common-$vers" =~ /$_/);
         }
       } else {
          print $tmp;
@@ -139,7 +139,7 @@ sub compare {
       } else {
         if (scalar(@ARGV) > 0 && $mode != 4) {
           foreach (@ARGV) {
-            if ($pkg =~ /$_/i) {
+            if ($pkg =~ /$_/) {
               print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
             }
           }
@@ -167,7 +167,7 @@ sub describe {
     chomp $line;
     if (scalar(@ARGV) > 0) {
       foreach (@ARGV) {
-        print "$line\n" if ($line =~ /$_/i);
+        print "$line\n" if ($line =~ /$_/);
       }
     } else {
       print "$line\n";
