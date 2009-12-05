@@ -393,6 +393,11 @@ sub gpg {
   print STDERR "GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
     print "Checking catalog integrity with gpg.\n";
+    my $output = `/opt/csw/bin/gpg --verify $catalog 2>&1`;
+    my ($goodorbad,$signer) = ($output =~ /gpg: (.+) signature from "(.+)"$/);
+    print "Good or Bad: $goodorbad\nSigner: $signer\nExpected: $config{catalog_signature}\n" if $debug;
+    myexit("Bad signature detected in catalog!","",1) if ($goodorbad =~ /BAD/);
+    myexit("Catalog not signed by who you expected!","",1) if ($signer ne $config{catalog_signature});
     rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
     my $status = system("/opt/csw/bin/gpg $catalog.asc");
     die "Catalog signature is not correct!\n" if $status;
@@ -423,6 +428,7 @@ sub init {
              "noncsw"			=> "",
              "stop_on_hook_soft_error"	=> "",
              "exclude_pattern"		=> "",
+             "catalog_signature"	=> "CSW Distribution Manager <dm\@opencsw.org>",
              "catalog_update"		=> "14");
 
   foreach (@conf_file) {
@@ -460,6 +466,7 @@ sub init {
     print "wgetopts: $config{wgetopts}\n";
     print "stop_on_hook_soft_error: $config{stop_on_hook_soft_error}\n";
     print "exclude_pattern: $config{exclude_pattern}\n";
+    print "catalog_signature: $config{catalog_signature}\n";
     print "catalog_update: $config{catalog_update}\n";
   }
 
