@@ -394,7 +394,7 @@ sub gpg {
   if ($gpg_signed_catalog) {
     print "Checking catalog integrity with gpg.\n";
     my $gpghomedir = "";
-    $gpghomedir = $config{gpg_homedir} if $config{gpg_homedir};
+    $gpghomedir = "--homedir $config{gpg_homedir}" if $config{gpg_homedir};
     my $output = `/opt/csw/bin/gpg $gpghomedir --verify $catalog 2>&1`;
     my ($goodorbad) = ($output =~ /gpg: (.+) signature/);
     print "Good or Bad gpg signature: $goodorbad\n" if $debug;
