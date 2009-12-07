@@ -24,6 +24,16 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v1.9.1. Released 2009-12-08
+  - cswpkgloghooks added as a dependency to pkgutilplus, adds logging of
+    package maintenance actions
+  - Maciej Blizinski's build_sun_catalog.py script added to pkgutilplus,
+    it builds CSW catalogs from Sun packages
+  - gpg homedir support (Maciej Blizinski)
+  - Make -a/c/C and --describe case sensitive (#2908177@SF) (David Everly)
+  - Fix upgrade all bug (#2907651@SF) (David Everly)
+  - Fix bug with system calls (Bartosz Trudnowski)
+
 * v1.9. Released 2009-11-27
   - Add --single (used with -c) to quickly check one package
     (Maciej Blizinski)

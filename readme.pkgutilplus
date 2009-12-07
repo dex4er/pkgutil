@@ -15,6 +15,9 @@ Utilities
 - bldcat -
 Builds CSW catalogs from package files.
 
+- build_sun_catalog.py -
+Builds CSW catalogs from Sun packages (Maciej Blizinski)
+
 - chkcat -
 Checks CSW catalogs for standard compliance.
 
