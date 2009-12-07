@@ -1880,6 +1880,10 @@ C<exclude_pattern>
 
 Space separated list of simple patterns that will exclude matching packages when updating or installing. If you, e.g., never want cups related packages updated accidentally you can add the string cups here, this will exclude all package names that contain that string. Default is blank.
 
+C<gpg_homedir>
+
+The path to the gpg directory (instead of ~/.gnupg) when verifying the catalogs integrity.
+
 C<maxpkglist>
 
 During dependency calculation the recursive algorithm needs to be protected against cyclic dependencies in the catalog (packages that list each other as dependencies) or pkgutil will not stop until memory is exhausted. This sets the maximum number of recursions before pkgutil stops.
@@ -1904,6 +1908,10 @@ C<pkgliststyle>
 
 Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read.
 
+C<stop_on_hook_soft_error>
+
+This option determines whether or not execution will be halted if a hook returns 2 as its exit code.  Execution is always stopped if a hook returns 1.  Set this to true to enable it.
+
 C<use_gpg>
 C<use_md5>
 
@@ -1912,10 +1920,6 @@ These two can enable (default is disabled for both) checking the catalogs integr
 C<wgetopts>
 
 Send options to wget, for example to show more or less information during downloads.
-
-C<stop_on_hook_soft_error>
-
-This option determines whether or not execution will be halted if a hook returns 2 as its exit code.  Execution is always stopped if a hook returns 1.  Set this to true to enable it.
 
 =head1 PKGASK RESPONSE FILES
 
