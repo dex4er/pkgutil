@@ -17,6 +17,8 @@ Builds CSW catalogs from package files.
 
 - build_sun_catalog.py -
 Builds CSW catalogs from Sun packages (Maciej Blizinski)
+See http://automatthias.wordpress.com/2009/11/26/sunw-packages-in-an-opencsw-format-catalog/
+for more info.
 
 - chkcat -
 Checks CSW catalogs for standard compliance.

@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v1.9.1. Released 2009-12-08
+* v1.9.1. Released 2009-12-10
   - cswpkgloghooks added as a dependency to pkgutilplus, adds logging of
     package maintenance actions
   - Maciej Blizinski's build_sun_catalog.py script added to pkgutilplus,
