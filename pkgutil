@@ -400,7 +400,7 @@ sub gpg {
     print "Good or Bad gpg signature: $goodorbad\n" if $debug;
     myexit("Bad signature detected in catalog!","",1) if ($goodorbad =~ /BAD/);
     rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
-    my $status = system("/opt/csw/bin/gpg $catalog.asc");
+    my $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc");
     die "Catalog signature is not correct!\n" if $status;
     rename($catalog . ".asc", $catalog) or die "Could not rename catalog!\n";
     print STDERR "Status GPG: $status\n" if $debug;
