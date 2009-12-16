@@ -30,7 +30,7 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 $| = 1;
 
 my $debug = 0;
-my $pkgutilver = "1.9.1";
+my $pkgutilver = "1.10b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -210,6 +210,7 @@ sub fetch_catalog {
   my $status;
 
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
+  $wgetopts .= " --execute cache=off" if ($config{catalog_not_cached} eq "true");
   print "Fetching new catalog and descriptions ($url) if available...\n";
   myexit("Option -n selected, stopping here.","",0) if $nomod;
 
@@ -430,6 +431,7 @@ sub init {
              "stop_on_hook_soft_error"	=> "",
              "exclude_pattern"		=> "",
              "gpg_homedir"		=> "",
+             "catalog_not_cached"	=> "true",
              "catalog_update"		=> "14");
 
   foreach (@conf_file) {
@@ -468,6 +470,7 @@ sub init {
     print "stop_on_hook_soft_error: $config{stop_on_hook_soft_error}\n";
     print "exclude_pattern: $config{exclude_pattern}\n";
     print "gpg_homedir: $config{gpg_homedir}\n";
+    print "catalog_not_cached: $config{catalog_not_cached}\n";
     print "catalog_update: $config{catalog_update}\n";
   }
 
