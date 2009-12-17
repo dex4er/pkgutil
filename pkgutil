@@ -1875,6 +1875,10 @@ There's a configuration file in /opt/csw/etc/pkgutil.conf. The only thing you no
 
 The settings that can be used are:
 
+C<catalog_not_cached>
+
+Tells your proxy server to disable caching during fetching of the catalog and descriptions. Default is true.
+
 C<catalog_update>
 
 Number of days between automatic catalog updates. Special cases are -1 if you want to disable automatic updates and 0 if you always want to update the catalog. Default is 14.
