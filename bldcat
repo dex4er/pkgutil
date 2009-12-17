@@ -21,8 +21,9 @@ my %oldcatalog;
 my %olddescriptions;
 my $format = 8;
 
-GetOptions("h|help"	=> \$help,
-           "f|format=s"	=> \$format) || usage();
+GetOptions("h|help"		=> \$help,
+           "W|workdir=s"	=> \$tmpdir,
+           "f|format=s"		=> \$format) || usage();
 
 usage() if $help;
 if (scalar(@ARGV) > 0) {
@@ -31,14 +32,13 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
-if ($format != 9) {
-  $format = 8;
-}
+$format = 8 if ($format != 9);
 
 sub usage {
   print "bldcat, build CSW catalogs.\n\n";
-  print "Usage: bldcat [-fh] <package dir>\n";
+  print "Usage: bldcat [-fWh] <package dir>\n";
   print "\n  -f, --format=x\tSet catalog format ([8]|9)";
+  print "\n  -W, --workdir=x\tSet work directory (default: /tmp)";
   print "\n  -h, --help\t\tShow this help\n";
   print "\nWritten and maintained by Peter Bonivart.\n";
   exit 1;
