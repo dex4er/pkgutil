@@ -383,7 +383,7 @@ sub gpg {
   my $gpg_signed_catalog = 0;
 
   if (! -x "/opt/csw/bin/gpg") {
-    myexit("GPG not found! Install CSWgnupg or disable use_gpg in pkgutil.conf.","",1);
+    myexit("GPG not found! Install CSWgnupg (pkgutil -i CSWgnupg) or disable use_gpg in pkgutil.conf.","",1);
   }
   open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
   while ($line = <CATALOG>) {
@@ -396,12 +396,11 @@ sub gpg {
     print "Checking catalog integrity with gpg.\n";
     my $gpghomedir = "";
     $gpghomedir = "--homedir $config{gpg_homedir}" if $config{gpg_homedir};
-    my $output = `/opt/csw/bin/gpg $gpghomedir --verify $catalog 2>&1`;
-    my ($goodorbad) = ($output =~ /gpg: (.+) signature/);
-    print "Good or Bad gpg signature: $goodorbad\n" if $debug;
-    myexit("Bad signature detected in catalog!","",1) if ($goodorbad =~ /BAD/);
+    my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
+    print STDERR "GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
+    myexit("Bad signature detected in catalog!","",1) if $status;
     rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
-    my $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc");
+    $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2>/dev/null");
     die "Catalog signature is not correct!\n" if $status;
     rename($catalog . ".asc", $catalog) or die "Could not rename catalog!\n";
     print STDERR "Status GPG: $status\n" if $debug;
