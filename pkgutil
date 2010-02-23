@@ -177,7 +177,6 @@ sub describe {
   myexit("","",0);
 }
 
-# check catalog
 # email notifications when updates are available
 #   email - address to send notications to
 sub email {
