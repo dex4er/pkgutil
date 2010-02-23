@@ -207,8 +207,8 @@ while (scalar(@tmp) > 0) {
   if ($field[6] ne "none") {
     foreach (split(/\|/,$field[6])) {
       if (! $pkg{$_}) {
-        retcode(1);
-        print "\nWARNING! Dependency $_ of package $field[2] is missing.\n" unless ($erroronly || $quiet);
+        retcode(2);
+        print "\nERROR! Dependency $_ of package $field[2] is missing.\n" unless $quiet;
       }
     }
   }
