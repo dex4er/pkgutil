@@ -1562,7 +1562,7 @@ sub extract_pkg {
 
   foreach (@pkglist) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
-    print "Extracting $_ ($pkgdir)...\n";
+    print "Extracting $_ to $pkgdir/" . parse_catalog($_,2) . " ...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
     die "Could not extract $file: $! (directory may already exist)\n" if $status;
   }
