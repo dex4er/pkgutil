@@ -281,7 +281,7 @@ sub fetch_pkgs {
         }
       }
       if ($status || ! $tried) {
-        myexit("\nFetching of $_ failed. Try updating your catalog with pkgutil -U.","",1);
+        myexit("\nFetching of $pkg failed. Try updating your catalog with pkgutil -U.","",1);
       }
     }
     md5($pkg,"$pkgdir/$file",$mode) if $use_md5;
