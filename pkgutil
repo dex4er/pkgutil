@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # pkgutil - manages packages on Sun Solaris systems
-# Copyright (C) 2008-2009 Peter Bonivart
+# Copyright (C) 2008-2010 Peter Bonivart
 
 # $Id$
 
@@ -35,7 +35,7 @@ my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
 my $pkgliststyle = 0;
-my $maxpkglist = 250000;
+my $maxpkglist = 500000;
 my @mirror;
 my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
@@ -1976,7 +1976,7 @@ For more details, see the readme file.
 
 =head1 COPYRIGHT AND DISCLAIMER
 
-Copyright (C) 2008-2009 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+Copyright (C) 2008-2010 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
