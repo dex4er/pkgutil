@@ -211,7 +211,7 @@ sub fetch_catalog {
 
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   $wgetopts .= " --execute cache=off" if ($config{catalog_not_cached} eq "true");
-  print "Fetching new catalog and descriptions ($url) if available...\n";
+  print "Fetching new catalog and descriptions ($url) if available ...\n";
   myexit("Option -n selected, stopping here.","",0) if $nomod;
 
   my $desc_file = $filename;
@@ -258,7 +258,7 @@ sub fetch_pkgs {
       $i++;
       print $fh "A local copy of $pkg exists and is of matching size.\n";
     } else {
-      print $fh "Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ")...\n";
+      print $fh "Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
       locate_wget() unless (-x $wget);	# if wget disappeared locate alt.
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
@@ -620,7 +620,7 @@ sub install {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
   my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
 
-  print $fh "Parsing catalog, may take a while...\n";
+  print $fh "Parsing catalog, may take a while ...\n";
   foreach my $tmppkg (@ARGV) {
     my $tmp = parse_catalog($tmppkg,2);
     my $vers = parse_catalog($tmppkg,1);
@@ -628,7 +628,7 @@ sub install {
       push(@pkglist,$tmp);
       $pkgvers{$tmp} = $vers;
     } else {
-      myexit("Package $tmppkg not in catalog...exiting.","",1);
+      myexit("Package $tmppkg not in catalog. Exiting.","",1);
     }
   }
 
@@ -675,7 +675,7 @@ sub install {
         if ($retvalue eq "not in catalog") {
           system("pkginfo -q $tmppkg2");
           next if $? == 0;	# already installed...forgive its absence from the catalog
-          myexit("Package $tmppkg2 not in catalog...exiting.","",1);
+          myexit("Package $tmppkg2 not in catalog. Exiting.","",1);
         } else {
           @tmpdeps = split(/\|/,$retvalue);
           print STDERR "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
@@ -1116,7 +1116,7 @@ sub parse_cl {
       print STDERR "$_ : $notalocpkg\n" if $debug;
     }
     unless ($notalocpkg) {
-      print "Installing your local packages...\n";
+      print "Installing your local packages ...\n";
       inst_loc_pkgs(@ARGV);
     }
   }
@@ -1245,7 +1245,7 @@ sub parse_cl {
     if (@ARGV == 0 || $ARGV[0] eq "all" || $ARGV[0] eq "ALL") {
       # need to manipulate ARGV to match installed CSW packages
       # that need upgrading (use -c mode 1)
-      print "Looking for packages that can be upgraded...\n";
+      print "Looking for packages that can be upgraded ...\n";
       my @cswpkgs = compare(1);
       my $i = 0;
       foreach (@cswpkgs) {
@@ -1368,7 +1368,7 @@ sub rem_pkgs {
 
   $pkgforce = "-a $admin -n" if $yes;
   $pkgtrace = "-v" if $trace;
-  print "Looking at installed CSW packages...\n";
+  print "Looking at installed CSW packages ...\n";
   my @cswpkgstmp = `/bin/pkginfo | grep CSW`;
   foreach $pkg (@cswpkgstmp) {
     ($pkg) = ($pkg =~ /\s+?(\w+?)\s/);
@@ -1486,7 +1486,7 @@ sub run_hooks {
         } elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
           myexit("Hook $hook_name.d/$hookfile returned with code 2","respecting configuration option stop_on_hook_soft_error",1);
         } elsif ($code > 2) {
-          print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway...\n";
+          print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway ...\n";
         }
       }
     }
@@ -1529,13 +1529,13 @@ sub stream {
 
   foreach (@install_order) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
-    print $fh "Transforming $_...\n";
+    print $fh "Transforming $_ ...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
     die "Could not transform $file: $!\n" if $status;
   }
 
   # pkgtrans all of them into one package stream
-  print $fh "Transforming packages into stream ($transfile)...\n";
+  print $fh "Transforming packages into stream ($transfile) ...\n";
   my $status = system("/bin/touch $transfile");
   die "Could not create stream file: $!\n" if $status;
   $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
