@@ -1104,7 +1104,6 @@ sub parse_cl {
   # simple options
   usage() if $opt_help;
   pkgutilver(0) if $opt_version;
-  pkgutilver(1) if $opt_syscheck;
   find_file() if $opt_findfile;
 
   # installing local packages if all args are package files
@@ -1121,6 +1120,7 @@ sub parse_cl {
   }
 
   init($opt_config) if $opt_config;
+  pkgutilver(1) if $opt_syscheck;
   locate_wget();
   locate_gzip();
 
