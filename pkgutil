@@ -525,6 +525,15 @@ sub inst_loc_pkgs {
 
     # install
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file");
+
+    # check if pkgadd operation exited successfully
+    if ($? != 0) {
+      printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
+      print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
+      chomp(my $prompt = <STDIN>);
+      myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
+    }  
+
     if ($_ =~ /\.gz$/) {		# not all packages are compressed
       unlink "$file" or die "Can't delete $file: $!\n";
     }
@@ -599,12 +608,13 @@ sub inst_pkgs {
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
     print STDERR "pkgaddopts: $pkgaddopts\n" if $debug;
     
+    # install
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
 
     # check if pkgadd operation exited successfully
     if ($? != 0) {
-      printf("pkgadd failed with exit code: %d\n",$? >> 8);
-      print "\nExit from $0 and fix this issue first (recommended)? [Y,n] ";
+      printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
+      print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
     }  
