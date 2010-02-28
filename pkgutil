@@ -410,8 +410,9 @@ sub gpg {
 
 # init
 #   conf - custom configuration
+#   param - configuration overrides
 sub init {
-  my ($conf) = @_;
+  my ($conf,@param) = @_;
   my @conf_file;
   if ($conf) {
     @conf_file = ($conf);
@@ -450,7 +451,6 @@ sub init {
         } elsif ($r eq 'ARRAY') {
           push(@{$config{$var}},$value);
         }
-
       }
       close CONFIG;
     }
@@ -478,6 +478,18 @@ sub init {
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
+
+  # overrides
+  ### not for mirror! use -t
+  foreach (@param) {
+    my ($var,$value) = split(/:/);
+    my $r = ref($config{$var});
+    if (! $r) {
+      $config{$var} = $value;
+    } elsif ($r eq 'ARRAY') {
+      push(@{$config{$var}},$value);
+    }
+  }
 }
 
 # install local packages
@@ -1081,7 +1093,7 @@ sub parse_cl {
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_extract,$opt_nodeps,$opt_single);
+      $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param);
 
   usage() if (@ARGV == 0);
 
@@ -1118,6 +1130,7 @@ sub parse_cl {
              "extract"		=> \$opt_extract,
              "single"		=> \$opt_single,
              "N|nodeps"		=> \$opt_nodeps,
+             "p|param=s"	=> \@opt_param,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   # simple options
@@ -1138,7 +1151,7 @@ sub parse_cl {
     }
   }
 
-  init($opt_config) if $opt_config;
+  init($opt_config,@opt_param) if ($opt_config || scalar(@opt_param));
   pkgutilver(1) if $opt_syscheck;
   locate_wget();
   locate_gzip();
@@ -1588,40 +1601,47 @@ sub extract_pkg {
 
 # show usage info
 sub usage {
-  print "pkgutil $pkgutilver, install Solaris packages the easy way.\n\n";
-  print "Usage: pkgutil [option]... [package](-[version])...\n";
-  print "\n  -i, --install\t\tInstall package";
-  print "\n  -u, --upgrade\t\tUpgrade package";
-  print "\n  -r, --remove\t\tRemove package (experimental)";
-  print "\n  -d, --download\tDownload only";
-  print "\n  -U, --catalog\t\tUpdate catalog";
-  print "\n  -a, --available\tShow available packages";
-  print "\n      --describe\tDescribe available packages";
-  print "\n  -c, --compare\t\tCompare installed packages to current";
-  print "\n  -C           \t\tSame as -c but only show different versions";
-  print "\n  -e, --email=address\tSend e-mail with available updates";
-  print "\n  -t, --temp=site\tTemporarily use this site as primary for download";
-  print "\n  -x, --exclude=package\tPackage to exclude";
-  print "\n  -W, --workdir=path\tPath to use for downloads";
-  print "\n      --config=file\tUse this configuration file";
-  print "\n  -y, --yes\t\tAnswer yes on all prompts";
-  print "\n  -f, --force\t\tForce updates (sync with mirror)";
-  print "\n  -n, --nomod\t\tNo modifications are made to the system";
-  print "\n  -N, --nodeps\t\tNo dependencies";
-  print "\n  -D, --debug\t\tDebug mode";
-  print "\n      --trace\t\tSet trace mode (-v) for pkgadd/pkgrm";
-  print "\n  -h, --help\t\tShow this help";
-  print "\n  -v, --version\t\tShow version";
-  print "\n  -V, --syscheck\tSystem check";
-  print "\n  -L, --listfile\tList files in package";
-  print "\n  -F, --findfile\tFind files in package";
-  print "\n      --extract\t\tExtract package content (use with -d)";
-  print "\n  -s, --stream\t\tBuild a package stream (use with -d)";
-  print "\n  -o, --output=file\tFile name for package stream (use with -s)";
-  print "\n  -T, --target=arch:rel\tSpecify architecture and OS release for download";
-  print "\n      --single\t\tSingle package check (use with -c)";
-  print "\n\nExample: pkgutil -i CSWwget\ (install wget and its dependencies)\n";
-  print "\nWritten and maintained by Peter Bonivart.\n";
+  print <<EOF;
+pkgutil $pkgutilver, install Solaris packages the easy way.
+
+Usage: pkgutil [option]... [package](-[version])...
+
+  -i, --install         Install package
+  -u, --upgrade         Upgrade package
+  -r, --remove          Remove package (experimental)
+  -d, --download        Download only
+  -U, --catalog         Update catalog
+  -a, --available       Show available packages
+      --describe        Describe available packages
+  -c, --compare         Compare installed packages to current
+  -C                    Same as -c but only show different versions
+  -e, --email=address   Send e-mail with available updates
+  -t, --temp=site       Temporarily use this site as primary for download
+  -x, --exclude=package Package to exclude
+  -W, --workdir=path    Path to use for downloads
+      --config=file     Use this configuration file
+  -y, --yes             Answer yes on all prompts
+  -f, --force           Force updates (sync with mirror)
+  -n, --nomod           No modifications are made to the system
+  -N, --nodeps          No dependencies
+  -D, --debug           Debug mode
+      --trace           Set trace mode (-v) for pkgadd/pkgrm
+  -h, --help            Show this help
+  -v, --version         Show version
+  -V, --syscheck        System check
+  -L, --listfile        List files in package
+  -F, --findfile        Find files in package
+      --extract         Extract package content (use with -d)
+  -s, --stream          Build a package stream (use with -d)
+  -o, --output=file     File name for package stream (use with -s)
+  -T, --target=arch:rel Specify architecture and OS release for download
+      --single          Single package check (use with -c)
+  -p, --param=opt:val   Override configuration option
+
+Example: pkgutil -i CSWwget\ (install wget and its dependencies)
+
+Written and maintained by Peter Bonivart.
+EOF
   myexit("","",0);
 }
 
