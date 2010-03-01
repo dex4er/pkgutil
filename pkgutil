@@ -479,9 +479,12 @@ sub init {
   $use_gpg = 1 if ($config{use_gpg} eq "true");
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
 
-  # overrides
-  ### not for mirror! use -t
+  # configuration overrides using -p
   foreach (@param) {
+    if (/mirror/) {
+      print STDERR "Do not use -p for mirror, use -t instead!\n";
+      next;
+    }
     my ($var,$value) = split(/:/);
     my $r = ref($config{$var});
     if (! $r) {
