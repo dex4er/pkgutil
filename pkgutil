@@ -26,10 +26,10 @@ use Getopt::Long;
 use Cwd;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
-# unbuffered output
+# Unbuffered output
 $| = 1;
 
-# signal handlers
+# Signal handlers
 $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
@@ -49,7 +49,7 @@ my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$has
 my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
-# show available packages in catalog
+# Show available packages in catalog
 sub available {
   foreach my $common (sort keys %commonpkg) {
     my $pkgname = $commonpkg{$common};
@@ -68,7 +68,7 @@ sub available {
   myexit("","",0);
 }
 
-# check catalog
+# Check catalog
 #   always - always update catalog
 sub check_catalog {
   my($always) = @_;
@@ -84,7 +84,7 @@ sub check_catalog {
   }
 }
 
-# check if package is already installed and if so, which version
+# Check if package is already installed and if so, which version
 #   pkg  - package to check for
 #   mode - 0 = return full string, 1 = return only rev part
 sub check_pkg {
@@ -109,7 +109,7 @@ sub check_pkg {
   return $retvalue;
 }
 
-# compare current to available packages
+# Compare current to available packages
 #   mode - 0 = print full list, 1 = return list of old packages
 #          2 = return full list of old packages, 3 = same as 0 but only diffs
 #          4 = compare a single package (much faster, used with Puppet)
@@ -160,7 +160,7 @@ sub compare {
   }
 }
 
-# describe available packages
+# Describe available packages
 sub describe {
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
@@ -181,7 +181,7 @@ sub describe {
   myexit("","",0);
 }
 
-# email notifications when updates are available
+# Email notifications when updates are available
 #   email - address to send notications to
 sub email {
   my ($email) = @_;
@@ -204,7 +204,7 @@ sub email {
   myexit("","",0);
 }
 
-# extract downloaded packages
+# Extract downloaded packages
 #   pkglist - list of packages to extract (from install sub)
 sub extract_pkg {
   my (@pkglist) = @_;
@@ -217,7 +217,7 @@ sub extract_pkg {
   }
 }
 
-# fetch catalog
+# Fetch catalog
 #   url - url to download from
 #   filename - filename to use for local catalog
 sub fetch_catalog {
@@ -248,7 +248,7 @@ sub fetch_catalog {
   system("/bin/touch $filename") if (-w $filename);
 }
 
-# get wanted package and its dependencies
+# Get wanted package and its dependencies
 #   pkglist - packages to fetch
 #   mode - 4 = stream silent
 sub fetch_pkgs {
@@ -304,17 +304,17 @@ sub fetch_pkgs {
   }
 }
 
-## global vars
+## Global vars
 ##my ($progress,$last);
 
-## experimental code for curl downloads
+## Experimental code for curl downloads
 ##sub fetch_pkgs_curl {
 ##  my ($url,$file) = @_;
 
 ##print "url: $url\n";
 ##print "file: $file\n";
 
-## only if available - eval?
+## Only if available - eval?
 ##  use WWW::Curl::Easy;
 
 ##  my $curl = new WWW::Curl::Easy;
@@ -338,7 +338,7 @@ sub fetch_pkgs {
 ##  if ($retcode == 0) {
 ##    print("Transfer went ok\n");
 ##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
-##    # judge result and next action based on $response_code
+##    # Judge result and next action based on $response_code
 ##    print("Received response: $response_code\n");
 ##  } else {
 ##    print("Error: " . $curl->strerror($retcode) . " ($retcode)\n");
@@ -354,7 +354,7 @@ sub fetch_pkgs {
 ##  return 0;
 ##}
 
-# find files in package (-F)
+# Find files in package (-F)
 sub find_file {
   my $contents = "/var/sadm/install/contents";
 
@@ -371,7 +371,7 @@ sub find_file {
   myexit("","",0);
 }
 
-# format size in bytes to more human friendly format with suffixes
+# Format size in bytes to more human friendly format with suffixes
 #   size - size in bytes
 sub format_byte {
   my ($size) = @_;
@@ -392,7 +392,7 @@ sub format_byte {
   return sprintf ("%1.1f %s",$size,$suffix);
 }
 
-# check signature on catalog
+# Check signature on catalog
 sub gpg {
   my ($catalog) = @_;
   my $line;
@@ -425,7 +425,7 @@ sub gpg {
   }
 }
 
-# init
+# Initialize
 #   conf - custom configuration
 #   param - configuration overrides
 sub init {
@@ -473,7 +473,7 @@ sub init {
     }
   }
 
-  # configuration overrides using -p
+  # Configuration overrides using -p
   foreach (@param) {
     if (/mirror/) {
       print STDERR "Do not use -p for mirror, use -t instead!\n";
@@ -512,7 +512,7 @@ sub init {
   $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
 }
 
-# install local packages
+# Install local packages
 #   pkglist - packages to install
 sub inst_loc_pkgs {
   my @pkglist = @_;
@@ -546,7 +546,7 @@ sub inst_loc_pkgs {
       }
     }
 
-    # remove first if the package is already installed
+    # Remove first if the package is already installed
     my $pkgname = `$pkginfo -d $file`;
     ($pkgname) = ($pkgname =~ /\s(.+?)\s/);
     my $tmp = check_pkg($pkgname,0);
@@ -555,10 +555,10 @@ sub inst_loc_pkgs {
       system("$pkgrm $pkgforce $pkgtrace $pkgname");
     }
 
-    # install
+    # Install
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $file");
 
-    # check if pkgadd operation exited successfully
+    # Check if pkgadd operation exited successfully
     if ($? != 0) {
       printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
       print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
@@ -573,7 +573,7 @@ sub inst_loc_pkgs {
   myexit("","",0);
 }
 
-# install packages
+# Install packages
 #   batchmode - whether we're updating some of the packages or doing new
 #               installs only (values: upgrade or install)
 #   pkglist - packages to install
@@ -594,14 +594,14 @@ sub inst_pkgs {
 
   run_hooks("prebatch$batchmode", @pkglist);
 
-  # removing old version of all packages being upgraded
+  # Removing old version of all packages being upgraded
   foreach (reverse @pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     my ($pkgname) = ($_ =~ /^(.+)-/);
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
-      # a small sanity check
+      # A small sanity check
       die "Batch hook 'install' was run, but we've found a package being upgraded. Bailing out." if ($batchmode eq 'install');
 
       $per_package_hook = 'upgrade';
@@ -611,7 +611,7 @@ sub inst_pkgs {
     }
   }
 
-  # install all packages being upgraded/installed
+  # Install all packages being upgraded/installed
   foreach (@pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
@@ -632,18 +632,18 @@ sub inst_pkgs {
       ($file) = ($file =~ /(.+)\.gz$/);
     }
 
-    # we may have already run preupgrade above. running upgrade _and_ install
+    # We may have already run preupgrade above. Running upgrade _and_ install
     # is invalid
     run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
 
-    # support response (pkgask) files
+    # Support response (pkgask) files
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
     print STDERR "pkgaddopts: $pkgaddopts\n" if $debug;
     
-    # install
+    # Install
     system("$pkgadd $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
 
-    # check if pkgadd operation exited successfully
+    # Check if pkgadd operation exited successfully
     if ($? != 0) {
       printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
       print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
@@ -659,7 +659,7 @@ sub inst_pkgs {
   run_hooks("postbatch$batchmode", @pkglist);
 }
 
-# install (-i) option
+# Install (-i) option
 #   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
 #          4 = stream silent, 5 = extract
 #   deps - option --nodeps set or not
@@ -736,7 +736,7 @@ sub install {
       }
       if ($tmpdeps[0] ne "none") {
         foreach my $dep (@tmpdeps) {
-          # there is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
+          # There is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
           if (! exists $pkgvers{$dep}) {
             $pkgvers{$dep} = parse_catalog($dep,1);
           }
@@ -748,7 +748,7 @@ sub install {
   }
   print STDERR "pkglist ", join(",", @pkglist), "\n" if $debug;
 
-  # clean list from excludes. Delete from the %pkgvers hash
+  # Clean list from excludes. Delete from the %pkgvers hash
   foreach my $pkg (@exclude) {
     if (exists $pkgvers{$pkg}) {
       delete $pkgvers{$pkg};
@@ -756,7 +756,7 @@ sub install {
     }
   }
 
-  # now reverse and deduplicate @pkglist. Need the last instance of each
+  # Now reverse and deduplicate @pkglist. Need the last instance of each
   # package if reading @pkglist forwards
   my %deduped;
   for my $pkg (reverse @pkglist) {
@@ -767,7 +767,7 @@ sub install {
     }
   }
 
-  # clean list from exclude patterns in pkgutil.conf
+  # Clean list from exclude patterns in pkgutil.conf
   foreach my $pattern (split(/\s+?/,$config{exclude_pattern})) {
     my @tmppkglist = grep(!/$pattern/,@revpkglist);
     push(@excludelist,grep(/$pattern/,@revpkglist));
@@ -785,27 +785,27 @@ sub install {
   }
   print STDERR "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
-  ## temporary for testing loop/speed suggestions
+  ## Temporary for testing loop/speed suggestions
   ##print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
   ##print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
-  ## temporary for testing loop/speed suggestions
+  ## Temporary for testing loop/speed suggestions
 
-  # incompatible packages (I-dependencies)
+  # Incompatible packages (I-dependencies)
   my @ideppkglist;
   foreach (@revpkglist) {
     my $retvalue = parse_catalog($_,8);
     push(@ideppkglist,split(/\|/,$retvalue)) if ($retvalue ne "none");
   }
-  # clean the list from packages not installed
+  # Clean the list from packages not installed
   my @ideppkglist2;
   foreach (@ideppkglist) {
-    # check if pkg is present first
+    # Check if pkg is present first
     push(@ideppkglist2,$_) if (check_pkg($_,0) ne "notinst");
   }
   @ideppkglist = @ideppkglist2;
   undef @ideppkglist2;
 
-  # which packages do we really need to download?
+  # Which packages do we really need to download?
   if ($mode == 0 || $mode == 2) {
     foreach (@revpkglist) {
       my $old = check_pkg($_,0);
@@ -829,20 +829,20 @@ sub install {
 
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
-  # only present incompatible packages when doing install/upgrade
+  # Only present incompatible packages when doing install/upgrade
   if ($mode == 0) {
     if (scalar(@ideppkglist) > 0) {
       print "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
     }
   }
 
-  # different text for install/upgrade vs. the rest
+  # Different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
     print $fh ($mode == 0) ? "Install NEW packages" : "Package list";
     print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
-  # only present updated and current packages when doing install/upgrade
+  # Only present updated and current packages when doing install/upgrade
   if ($mode == 0) {
     if (scalar(@updpkglist) > 0) {
       print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
@@ -853,13 +853,13 @@ sub install {
     }
   }
 
-  # show excluded packages
+  # Show excluded packages
   if (scalar(@excludelist) > 0) {
     print $fh "EXCLUDED packages:$pkgsep", join("$pkgsep", sort @excludelist), "\n";
   }
 
-  # what packages do we need to fetch?
-  # make sure they are in correct order
+  # What packages do we need to fetch?
+  # Make sure they are in correct order
   foreach my $i (@revpkglist) {
     my $hit = 0;
     foreach (@curpkglist) {
@@ -876,10 +876,10 @@ sub install {
   }
   print STDERR "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
 
-  # print info before exiting if there's nothing to do
+  # Print info before exiting if there's nothing to do
   myexit("\nNothing to do.","",0) if (scalar(@dlpkglist) == 0);
 
-  # print size of download
+  # Print size of download
   if (scalar(@dlpkglist) > 0) {
     foreach (@dlpkglist) {
       $size += parse_catalog($_,5);
@@ -897,7 +897,7 @@ sub install {
 
   return @revpkglist if ($mode == 3 || $mode == 4);	# if -s used
 
-  # remove incompatible packages
+  # Remove incompatible packages
   if (scalar(@ideppkglist) > 0 && $mode == 0) {
     my $pkgrm = "/usr/sbin/pkgrm";
     my $pkgtrace = "";
@@ -922,7 +922,7 @@ sub install {
   myexit("","",0);
 }
 
-# list files in package
+# List files in package
 sub list_file {
   my $contents = "/var/sadm/install/contents";
 
@@ -960,7 +960,7 @@ sub list_file {
   myexit("","",0);
 }
 
-# find gzip
+# Find gzip
 sub locate_gzip {
   my @locations = ("/opt/csw/bin","/bin","/usr/local/bin");
 
@@ -974,7 +974,7 @@ sub locate_gzip {
   return 1 if (! $gzip);
 }
 
-# find wget
+# Find wget
 sub locate_wget {
   my @locations = ("/opt/csw/bin","/usr/sfw/bin","/usr/local/bin");
   my $libexec = "/opt/csw/libexec/pkgutil";
@@ -992,7 +992,7 @@ sub locate_wget {
   return 1 if (! $wget);
 }
 
-# make a filename from the URL - /es to _es
+# Make a filename from the URL - /es to _es
 #   url - url to mangle
 sub mangle_url {
   my($url) = @_;
@@ -1003,7 +1003,7 @@ sub mangle_url {
   return $filename;
 }
 
-# check md5 on downloaded files
+# Check md5 on downloaded files
 #   mode - 4 = stream silent
 sub md5 {
   my ($pkg,$file,$mode) = @_;
@@ -1031,7 +1031,7 @@ sub md5 {
   print $fh "MD5 for $pkg matched.\n";
 }
 
-# do cleanup and exit with return code
+# Do cleanup and exit with return code
 #   msg - message to stderr
 #   err - error ($!)
 #   rc - return code when exiting
@@ -1045,7 +1045,7 @@ sub myexit {
   exit $rc;
 }
 
-# parse catalog
+# Parse catalog
 #   pkg  - package to look for, can be both common name and true name
 #   mode - what we want to return, field number from catalog
 sub parse_catalog {
@@ -1054,12 +1054,12 @@ sub parse_catalog {
 
   print STDERR "Parsing catalog...looking for: $pkg (mode $mode)\n" if $debug;
 
-  # do we have an embedded version?
+  # Do we have an embedded version?
   my @p = split /-/, $pkg;
   my $vers = pop @p;
   my $tryname = join('-', @p);
 
-  # first check the whole name without stripping off a "version"
+  # First check the whole name without stripping off a "version"
   # e.g. CSWdovecot-devel
   if ($pkg{$pkg}) {
     # SysV, no version (e.g. CSWdovecot-devel)
@@ -1078,7 +1078,7 @@ sub parse_catalog {
   }
 
   if ($name) {
-    # have we a version match?
+    # Have we a version match?
     if ($vers && exists $pkg{$name}{$vers}) {
       my @tmpcatline = split(/ /,$pkg{$name}{$vers});
       my $fieldsincatalog = scalar(@tmpcatline);
@@ -1088,8 +1088,8 @@ sub parse_catalog {
         $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
       }
     } elsif (! $vers) {
-      # we may have multiple versions in the catalog, take the highest
-      # note this won't work unless at least one has a REV in it
+      # We may have multiple versions in the catalog, take the highest
+      # Note this won't work unless at least one has a REV in it
       my $highest = (sort { verscmp($b, $a) } keys %{$pkg{$name}})[0];
       my @tmpcatline = split(/ /,$pkg{$name}{$highest});
       my $fieldsincatalog = scalar(@tmpcatline);
@@ -1108,7 +1108,7 @@ sub parse_catalog {
   return $retvalue;
 }
 
-# parse command line
+# Parse command line
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
       $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
@@ -1118,7 +1118,7 @@ sub parse_cl {
 
   usage() if (@ARGV == 0);
 
-  # this call gives hooks a chance to look at the unaltered argument list
+  # This call gives hooks a chance to look at the unaltered argument list
   print STDERR "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
   run_hooks("preargproc", @ARGV);
 
@@ -1154,12 +1154,12 @@ sub parse_cl {
              "p|param=s"	=> \@opt_param,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
-  # simple options
+  # Simple options
   usage() if $opt_help;
   pkgutilver(0) if $opt_version;
   find_file() if $opt_findfile;
 
-  # installing local packages if all args are package files
+  # Installing local packages if all args are package files
   if (scalar(@ARGV) && ($opt_install || $opt_upgrade)) {
     my $notalocpkg = 0;
     foreach (@ARGV) {
@@ -1187,7 +1187,7 @@ sub parse_cl {
   }
   $pkgdir = "$workdir/packages";
 
-  # create runtime copy of admin to make sure we have one
+  # Create runtime copy of admin to make sure we have one
   # available even during upgrade of pkgutil itself
   $admin = "$workdir/admin";
   $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
@@ -1262,12 +1262,12 @@ sub parse_cl {
 
   print STDERR "primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
-    check_catalog(1);	# Reread everything
+    check_catalog(1);	# reread everything
   } else {
     check_catalog();
   }
 
-  # running the hook now should pass only things that remain in ARGV,
+  # Running the hook now should pass only things that remain in ARGV,
   # which should be a list of package names
   my @norm_argv;
   foreach (@ARGV) {
@@ -1276,9 +1276,9 @@ sub parse_cl {
   print STDERR "postargproc: " . join(' ',@norm_argv) . "\n" if $debug;
   run_hooks("postargproc", @norm_argv);
 
-  # complex options
+  # Complex options
   list_file() if $opt_listfile;
-  # download and stream if both -d and -s selected
+  # Download and stream if both -d and -s selected
   stream($loc_arch,$loc_rel,$opt_output) if ($opt_stream && $opt_download);
   email($opt_email) if $opt_email;
   available() if $opt_avail;
@@ -1286,16 +1286,16 @@ sub parse_cl {
   compare(3) if $opt_compare_diffonly;
   compare(4) if ($opt_compare && $opt_single);
   compare(0) if $opt_compare;
-  # download and extract if both -d and --extract selected
+  # Download and extract if both -d and --extract selected
   install(5,$opt_nodeps) if ($opt_extract && $opt_download);
   install(0,$opt_nodeps) if $opt_install;
   install(2,$opt_nodeps) if $opt_remove;	# remove instead of install
   install(1,$opt_nodeps) if $opt_download;	# download only
 
-  # upgrade is a special case of install
+  # Upgrade is a special case of install
   if ($opt_upgrade) {
     if (@ARGV == 0 || $ARGV[0] eq "all" || $ARGV[0] eq "ALL") {
-      # need to manipulate ARGV to match installed CSW packages
+      # Need to manipulate ARGV to match installed CSW packages
       # that need upgrading (use -c mode 1)
       print "Looking for packages that can be upgraded ...\n";
       my @cswpkgs = compare(1);
@@ -1307,11 +1307,11 @@ sub parse_cl {
     install(0);
   }
 
-  # arguments but no options
+  # Arguments but no options
   print "You need to select a valid option!\n" if (! $opt_upd_cat);
 }
 
-# show version info
+# Show version info
 #   mode - 0 = print only version, 1 = system check
 sub pkgutilver {
   my ($mode) = @_;
@@ -1385,7 +1385,7 @@ sub pkgutilver {
   myexit("","",0);
 }
 
-# read catalog into hash
+# Read catalog into hash
 #   catalog - catalog to read
 #   filename - filename to use
 sub read_catalog {
@@ -1407,7 +1407,7 @@ sub read_catalog {
   close CATALOG;
 }
 
-# remove packages
+# Remove packages
 #   pkglist - packages to remove
 sub rem_pkgs {
   my @pkgs = @_;
@@ -1479,7 +1479,7 @@ sub rem_pkgs {
   myexit("","",0);
 }
 
-# run hooks
+# Run hooks
 sub run_hooks {
   my $hook_name = shift;
   my @hook_args = @_;
@@ -1531,7 +1531,7 @@ sub run_hooks {
 
         print STDERR "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
 
-        # this allows a hook to stop execution of any further
+        # This allows a hook to stop execution of any further
         # package actions
         if ($code == 1) {
           myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
@@ -1547,7 +1547,7 @@ sub run_hooks {
   }
 }
 
-# signal handler
+# Signal handler
 #   signame - signal caught
 sub signal_handler {
   my $signame = shift;
@@ -1555,7 +1555,7 @@ sub signal_handler {
   myexit("\nCaught a SIG$signame. Exiting.","",1);
 }
 
-# build package streams
+# Build package streams
 #   target - arch and os release
 #   output - file name for package stream
 sub stream {
@@ -1606,7 +1606,7 @@ sub stream {
     die "Could not delete $pkgdir/$_: $!\n" if $status;
   }
 
-  # print cmd needed to install
+  # Print cmd needed to install
   print $fh "\nInstall commands in dependency safe order:\n\n";
   foreach (@install_order) {
     print $fh "pkgadd -d $output $_\n";
@@ -1615,7 +1615,7 @@ sub stream {
   myexit("","",0);
 }
 
-# show usage info
+# Show usage info
 sub usage {
   print <<EOF;
 pkgutil $pkgutilver, install Solaris packages the easy way.
@@ -1661,7 +1661,7 @@ EOF
   myexit("","",0);
 }
 
-# comparison of two package versions as per
+# Comparison of two package versions as per
 # http://pkgutil.wikidot.com/get-install-and-configure#toc7
 # as per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
 # Note that if neither has a REV code, -1 is *ALWAYS* returned.
@@ -1737,7 +1737,7 @@ sub verscmp {
   return $update;
 }
 
-# main
+# Main
 
 init();
 parse_cl();
