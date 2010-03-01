@@ -69,8 +69,8 @@ open (DESCRIPTIONS,">$pkgdir/descriptions.new") || die "Could not write new desc
 
 foreach my $file (glob "$pkgdir/*") {
   ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category,$ideps) = ("","","","","","","","","");
-  next unless (-r $file);		# must be a readable file
-  next unless ($file =~ /\.pkg(\.gz)?$/);	# must end with .pkg or .pkg.gz
+  next unless (-r $file);		# Must be a readable file
+  next unless ($file =~ /\.pkg(\.gz)?$/);	# Must end with .pkg or .pkg.gz
 
   # Calculate hash before we do anything else to look up the cache
   if (! $hash) {
@@ -89,7 +89,7 @@ foreach my $file (glob "$pkgdir/*") {
 
   print "Inspecting $file\n";
 
-  # unpack package
+  # Unpack package
   if (! -d "$tmpdir") {
     mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
   }
@@ -106,38 +106,38 @@ foreach my $file (glob "$pkgdir/*") {
   while (my $line = <FILE>) {
     chomp $line;
 
-    # field 1: common name
+    # Field 1: common name
     if ($line =~ /^NAME=/) {
       ($description,$common) = ($line =~ /=((.+?)\s.*)/);
       next;
     }
 
-    # field 2: version
+    # Field 2: version
     if ($line =~ /^VERSION=/) {
       ($version) = ($line =~ /=(.+)$/);
       next;
     }
 
-    # field 3: package name
+    # Field 3: package name
     if ($line =~ /^PKG=/) {
       ($package) = ($line =~ /=(.+)$/);
       next;
     }
 
-    # field 4: filename
+    # Field 4: filename
     if (! $pkgfile) {
       ($pkgfile) = ($file =~ /\//) ? ($file =~ /\/(.+)$/) : ($file);
     }
 
-    # field 5: md5 hash
+    # Field 5: md5 hash
     # Already computed
 
-    # field 6: file size
+    # Field 6: file size
     if (! $size) {
       $size = (stat($file))[7];
     }
 
-    # field 8: categories
+    # Field 8: categories
     if ($line =~ /^CSW_CATEGORY=/) {
       ($category) = ($line =~ /=(.+)$/);
       $category = join('|',split(/,\s?/,$category));
@@ -146,7 +146,7 @@ foreach my $file (glob "$pkgdir/*") {
   }
   close FILE;
 
-  # field 7: dependencies
+  # Field 7: dependencies
   $deps = $ideps = "";
   if (-r "$tmpdir/$pkgname/install/depend") {
     open (FILE,"<$tmpdir/$pkgname/install/depend");
@@ -154,13 +154,13 @@ foreach my $file (glob "$pkgdir/*") {
       chomp;
       if (/^P\s+\S/) {
         ($deptmp) = (/P\s+(\S+)/);
-        if ($deptmp ne $pkgname && $deptmp ne "SUNW") { # skip if circular or SUNW
+        if ($deptmp ne $pkgname && $deptmp ne "SUNW") { # Skip if circular or SUNW
           $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
         }
       }
       if (/^I\s+\S/) {
         ($ideptmp) = (/I\s+(\S+)/);
-        if ($ideptmp ne $pkgname && $ideptmp ne "SUNW") { # skip if circular or SUNW
+        if ($ideptmp ne $pkgname && $ideptmp ne "SUNW") { # Skip if circular or SUNW
           $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
         }
       }
@@ -168,7 +168,7 @@ foreach my $file (glob "$pkgdir/*") {
     close FILE;
   }
 
-  # clean up
+  # Clean up
   $status = system("/bin/rm -rf $tmpdir");
   die "Could not delete files in $tmpdir: $!" if $status;
 
