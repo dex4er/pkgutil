@@ -39,7 +39,7 @@ my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
 my $pkgliststyle = 0;
-my $maxpkglist = 1000000;
+my $maxpkglist = 2500000;
 my @mirror;
 my $defaultmirror = ("http://ibiblio.org/pub/packages/solaris/opencsw/current");
 my $workdir = "/var/opt/csw/pkgutil";
@@ -688,7 +688,8 @@ sub install {
       # N.B. This array grows and we keep looping until we've satisfied all
       # of the dependencies
       print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
-      die "Loop protection limit ($maxpkglist) hit. There's probably a cyclic dependency\nin the catalog.\n" if (scalar(@pkglist) > $maxpkglist);
+      myexit("Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.","",1) if (scalar(@pkglist) > $maxpkglist);
+
       my @tmpdeps;
 
       ## Skip stuff already checked, partly to avoid loops but also to gain
@@ -1369,7 +1370,7 @@ sub pkgutilver {
     print "\n- Configuration -\n";
     print "catalog_update\t" . (($config{catalog_update}) ? $config{catalog_update} : "not set") . " (default: 14)\n";
     print "exclude_pattern\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
-    print "maxpkglist\t$maxpkglist (default: 25000)\n";
+    print "maxpkglist\t$maxpkglist (default: 2500000)\n";
     print "mirror\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t", @{$config{mirror}}) : "not set") . "\n\t\t(default: $defaultmirror)\n";
     print "noncsw\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
     print "pkgaddopts\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
@@ -1551,7 +1552,7 @@ sub run_hooks {
 sub signal_handler {
   my $signame = shift;
 
-  myexit("\nCaught a SIG$signame. Exiting ...","",1);
+  myexit("\nCaught a SIG$signame. Exiting.","",1);
 }
 
 # build package streams
