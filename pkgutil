@@ -29,6 +29,10 @@ Getopt::Long::Configure qw(no_ignore_case bundling);
 # unbuffered output
 $| = 1;
 
+# signal handlers
+$SIG{HUP} = 'IGNORE';
+$SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
+
 my $debug = 0;
 my $pkgutilver = "1.10b1";
 my $use_md5 = 0;
@@ -198,6 +202,19 @@ sub email {
     unlink $file;
   }
   myexit("","",0);
+}
+
+# extract downloaded packages
+#   pkglist - list of packages to extract (from install sub)
+sub extract_pkg {
+  my (@pkglist) = @_;
+
+  foreach (@pkglist) {		# pkgtrans them one by one
+    my $file = parse_catalog($_,3);
+    print "Extracting $_ to $pkgdir/" . parse_catalog($_,2) . " ...\n";
+    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
+    die "Could not extract $file: $! (directory may already exist)\n" if $status;
+  }
 }
 
 # fetch catalog
@@ -1529,6 +1546,14 @@ sub run_hooks {
   }
 }
 
+# signal handler
+#   signame - signal caught
+sub signal_handler {
+  my $signame = shift;
+
+  myexit("\nCaught a SIG$signame. Exiting ...","",1);
+}
+
 # build package streams
 #   target - arch and os release
 #   output - file name for package stream
@@ -1587,19 +1612,6 @@ sub stream {
   }
 
   myexit("","",0);
-}
-
-# extract downloaded packages
-#   pkglist - list of packages to extract (from install sub)
-sub extract_pkg {
-  my (@pkglist) = @_;
-
-  foreach (@pkglist) {		# pkgtrans them one by one
-    my $file = parse_catalog($_,3);
-    print "Extracting $_ to $pkgdir/" . parse_catalog($_,2) . " ...\n";
-    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not extract $file: $! (directory may already exist)\n" if $status;
-  }
 }
 
 # show usage info
