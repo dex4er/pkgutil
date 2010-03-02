@@ -504,7 +504,7 @@ sub init {
     print "catalog_update: $config{catalog_update}\n";
   }
 
-  $pkgliststyle = $config{pkgliststyle} if $config{pkgliststyle};
+  $pkgliststyle = $config{pkgliststyle} if defined $config{pkgliststyle};
   $maxpkglist = $config{maxpkglist} if $config{maxpkglist};
   $use_md5 = $use_gpg = $noncsw = 0;
   $use_md5 = 1 if ($config{use_md5} eq "true");
@@ -1514,7 +1514,7 @@ sub run_hooks {
 
     @hooks_to_run = glob("*");
 
-    print "Executing $hook_name hook scripts.\n" if scalar(@hooks_to_run) and $debug;
+    print STDERR "Executing $hook_name hook scripts.\n" if (scalar(@hooks_to_run) && $debug);
 
     foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
       $hook = "$hook_dir/$hookfile";
