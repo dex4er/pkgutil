@@ -1116,7 +1116,7 @@ sub parse_cl {
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param);
 
-  usage() if (@ARGV == 0);
+  usage() unless scalar(@ARGV);
 
   # This call gives hooks a chance to look at the unaltered argument list
   print STDERR "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
@@ -1294,7 +1294,7 @@ sub parse_cl {
 
   # Upgrade is a special case of install
   if ($opt_upgrade) {
-    if (@ARGV == 0 || $ARGV[0] eq "all" || $ARGV[0] eq "ALL") {
+    if (scalar(@ARGV) == 0 || $ARGV[0] =~ /all/i) {
       # Need to manipulate ARGV to match installed CSW packages
       # that need upgrading (use -c mode 1)
       print "Looking for packages that can be upgraded ...\n";
