@@ -560,8 +560,8 @@ sub inst_loc_pkgs {
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
-      printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
-      print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
+      printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
+      print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
     }  
@@ -645,8 +645,8 @@ sub inst_pkgs {
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
-      printf STDERR "pkgadd failed with exit code: %d\n",$? >> 8;
-      print "\nExit from pkgutil and fix this issue first (recommended)? [Y,n] ";
+      printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
+      print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
     }  
@@ -1304,7 +1304,7 @@ sub parse_cl {
         $ARGV[$i++] = $_;
       }
     }
-    install(0);
+    install(0,$opt_nodeps);
   }
 
   # Arguments but no options
