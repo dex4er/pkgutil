@@ -187,10 +187,10 @@ sub email {
   my ($email) = @_;
   my $file = "/tmp/pkgutil.$$.$^T";
 
-  die "Mailx not found on system!\n" unless (-x "/bin/mailx");
+  myexit("Mailx not found on system!","",1) unless (-x "/bin/mailx");
   my @update_list = compare(2);
   if (scalar(@update_list) > 0) {
-    open (FILE,">$file") or die "Can't open $file: $!\n";
+    open (FILE,">$file") or myexit("Can't open $file","$!",1);
     foreach (@update_list) {
       print FILE;
     }
@@ -213,7 +213,7 @@ sub extract_pkg {
     my $file = parse_catalog($_,3);
     print "Extracting $_ to $pkgdir/" . parse_catalog($_,2) . " ...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not extract $file: $! (directory may already exist)\n" if $status;
+    myexit("Could not extract $file (directory may already exist)","",1) if $status;
   }
 }
 
@@ -235,15 +235,15 @@ sub fetch_catalog {
   if ($url =~ /^file:/) {
     my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
     $status = system("/bin/cp $tmpcatsrc/catalog $filename");
-    die "\nFetching of catalog failed.\n" if $status;
+    myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
-    die "\nFetching of descriptions failed.\n" if $status;
+    myexit("\nFetching of descriptions failed.","",1) if $status;
   } else {
     locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
     $status = system("$wget $wgetopts -O $filename $url/catalog");
-    die "\nFetching of catalog failed.\n" if $status;
+    myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
-    die "\nFetching of descriptions failed.\n" if $status;
+    myexit("\nFetching of descriptions failed.","",1) if $status;
   }
   system("/bin/touch $filename") if (-w $filename);
 }
@@ -325,7 +325,7 @@ sub fetch_pkgs {
 ##  $curl->setopt(CURLOPT_PROGRESSFUNCTION, \&curl_progress_callback);
 ##  $curl->setopt(CURLOPT_HEADER, 0);
 ##  $curl->setopt(CURLOPT_URL, $url);
-##  open(my $fp,">$file") or die "Can't open $file: $!\n";
+##  open(my $fp,">$file") or myexit("Can't open $file","$!",1);
 ##  $curl->setopt(CURLOPT_WRITEDATA, $fp);
 
 ##  # Starts the actual request
@@ -359,7 +359,7 @@ sub find_file {
   my $contents = "/var/sadm/install/contents";
 
   foreach (@ARGV) {
-    open (FILE,"<$contents") or die "Can't open $contents: $!\n";
+    open (FILE,"<$contents") or myexit("Can't open $contents","$!",1);
     while(my $line = <FILE>) {
       chomp $line;
       my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
@@ -401,7 +401,7 @@ sub gpg {
   if (! -x "/opt/csw/bin/gpg") {
     myexit("GPG not found! Install CSWgnupg (pkgutil -i CSWgnupg) or disable use_gpg in pkgutil.conf.","",1);
   }
-  open (CATALOG,"<$catalog") or die "Can't open $catalog: $!\n";
+  open (CATALOG,"<$catalog") or myexit("Can't open $catalog","$!",1);
   while ($line = <CATALOG>) {
     $gpg_signed_catalog = 1 if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/);
     last;
@@ -415,10 +415,10 @@ sub gpg {
     my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
     print STDERR "GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
     myexit("Bad signature detected in catalog!","",1) if $status;
-    rename($catalog, $catalog . ".asc") or die "Could not rename catalog!\n";
+    rename($catalog, $catalog . ".asc") or myexit("Could not rename catalog!","",1);
     $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2>/dev/null");
-    die "Catalog signature is not correct!\n" if $status;
-    rename($catalog . ".asc", $catalog) or die "Could not rename catalog!\n";
+    myexit("Catalog signature is not correct!","",1) if $status;
+    rename($catalog . ".asc", $catalog) or myexit("Could not rename catalog!","",1);
     print STDERR "Status GPG: $status\n" if $debug;
   } else {
     myexit("Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.","",1);
@@ -453,7 +453,7 @@ sub init {
   foreach (@conf_file) {
     if (-r $_) {	# If conf file found, parse it
       print STDERR "Conf file: $_\n" if $debug; 
-      open (CONFIG,"<$_") or die "Can't open $_: $!\n";
+      open (CONFIG,"<$_") or myexit("Can't open $_","$!",1);
       while (<CONFIG>) {
         chomp;	# Remove newline
         s/#.*//;	# Remove comments
@@ -567,7 +567,7 @@ sub inst_loc_pkgs {
     }  
 
     if ($_ =~ /\.gz$/) {		# Not all packages are compressed
-      unlink "$file" or die "Can't delete $file: $!\n";
+      unlink "$file" or myexit("Can't delete $file","$!",1);
     }
   }
   myexit("","",0);
@@ -602,7 +602,7 @@ sub inst_pkgs {
     $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       # A small sanity check
-      die "Batch hook 'install' was run, but we've found a package being upgraded. Bailing out." if ($batchmode eq 'install');
+      myexit("Batch hook 'install' was run, but we've found a package being upgraded. Bailing out.","",1) if ($batchmode eq 'install');
 
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
@@ -651,7 +651,7 @@ sub inst_pkgs {
       myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
     }  
 
-    unlink "$pkgdir/$file" or die "Can't delete $pkgdir/$file: $!\n";
+    unlink "$pkgdir/$file" or myexit("Can't delete $pkgdir/$file","$!",1);
 
     run_hooks("post$per_package_hook", $_);
     $per_package_hook = 'install'; # Reset for next package in the list
@@ -947,7 +947,7 @@ sub list_file {
       } else {
         $tmp = parse_catalog($_,2);
       }
-      open (FILE,"<$contents") or die "Can't open $contents: $!\n";
+      open (FILE,"<$contents") or myexit("Can't open $contents","$!",1);
       while(my $line = <FILE>) {
         chomp $line;
         my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
@@ -1013,21 +1013,21 @@ sub md5 {
   eval { require Digest::MD5; };
   if ($@) {
     if (-x "/opt/csw/bin/gmd5sum") {
-      die "Can't open $file: $!\n" unless (-r $file);
+      myexit("Can't open $file","$!",1) unless (-r $file);
       $md5 = `/opt/csw/bin/gmd5sum $file`;
       ($md5) = ($md5 =~ /^(.*\w) /);
     } else {
       myexit("\nMD5 support not available! Install CSWtextutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.","",1);
     }
   } else {
-    open (FILE,"<$file") or die "Can't open $file: $!\n";
+    open (FILE,"<$file") or myexit("Can't open $file","$!",1);
     binmode (FILE);
     $md5 = Digest::MD5->new->addfile(*FILE)->hexdigest;
     close FILE;
   }
   my $md5cat = parse_catalog($pkg,4);
   print STDERR "$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n" if $debug;
-  die "MD5 for $pkg doesn't match catalog!\n" if ($md5 ne $md5cat);
+  myexit("MD5 for $pkg doesn't match catalog!","",1) if ($md5 ne $md5cat);
   print $fh "MD5 for $pkg matched.\n";
 }
 
@@ -1191,7 +1191,7 @@ sub parse_cl {
   # available even during upgrade of pkgutil itself
   $admin = "$workdir/admin";
   $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
-  open (ADMSRC,"<$admin") or die "Can't open $admin: $!\n";
+  open (ADMSRC,"<$admin") or myexit("Can't open $admin","$!",1);
   if (-r "$workdir/admin.run") {
     my @pslist = `/bin/ps -ef`;
     my $pkgutilinst = 0;
@@ -1199,13 +1199,13 @@ sub parse_cl {
       $pkgutilinst++ if (/\bperl\s.*pkgutil\b/);
     }
     if ($pkgutilinst > 1) {
-      die "Another instance of pkgutil is already running!\n";
+      myexit("Another instance of pkgutil is already running!","",1);
     } else {
       unlink "$workdir/admin.run" if (-r "$workdir/admin.run");
       print "Stale lock file ($workdir/admin.run) removed\n";
     } 
   }
-  open (ADMCPY,">$workdir/admin.run") or die "Can't open $workdir/admin.run: $!\n";
+  open (ADMCPY,">$workdir/admin.run") or myexit("Can't open $workdir/admin.run","$!",1);
   while (<ADMSRC>) {
     print ADMCPY;
   }
@@ -1214,7 +1214,7 @@ sub parse_cl {
   $admin = "$workdir/admin.run";
 
   my $status = system("/bin/mkdir -p $pkgdir");
-  die "Could not create $pkgdir: $!\n" if $status;
+  myexit("Could not create $pkgdir","$!",1) if $status;
 
   # Get mirrors together
   @mirror = @{$config{mirror}};
@@ -1392,7 +1392,7 @@ sub read_catalog {
   my($catalog, $filename) = @_;
   my @llst;
 
-  open (CATALOG,"<$filename") or die "Can't open $filename: $!\n";
+  open (CATALOG,"<$filename") or myexit("Can't open $filename","$!",1);
   while (my $line = <CATALOG>) {
     chomp $line;
     if ($line =~ /^\w/) {
@@ -1504,13 +1504,13 @@ sub run_hooks {
 		     'preargproc',
 		     'postargproc');
 
-  die "Invalid hook: $hook_name" unless (grep(/$hook_name/, @valid_hooks));
+  myexit("Invalid hook: $hook_name","",1) unless (grep(/$hook_name/, @valid_hooks));
 
   if (! -d $hook_dir) {
     print STDERR "No $hook_name hook scripts.\n" if $debug;
   } else {
     $oldwd = getcwd();
-    chdir($hook_dir) or die "Could not cd to $hook_dir";
+    chdir($hook_dir) or myexit("Could not cd to $hook_dir","",1);
 
     @hooks_to_run = glob("*");
 
@@ -1584,26 +1584,26 @@ sub stream {
 
   foreach (@install_order) {		# Delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
-    die "Could not delete $pkgdir/$_: $!\n" if $status;
+    myexit("Could not delete $pkgdir/$_","$!",1) if $status;
   }
 
   foreach (@install_order) {		# pkgtrans them one by one
     my $file = parse_catalog($_,3);
     print $fh "Transforming $_ ...\n";
     my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    die "Could not transform $file: $!\n" if $status;
+    myexit("Could not transform $file","$!",1) if $status;
   }
 
   # pkgtrans all of them into one package stream
   print $fh "Transforming packages into stream ($transfile) ...\n";
   my $status = system("/bin/touch $transfile");
-  die "Could not create stream file: $!\n" if $status;
+  myexit("Could not create stream file","$!",1) if $status;
   $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
-  die "Could not transform packages into stream: $!\n" if $status;
+  myexit("Could not transform packages into stream","$!",1) if $status;
 
   foreach (@install_order) {		# Delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_");
-    die "Could not delete $pkgdir/$_: $!\n" if $status;
+    myexit("Could not delete $pkgdir/$_","$!",1) if $status;
   }
 
   # Print cmd needed to install
