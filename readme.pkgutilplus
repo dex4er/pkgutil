@@ -17,11 +17,20 @@ Builds CSW catalogs from package files.
 
 - build_sun_catalog.py -
 Builds CSW catalogs from Sun packages (Maciej Blizinski)
-See http://automatthias.wordpress.com/2009/11/26/sunw-packages-in-an-opencsw-format-catalog/
-for more info.
+
+URL: http://automatthias.wordpress.com/2009/11/26/sunw-packages-in-an-opencsw-format-catalog
 
 - chkcat -
 Checks CSW catalogs for standard compliance.
+
+- cswcatalog -
+Creates mirror structure for CSW packages (Dagobert Michelsen)
+Takes a source dir with packages and creates the needed dirs (e.g. i386/5.10)
+and places the packages/links, runs bldcat in each dir to create catalog and
+descriptions files. When it's done you have yourself a mirror to use with
+pkgutil.
+
+URL: http://opencsw.svn.sourceforge.net/svnroot/opencsw/buildfarm/bin/cswcatalog
 
 - pkgutillog -
 Script using hooks to log pkgutil actions. Uses syslog (info.notice).

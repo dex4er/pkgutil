@@ -24,6 +24,28 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v1.10. Released 2009-03-xx
+  - Add --param option to override configuration options
+    from pkgutil.conf (4045@OpenCSW)
+  - Add pkgutil.conf option to not cache fetching of catalogs
+  - Added signal handling
+  - Making some output more consistent and copy/paste friendly
+  - Display the full target path when using --extract (4154@OpenCSW)
+  - Nicer exits should not leave stale lock files (3994@OpenCSW) (Sebastian)
+  - Fix bug with -V and --config combo (4116@OpenCSW)
+  - Fix that option -N (nodeps) didn't work with -u (update) (4172@OpenCSW)
+  - Fix uninitialized value bug (4296@OpenCSW)
+  - Fix gpg bug with international LANG setting (4289@OpenCSW)
+  - Add comment about -S to not show license during install (pkgadd option)
+  - Fix release dates for v1.9.1 in readme and add link to Maciej's script in
+    readme for pkgutilplus
+  - Merge modified part of patch from Blastwave fork
+    (check exit status from pkgadd)
+  - Change missing dependencies from warning to error in chkcat
+  - Add -W/--workdir option to bldcat to set workdir (Maciej)
+  - Mirror-script added (to pkgutilplus) to create mirror structure,
+    uses bldcat (Dagobert Michelsen)
+
 * v1.9.1. Released 2009-12-10
   - cswpkgloghooks added as a dependency to pkgutilplus, adds logging of
     package maintenance actions
