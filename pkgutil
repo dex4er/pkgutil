@@ -505,7 +505,7 @@ sub init {
   }
 
   $pkgliststyle = $config{pkgliststyle} if defined $config{pkgliststyle};
-  $maxpkglist = $config{maxpkglist} if $config{maxpkglist};
+  $maxpkglist = $config{maxpkglist} if defined $config{maxpkglist};
   $use_md5 = $use_gpg = $noncsw = 0;
   $use_md5 = 1 if ($config{use_md5} eq "true");
   $use_gpg = 1 if ($config{use_gpg} eq "true");
