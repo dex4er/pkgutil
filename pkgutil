@@ -1368,17 +1368,19 @@ sub pkgutilver {
     print "Wget binary\t" . (($status) ? "not found (suggestion: install CSWwget)" : $wget) . "\n";
     print "PATH\t\t$ENV{PATH}\n";
     print "\n- Configuration -\n";
-    print "catalog_update\t" . (($config{catalog_update}) ? $config{catalog_update} : "not set") . " (default: 14)\n";
-    print "exclude_pattern\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
-    print "maxpkglist\t$maxpkglist (default: 2500000)\n";
-    print "mirror\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t", @{$config{mirror}}) : "not set") . "\n\t\t(default: $defaultmirror)\n";
-    print "noncsw\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
-    print "pkgaddopts\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
-    print "pkgliststyle\t$pkgliststyle (default: 0)\n";
-    print "stop_on_hook_soft_error\t\t" . (($config{stop_on_hook_soft_error}) ? $config{stop_on_hook_soft_error} : "not set") . " (default: false)\n";
-    print "use_gpg\t\t" . (($use_gpg) ? "true" : "false") . " (default: false)\n";
-    print "use_md5\t\t" . (($use_md5) ? "true" : "false") . " (default: false)\n";
-    print "wgetopts\t" . (($config{wgetopts}) ? $config{wgetopts} : "not set") . " (default: none)\n";
+    print "catalog_not_cached\t$config{catalog_not_cached} (default: true)\n";
+    print "catalog_update\t\t" . (($config{catalog_update}) ? $config{catalog_update} : "not set") . " (default: 14)\n";
+    print "exclude_pattern\t\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
+    print "gpg_homedir\t\t" . (($config{gpg_homedir}) ? $config{gpg_homedir} : "not set") . " (default: none)\n";
+    print "maxpkglist\t\t$maxpkglist (default: 2500000)\n";
+    print "mirror\t\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t", @{$config{mirror}}) : "not set") . "\n\t\t\t(default: $defaultmirror)\n";
+    print "noncsw\t\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
+    print "pkgaddopts\t\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
+    print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
+    print "stop_on_hook_soft_error\t" . (($config{stop_on_hook_soft_error}) ? $config{stop_on_hook_soft_error} : "not set") . " (default: false)\n";
+    print "use_gpg\t\t\t" . (($use_gpg) ? "true" : "false") . " (default: false)\n";
+    print "use_md5\t\t\t" . (($use_md5) ? "true" : "false") . " (default: false)\n";
+    print "wgetopts\t\t" . (($config{wgetopts}) ? $config{wgetopts} : "not set") . " (default: none)\n";
   } else {
     print "$pkgutilver\n";
   }
