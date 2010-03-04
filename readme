@@ -25,15 +25,15 @@ Version history
 ---------------
 
 * v1.10. Released 2009-03-xx
-  - Add --param option to override configuration options
+  - Add -p/--param option to override configuration options
     from pkgutil.conf (4045@OpenCSW)
   - Add pkgutil.conf option to not cache fetching of catalogs
   - Added signal handling
   - Making some output more consistent and copy/paste friendly
   - Display the full target path when using --extract (4154@OpenCSW)
-  - Nicer exits should not leave stale lock files (3994@OpenCSW) (Sebastian)
+  - Nicer exits should not leave stale lock files (3994@OpenCSW)
   - Fix bug with -V and --config combo (4116@OpenCSW)
-  - Fix that option -N (nodeps) didn't work with -u (update) (4172@OpenCSW)
+  - Fix that option -N/--nodeps didn't work with -u/--update (4172@OpenCSW)
   - Fix uninitialized value bug (4296@OpenCSW)
   - Fix gpg bug with international LANG setting (4289@OpenCSW)
   - Add comment about -S to not show license during install (pkgadd option)
@@ -52,8 +52,8 @@ Version history
   - Maciej Blizinski's build_sun_catalog.py script added to pkgutilplus,
     it builds CSW catalogs from Sun packages
   - gpg homedir support (Maciej Blizinski)
-  - Make -a/c/C and --describe case sensitive (#2908177@SF) (David Everly)
-  - Fix upgrade all bug (#2907651@SF) (David Everly)
+  - Make -a/c/C and --describe case sensitive (2908177@SF) (David Everly)
+  - Fix upgrade all bug (2907651@SF) (David Everly)
   - Fix bug with system calls (Bartosz Trudnowski)
 
 * v1.9. Released 2009-11-27
@@ -63,14 +63,14 @@ Version history
     the version on the mirror even if your local version is newer
   - Add exclude_pattern option to pkgutil.conf, use simple patterns
     to exclude packages from install/upgrade (Maciej Blizinski)
-  - Remove all upgrade packages first (#2890862@SF) (David Everly)
-  - Add support for response (pkgask) files (#2890896@SF) (David Everly)
+  - Remove all upgrade packages first (2890862@SF) (David Everly)
+  - Add support for response (pkgask) files (2890896@SF) (David Everly)
   - Local package files can now be upgraded as well (Sebastian Kayser)
-  - Enhance description of noncsw option in pkgutil.conf (#3990@OpenCSW)
+  - Enhance description of noncsw option in pkgutil.conf (3990@OpenCSW)
     (Sebastian Kayser)
   - Default maxpkglist (loop detection) value raised to 250000 to
     decrease risk of false alarm (Sebastian Kayser)
-  - Fix -F bug (#4039@OpenCSW) (Sebastian Kayser)
+  - Fix -F bug (4039@OpenCSW) (Sebastian Kayser)
 
 * v1.8. Released 2009-10-30
   - Simple pkgutil logging script included in pkgutilplus using the new hook
@@ -80,30 +80,30 @@ Version history
     9-field catalog
   - Added pre/postfetch hooks (Ben Walton)
   - Install local package files, e.g. "pkgutil -i foo.pkg.gz" (Trygve Laugstol)
-  - Fix transform (extract) feature (#3904@OpenCSW)
+  - Fix transform (extract) feature (3904@OpenCSW)
   - Transform renamed to extract to be more generic (Sebastian Kayser)
   - Extract and stream must now be used with download, e.g. "-d --stream"
   - Selecting target platform is now possible for --download and
-    --extract, not just --stream (#3914@OpenCSW) (Sebastian Kayser)
+    --extract, not just --stream (3914@OpenCSW) (Sebastian Kayser)
   - Catalog update interval user configurable via pkgutil.conf. Set to -1
     for no automatic updates, 0 for every time pkgutil is run and 1+ for
     the number of days between updates. 14 would emulate current behavior
     (Trygve Laugstol)
-  - Add support for catalog names in --listfile (#3894@OpenCSW)
+  - Add support for catalog names in --listfile (3894@OpenCSW)
     (Sebastian Keyser)
   - Split package into core pkgutil and extension pkgutilplus
     (bldcat/chkcat, more to come)
-  - Remove unused declaration causing noise when using -r (#3903@OpenCSW)
+  - Remove unused declaration causing noise when using -r (3903@OpenCSW)
   - Fix missing options in man/perldoc page
-  - Add support for non-CSW packages to bldcat (#2865123@SF) (David Everly)
+  - Add support for non-CSW packages to bldcat (2865123@SF) (David Everly)
   - Switch back to default 8 field catalogs for bldcat and chkcat
   - bldcat and chkcat doesn't require CSWperl, exit with helpful message if
-    Digest::MD5 is missing (#3917@OpenCSW)
+    Digest::MD5 is missing (3917@OpenCSW)
 
 * v1.7. Released 2009-09-11
-  - Clarify text about config file priority (#2835200) (Ken Stailey)
-  - Add config status to --syscheck option (#2855094) (Dagobert Michelsen)
-  - Add protection against concurrent pkgutil processes (#3831)
+  - Clarify text about config file priority (2835200@SF) (Ken Stailey)
+  - Add config status to --syscheck option (2855094@SF) (Dagobert Michelsen)
+  - Add protection against concurrent pkgutil processes (3831@OpenCSW)
   - New option -N (nodeps) to skip dependencies, you get only what you
     specified on the command line
   - New option --transform to download and transform (unpack) packages
@@ -122,14 +122,14 @@ Version history
     Use -f8 in bldcat and chkcat to use the old format
 
 * v1.6.1. Released 2009-06-05
-  - Fix -y bug when upgrading pkgutil (#3701) (Sebastian Kayser, Dagobert
-    Michelsen)
+  - Fix -y bug when upgrading pkgutil (3701@OpenCSW) (Sebastian Kayser,
+    Dagobert Michelsen)
   - Fix order of install to ,e.g., make sure that cswclassutils
-    is always installed first/early (#3702) (Sebastian Kayser)
+    is always installed first/early (3702@OpenCSW) (Sebastian Kayser)
 
 * v1.6. Released 2009-05-29
-  - Fix -T bug (#3689) (Sebastian Kayser)
-  - Fix -W bug (#3688) (Sebastian Kayser)
+  - Fix -T bug (3689@OpenCSW) (Sebastian Kayser)
+  - Fix -W bug (3688@OpenCSW) (Sebastian Kayser)
   - New option -C, same as -c but only shows different versions, no more
     piping to grep -v SAME (Ben Walton)
   - New option --trace to debug pkgadd/pkgrm operations (#3683) (Yann Rouillard)

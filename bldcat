@@ -213,6 +213,10 @@ Build a CSW catalog from packages in a directory.
 
 Set catalog format. Use 8 for the old 8 field format and 9 for the new 9 field format including incompatible packages.
 
+=item B<-W, --workdir=x>
+
+Set work directory. Default /tmp.
+
 =item B<-h, --help>
 
 Show this help.
@@ -238,6 +242,8 @@ http://sourceforge.net/projects/pkgutil
 Peter Bonivart <bonivart@opencsw.org>
 
 =head1 CREDITS
+
+Maciej Blizinksi
 
 Dagobert Michelsen
 

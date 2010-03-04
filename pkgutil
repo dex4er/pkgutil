@@ -1894,6 +1894,10 @@ Will fetch and extract package content. Must be used with -d.
 
 Single package check. This is much faster than checking all installed packages, note that using something like "-c foo" still checks all packages, it just filters the output to only show lines containing foo. Must be used with -c.
 
+=item B<,p --param=opt:val>
+
+Override configuration option. All configuration options in pkgutil.conf can be overridden except the mirror option (use -t for that). This can be useful if you temporarily want to disable gpg checks for example.
+
 =back
 
 =head1 EXAMPLES
@@ -1964,7 +1968,7 @@ Pkgutil also uses a file to configure pkgadd when the yes (-y) option is used. T
 
 C<pkgaddopts>
 
-Send options to pkgadd, one example is -G that will only install the packages in the global zone for Solaris 10.
+Send options to pkgadd, one example is -G that will only install the packages in the global zone for Solaris 10. A useful setting is -S, that will not display the license during install.
 
 C<pkgliststyle>
 
@@ -1972,7 +1976,7 @@ Style of package list when installing/upgrading packages. 0 is the one used sinc
 
 C<stop_on_hook_soft_error>
 
-This option determines whether or not execution will be halted if a hook returns 2 as its exit code.  Execution is always stopped if a hook returns 1.  Set this to true to enable it.
+This option determines whether or not execution will be halted if a hook returns 2 as its exit code. Execution is always stopped if a hook returns 1. Set this to true to enable it.
 
 C<use_gpg>
 C<use_md5>
