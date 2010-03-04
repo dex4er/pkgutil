@@ -68,6 +68,17 @@ sub available {
   myexit("","",0);
 }
 
+# check binary to avoid trying to use broken wget for example
+#   bin - binary to check
+sub check_binary {
+  my ($bin) = @_;
+
+  print "Checking binary: $bin ... " if $debug;
+  my $status = system("/bin/sh -c '$bin --version' >/dev/null 2>/dev/null");
+  print "" . (($status) ? "fail" : "OK") . "\n" if $debug;
+  return 1 if $status;
+}
+
 # Check catalog
 #   always - always update catalog
 sub check_catalog {
@@ -966,6 +977,7 @@ sub locate_gzip {
 
   foreach (@locations) {
     if (-x "$_/gzip") {
+      next if check_binary("$_/gzip");
       $gzip = "$_/gzip";
       last;
     }
@@ -981,6 +993,7 @@ sub locate_wget {
 
   foreach (@locations) {
     if (-x "$_/wget") {
+      next if check_binary("$_/wget");
       $wget = "$_/wget";
       last;
     }
@@ -995,7 +1008,7 @@ sub locate_wget {
 # Make a filename from the URL - /es to _es
 #   url - url to mangle
 sub mangle_url {
-  my($url) = @_;
+  my ($url) = @_;
 
   (my $mangled = $url) =~ s?\w+://??;
   $mangled =~ s?/?_?g;
