@@ -1065,7 +1065,7 @@ sub parse_catalog {
   my ($pkg,$mode) = @_;
   my ($retvalue, $name);
 
-  print STDERR "Parsing catalog...looking for: $pkg (mode $mode)\n" if $debug;
+  print STDERR "Parsing catalog ... looking for: $pkg (mode $mode)\n" if $debug;
 
   # Do we have an embedded version?
   my @p = split /-/, $pkg;
@@ -1677,7 +1677,7 @@ EOF
 }
 
 # Comparison of two package versions as per
-# http://pkgutil.wikidot.com/get-install-and-configure#toc7
+# http://pkgutil.wikidot.com/get-install-and-configure#toc8
 # As per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
 # Note that if neither has a REV code, -1 is *ALWAYS* returned.
 #   p1rev, p2rev - versions to compare

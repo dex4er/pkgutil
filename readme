@@ -28,6 +28,7 @@ Version history
   - Add -p/--param option to override configuration options
     from pkgutil.conf (4045@OpenCSW)
   - Add pkgutil.conf option to not cache fetching of catalogs
+  - Health check for gzip and wget binaries
   - Added signal handling
   - Making some output more consistent and copy/paste friendly
   - Display the full target path when using --extract (4154@OpenCSW)
