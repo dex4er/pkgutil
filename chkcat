@@ -153,6 +153,16 @@ while (scalar(@tmp) > 0) {
     }
   }
 
+  # Packages that should be compressed - common and gzip
+  if ($field[2] eq "CSWcommon" || $field[2] eq "CSWgzip") {
+    if ($field[3] =~ /\.gz$/) {
+      retcode(2);
+      if (! $quiet) {
+        print "\nERROR! Package $field[2] is compressed. [$line]\n";
+      }
+    }
+  }
+
   # Check the naming standard - http://opencsw.org/standards/build#versioning
   my ($name, $version, $uname, $arch, $footer, $rest) = split /-/, $field[3];
   if (! $footer && $arch) {
