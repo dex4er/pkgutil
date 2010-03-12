@@ -238,7 +238,7 @@ sub fetch_catalog {
 
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   $wgetopts .= " --execute cache=off" if ($config{catalog_not_cached} eq "true");
-  print "Fetching new catalog and descriptions ($url) if available ...\n";
+  print "=> Fetching new catalog and descriptions ($url) if available ...\n";
   myexit("Option -n selected, stopping here.","",0) if $nomod;
 
   my $desc_file = $filename;
@@ -285,7 +285,7 @@ sub fetch_pkgs {
       $i++;
       print $fh "A local copy of $pkg exists and is of matching size.\n";
     } else {
-      print $fh "Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
+      print $fh "=> Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
       locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
@@ -617,7 +617,7 @@ sub inst_pkgs {
 
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
-      print "=> Removing old version of $pkgname\n";
+      print "=> Removing old version of $pkgname (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
       system("$pkgrm $pkgforce $pkgtrace $pkgname");
     }
   }
@@ -628,7 +628,7 @@ sub inst_pkgs {
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
-    print "=> Installing $_\n";
+    print "=> Installing $_ (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
     if ($file =~ /\.gz$/) {		# Not all packages are compressed
       my $status = locate_gzip();
       if (! $status) {
