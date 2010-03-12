@@ -34,7 +34,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 my $debug = 0;
-my $pkgutilver = "1.10";
+my $pkgutilver = "1.11b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -595,8 +595,7 @@ sub inst_pkgs {
   my $pkgadd = "/usr/sbin/pkgadd";
   my $pkgaddopts = "";
   my $pkgrm = "/usr/sbin/pkgrm";
-  my $file;
-  my $name;
+  my ($file,$name);
   my $pkgtrace = "";
   my $per_package_hook = "install";
 
@@ -606,6 +605,7 @@ sub inst_pkgs {
   run_hooks("prebatch$batchmode", @pkglist);
 
   # Removing old version of all packages being upgraded
+  my $i = 1;
   foreach (reverse @pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
@@ -623,6 +623,7 @@ sub inst_pkgs {
   }
 
   # Install all packages being upgraded/installed
+  $i = 1;
   foreach (@pkglist) {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
