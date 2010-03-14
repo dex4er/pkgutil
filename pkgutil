@@ -34,7 +34,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 my $debug = 0;
-my $pkgutilver = "1.11b1";
+my $pkgutilver = "2.0b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -682,7 +682,8 @@ sub install {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
   my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
 
-  print $fh "Parsing catalog, may take a while ...\n";
+  print $fh "Solving needed dependencies ...\n";
+
   foreach my $tmppkg (@ARGV) {
     my $tmp = parse_catalog($tmppkg,2);
     my $vers = parse_catalog($tmppkg,1);
@@ -704,34 +705,9 @@ sub install {
 
       my @tmpdeps;
 
-      ## Skip stuff already checked, partly to avoid loops but also to gain
-      ## speed if possible
-      ## Uncomment one of the below if you want to try it
-
-      ## 1. Suggestion from Joe Baro, avoids loops, skips lots of iterations
-      ##    but reorders install order
-      ##next if $finished{$tmppkg2};
-      ##$finished{$tmppkg2} = 1;
-
-      ## 2. My "deduplicate at every hit" suggestion, reduces iterations but
-      ##    still reorders list
-      ##if ($finished{$tmppkg2}) {
-      ##  my @tmppkglist = @pkglist;
-      ##  my $tmp;
-      ##  undef @pkglist;
-      ##  while (scalar(@tmppkglist)) {
-      ##    $tmp = shift(@tmppkglist);
-      ##    if ($tmp eq $tmppkg2) {
-      ##      push(@pkglist,@tmppkglist);
-      ##      last;
-      ##    } else {
-      ##      push(@pkglist,$tmp);
-      ##    }
-      ##  }
-      ##}
-      ##$finished{$tmppkg2} = 1;
-
-      ## End of skip stuff tests
+      # Next two lines from Joe Baro reduces iterations
+      next if $finished{$tmppkg2};
+      $finished{$tmppkg2} = 1;
 
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
@@ -797,10 +773,39 @@ sub install {
   }
   print STDERR "revpkglist ", join(",", @revpkglist), "\n" if $debug;
 
-  ## Temporary for testing loop/speed suggestions
-  ##print "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n";
-  ##print "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n";
-  ## Temporary for testing loop/speed suggestions
+  print STDERR "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n" if $debug;
+  print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+
+  print $fh "Solving dependency order ...\n";
+  my @revpkglist2 = @revpkglist;
+  my @revpkglist3;
+  foreach (@revpkglist2) {
+    my $dep = parse_catalog($_,6);
+    if ($dep eq "none") {
+      push(@revpkglist3,$_);
+    } else {
+      my $allhit = 1;
+      foreach my $i (split(/\|/,$dep)) {
+        my $hit = 0;
+        foreach my $j (@revpkglist3) {
+          if ($i eq $j) {
+            $hit = 1;
+            last;
+          }
+        }
+        if (! $hit) {   # no hit, add last for re-processing
+          push(@revpkglist2,$_);
+          $allhit = 0;
+          last;
+        }
+      }
+      if ($allhit) {    # all deps ok, add to final list
+        push(@revpkglist3,$_);
+      }
+    }
+  }
+  print STDERR"revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
+  @revpkglist = @revpkglist3;
 
   # Incompatible packages (I-dependencies)
   my @ideppkglist;
