@@ -35,12 +35,17 @@ if (scalar(@ARGV) > 0) {
 $format = 8 if ($format != 9);
 
 sub usage {
-  print "bldcat, build CSW catalogs.\n\n";
-  print "Usage: bldcat [-fWh] <package dir>\n";
-  print "\n  -f, --format=x\tSet catalog format ([8]|9)";
-  print "\n  -W, --workdir=x\tSet work directory (default: /tmp)";
-  print "\n  -h, --help\t\tShow this help\n";
-  print "\nWritten and maintained by Peter Bonivart.\n";
+  print <<EOF;
+bldcat, build CSW catalogs.
+
+Usage: bldcat [-fWh] <package dir>
+
+  -f, --format=x\tSet catalog format ([8]|9)
+  -W, --workdir=x\tSet work directory (default: /tmp)
+  -h, --help\t\tShow this help
+
+Written and maintained by Peter Bonivart.
+EOF
   exit 1;
 }
 
