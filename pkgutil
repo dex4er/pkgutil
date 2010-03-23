@@ -176,7 +176,8 @@ sub describe {
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
 
-  check_catalog(1) unless (-r $desc_file);
+##  check_catalog(1) unless (-r $desc_file);
+  myexit("No descriptions file available. Try pkgutil -U.","",1) unless (-r $desc_file && -s _);
   open(DESC,"<$desc_file");
   while (my $line = <DESC>) {
     chomp $line;
@@ -248,13 +249,15 @@ sub fetch_catalog {
     $status = system("/bin/cp $tmpcatsrc/catalog $filename");
     myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
-    myexit("\nFetching of descriptions failed.","",1) if $status;
+##    myexit("\nFetching of descriptions failed.","",1) if $status;
+    print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
   } else {
     locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
     $status = system("$wget $wgetopts -O $filename $url/catalog");
     myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
-    myexit("\nFetching of descriptions failed.","",1) if $status;
+##    myexit("\nFetching of descriptions failed.","",1) if $status;
+    print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
   }
   system("/bin/touch $filename") if (-w $filename);
 }
@@ -1273,6 +1276,10 @@ sub parse_cl {
   print "Architecture $loc_arch not supported.\n" unless $ok_arch;
   print "OS release $loc_rel not supported.\n" unless $ok_rel;
   myexit("","",1) if (($ok_arch + $ok_rel) < 2);
+
+####
+$loc_rel = "5.8";
+####
 
   foreach (my $i=0; $i < scalar(@mirror); $i++) {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
