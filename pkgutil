@@ -1062,7 +1062,7 @@ sub myexit {
 
   my $text = ($msg && $err) ? "$msg: $err" : "$msg";
   $rc = 0 unless $rc;
-  unlink $admin if ($admin && -r $admin);
+  unlink $admin if ($admin && -r $admin && $admin =~ /admin\.run$/);
   print STDERR "$text\n" if $text;
   exit $rc;
 }
