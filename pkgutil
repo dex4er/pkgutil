@@ -1690,7 +1690,7 @@ EOF
 }
 
 # Comparison of two package versions as per
-# http://pkgutil.wikidot.com/get-install-and-configure#toc8
+# http://pkgutil.net/get-install-and-configure#toc8
 # As per cmp or <=>, -1, 0, or 1 if p1 is less than, equal to or greater than p2
 # Note that if neither has a REV code, -1 is *ALWAYS* returned.
 #   p1rev, p2rev - versions to compare
@@ -2019,7 +2019,7 @@ Pkgutil supports pkgask response files and will use them if you provide them. Cr
 
 =head1 SEE ALSO
 
-http://pkgutil.wikidot.com
+http://pkgutil.net
 
 http://sourceforge.net/projects/pkgutil
 
