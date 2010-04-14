@@ -464,10 +464,10 @@ sub init {
              "catalog_not_cached"	=> "true",
              "catalog_update"		=> "14");
 
-  foreach (@conf_file) {
-    if (-r $_) {	# If conf file found, parse it
-      print STDERR "Conf file: $_\n" if $debug; 
-      open (CONFIG,"<$_") or myexit("Can't open $_","$!",1);
+  foreach my $file (@conf_file) {
+    if (-r $file) {	# If conf file found, parse it
+      print STDERR "Conf file: $file\n" if $debug; 
+      open (CONFIG,"<$file") or myexit("Can't open $file","$!",1);
       while (<CONFIG>) {
         chomp;	# Remove newline
         s/#.*//;	# Remove comments
@@ -475,6 +475,10 @@ sub init {
         s/\s+$//;	# Remove trailing white
         next unless length;	# Next if nothing left
         my ($var,$value) = split(/\s*=\s*/,$_,2);
+	unless (exists $config{$var}) {
+	  print "Unrecognized value (in $file): $var\n";
+	  next;
+        }
         print STDERR "Found $var = $value\n" if $debug;
         my $r = ref($config{$var});
         if (! $r) {
@@ -494,6 +498,10 @@ sub init {
       next;
     }
     my ($var,$value) = split(/:/);
+    unless (exists $config{$var}) {
+      print "Unrecognized value (using --param): $var\n";
+      next;
+    }
     my $r = ref($config{$var});
     if (! $r) {
       $config{$var} = $value;
@@ -503,19 +511,9 @@ sub init {
   }
 
   if ($debug) {
-    print "maxpkglist: $config{maxpkglist}\n";
-    print "mirror: " . join("\t", @{$config{mirror}}) . "\n";
-    print "noncsw: $config{noncsw}\n";
-    print "pkgaddopts: $config{pkgaddopts}\n";
-    print "pkgliststyle: $config{pkgliststyle}\n";
-    print "use_gpg: $config{use_gpg}\n";
-    print "use_md5: $config{use_md5}\n";
-    print "wgetopts: $config{wgetopts}\n";
-    print "stop_on_hook_soft_error: $config{stop_on_hook_soft_error}\n";
-    print "exclude_pattern: $config{exclude_pattern}\n";
-    print "gpg_homedir: $config{gpg_homedir}\n";
-    print "catalog_not_cached: $config{catalog_not_cached}\n";
-    print "catalog_update: $config{catalog_update}\n";
+    foreach (sort keys %config) {
+      print "$_: " . (($_ eq "mirror") ? join("\t", @{$config{$_}}) : $config{$_}) . "\n";
+    }
   }
 
   $pkgliststyle = $config{pkgliststyle} if defined $config{pkgliststyle};
