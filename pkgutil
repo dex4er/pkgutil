@@ -1408,7 +1408,7 @@ sub pkgutilver {
     print "noncsw\t\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
     print "pkgaddopts\t\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
     print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
-    print "root_path\t\t" . (($config{root_path}) ? $config{root_path} : "not set") . " (default: none)\n";
+    print "root_path\t\t" . (($config{root_path}) ? $config{root_path} : "not set") . " (default: /)\n";
     print "stop_on_hook_soft_error\t" . (($config{stop_on_hook_soft_error}) ? $config{stop_on_hook_soft_error} : "not set") . " (default: false)\n";
     print "use_gpg\t\t\t" . (($use_gpg) ? "true" : "false") . " (default: false)\n";
     print "use_md5\t\t\t" . (($use_md5) ? "true" : "false") . " (default: false)\n";
@@ -2007,6 +2007,10 @@ Send options to pkgadd, one example is -G that will only install the packages in
 C<pkgliststyle>
 
 Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read.
+
+C<root_path>
+
+Set alternate root path (-R with pkg commands). Default is /.
 
 C<stop_on_hook_soft_error>
 
