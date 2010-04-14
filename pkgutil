@@ -476,7 +476,7 @@ sub init {
         next unless length;	# Next if nothing left
         my ($var,$value) = split(/\s*=\s*/,$_,2);
 	unless (exists $config{$var}) {
-	  print "Unrecognized value (in $file): $var\n";
+	  print "Unrecognized option (in $file): $var\n";
 	  next;
         }
         print STDERR "Found $var = $value\n" if $debug;
@@ -499,7 +499,7 @@ sub init {
     }
     my ($var,$value) = split(/:/);
     unless (exists $config{$var}) {
-      print "Unrecognized value (using --param): $var\n";
+      print "Unrecognized option (using --param): $var\n";
       next;
     }
     my $r = ref($config{$var});
