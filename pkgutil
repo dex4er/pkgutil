@@ -1282,10 +1282,6 @@ sub parse_cl {
   print "OS release $loc_rel not supported.\n" unless $ok_rel;
   myexit("","",1) if (($ok_arch + $ok_rel) < 2);
 
-####
-$loc_rel = "5.8";
-####
-
   foreach (my $i=0; $i < scalar(@mirror); $i++) {
     ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
     $mirror[$i] .= "/" . $loc_arch . "/" . $loc_rel;
