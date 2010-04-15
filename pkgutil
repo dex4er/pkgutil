@@ -1207,10 +1207,14 @@ sub parse_cl {
   if ($opt_workdir) {	# Set/create optional working dir
     $workdir = $opt_workdir;
     print STDERR "new workdir: $workdir\n" if $debug;
-  } elsif ($>) {	# If -W not used and non-root, use pwd
-    $workdir = getcwd();
+  } elsif ($>) {	# If -W not used and non-root, use home dir
+    $workdir = $ENV{HOME} . "/.pkgutil";
+    if (! -d $workdir) {	# Create if non-existing
+      my $status = mkdir $workdir;
+      myexit("Could not create $workdir","$!",1) unless $status;
+    }
     print STDERR "username: " . getpwuid($>) . "\n" if $debug;
-    print "You're not root and didn't set -W, using current dir.\n";
+    print "You're not root and didn't set -W, using home dir.\n";
   }
   $pkgdir = "$workdir/packages";
 
