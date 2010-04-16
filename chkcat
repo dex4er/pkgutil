@@ -110,7 +110,8 @@ while (scalar(@tmp) > 0) {
   last if ($line =~ /-BEGIN PGP SIGNATURE-/);
   next if ($line =~ /^#/);
   my @line = split(/\s+/,$line);
-  $pkg{$line[2]} = 1 if ($line[2] =~ /^CSW/);
+  next unless (scalar(@line) == 8 || scalar(@line) == 9);
+  $pkg{$line[2]} = 1 if ($line[2] =~ /\w+/);
   $pkgdep{$line[2]} = $line[6];
 }
 
@@ -160,7 +161,7 @@ while (scalar(@tmp) > 0) {
     }
   }
 
-  # Packages that should be compressed - common and gzip
+  # Packages that should not be compressed - common and gzip
   if ($field[2] eq "CSWcommon" || $field[2] eq "CSWgzip") {
     if ($field[3] =~ /\.gz$/) {
       retcode(2);
