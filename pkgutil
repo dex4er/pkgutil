@@ -786,7 +786,23 @@ sub install {
     my @revpkglist2 = @revpkglist;
     my @revpkglist3;
     foreach (@revpkglist2) {
-      myexit("Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.","",1) if (scalar(@revpkglist2) > $maxpkglist);
+      if (scalar(@revpkglist2) > $maxpkglist) {
+        print "Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.\n";
+        print "Do you want to continue anyway? [Y/n] ";
+        chomp (my $prompt = <STDIN>);
+        myexit("","",0) if ($prompt =~ /^[nN]/);
+        my %deduped;
+        my @tmppkglist;
+        for my $pkg (@revpkglist2) {
+          next unless $pkgvers{$pkg}; # Not if excluded
+          unless (exists $deduped{$pkg}) {
+            push(@tmppkglist,$pkg);
+            $deduped{$pkg} = 1;
+          }
+        }
+        @revpkglist3 = @tmppkglist;
+        last;
+      }
       my $dep = parse_catalog($_,6);
       if ($dep eq "none") {
         push(@revpkglist3,$_);
