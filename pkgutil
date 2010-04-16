@@ -172,12 +172,27 @@ sub compare {
   }
 }
 
+# Deduplicate a list
+#   list - list to deduplicate
+sub dedup {
+  my @list = @_;
+  my %deduped;
+  my @tmplist;
+
+  for my $pkg (@list) {
+    unless (exists $deduped{$pkg}) {
+      push(@tmplist,$pkg);
+      $deduped{$pkg} = 1;
+    }
+  }
+  return @tmplist;
+}
+
 # Describe available packages
 sub describe {
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
 
-##  check_catalog(1) unless (-r $desc_file);
   myexit("No descriptions file available. Try pkgutil -U.","",1) unless (-r $desc_file && -s _);
   open(DESC,"<$desc_file");
   while (my $line = <DESC>) {
@@ -250,14 +265,12 @@ sub fetch_catalog {
     $status = system("/bin/cp $tmpcatsrc/catalog $filename");
     myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
-##    myexit("\nFetching of descriptions failed.","",1) if $status;
     print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
   } else {
     locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
     $status = system("$wget $wgetopts -O $filename $url/catalog");
     myexit("\nFetching of catalog failed.","",1) if $status;
     $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
-##    myexit("\nFetching of descriptions failed.","",1) if $status;
     print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
   }
   system("/bin/touch $filename") if (-w $filename);
@@ -707,7 +720,6 @@ sub install {
       # N.B. This array grows and we keep looping until we've satisfied all
       # of the dependencies
       print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
-##      myexit("Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.","",1) if (scalar(@pkglist) > $maxpkglist);
 
       my @tmpdeps;
 
@@ -752,13 +764,9 @@ sub install {
 
   # Now reverse and deduplicate @pkglist. Need the last instance of each
   # package if reading @pkglist forwards
-  my %deduped;
-  for my $pkg (reverse @pkglist) {
-    next unless $pkgvers{$pkg}; # Not if excluded
-    unless (exists $deduped{$pkg}) {
-      push(@revpkglist,$pkg);
-      $deduped{$pkg} = 1;
-    }
+  my @tmprevpkglist = dedup(reverse @pkglist);
+  foreach (@tmprevpkglist) {
+    push(@revpkglist,$_) if $pkgvers{$_}; # Not if excluded
   }
 
   # Clean list from exclude patterns in pkgutil.conf
@@ -791,16 +799,7 @@ sub install {
         print "Do you want to continue anyway? [Y/n] ";
         chomp (my $prompt = <STDIN>);
         myexit("","",0) if ($prompt =~ /^[nN]/);
-        my %deduped;
-        my @tmppkglist;
-        for my $pkg (@revpkglist2) {
-          next unless $pkgvers{$pkg}; # Not if excluded
-          unless (exists $deduped{$pkg}) {
-            push(@tmppkglist,$pkg);
-            $deduped{$pkg} = 1;
-          }
-        }
-        @revpkglist3 = @tmppkglist;
+        @revpkglist3 = dedup(@revpkglist2);
         last;
       }
       my $dep = parse_catalog($_,6);
