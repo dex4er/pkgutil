@@ -688,7 +688,7 @@ sub install {
   my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print $fh "Solving needed dependencies ...\n";
+  print $fh "Solving needed dependencies ...\n" unless $deps;
 
   foreach my $tmppkg (@ARGV) {
     my $tmp = parse_catalog($tmppkg,2);
@@ -781,37 +781,39 @@ sub install {
   print STDERR "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n" if $debug;
   print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
 
-  print $fh "Solving dependency order ...\n";
-  my @revpkglist2 = @revpkglist;
-  my @revpkglist3;
-  foreach (@revpkglist2) {
-    myexit("Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.","",1) if (scalar(@revpkglist2) > $maxpkglist);
-    my $dep = parse_catalog($_,6);
-    if ($dep eq "none") {
-      push(@revpkglist3,$_);
-    } else {
-      my $allhit = 1;
-      foreach my $i (split(/\|/,$dep)) {
-        my $hit = 0;
-        foreach my $j (@revpkglist3) {
-          if ($i eq $j) {
-            $hit = 1;
+  unless ($deps) {
+    print $fh "Solving dependency order ...\n";
+    my @revpkglist2 = @revpkglist;
+    my @revpkglist3;
+    foreach (@revpkglist2) {
+      myexit("Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.","",1) if (scalar(@revpkglist2) > $maxpkglist);
+      my $dep = parse_catalog($_,6);
+      if ($dep eq "none") {
+        push(@revpkglist3,$_);
+      } else {
+        my $allhit = 1;
+        foreach my $i (split(/\|/,$dep)) {
+          my $hit = 0;
+          foreach my $j (@revpkglist3) {
+            if ($i eq $j) {
+              $hit = 1;
+              last;
+            }
+          }
+          if (! $hit) {   # no hit, add last for re-processing
+            push(@revpkglist2,$_);
+            $allhit = 0;
             last;
           }
         }
-        if (! $hit) {   # no hit, add last for re-processing
-          push(@revpkglist2,$_);
-          $allhit = 0;
-          last;
+        if ($allhit) {    # all deps ok, add to final list
+          push(@revpkglist3,$_);
         }
       }
-      if ($allhit) {    # all deps ok, add to final list
-        push(@revpkglist3,$_);
-      }
     }
+    print STDERR"revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
+    @revpkglist = @revpkglist3;
   }
-  print STDERR"revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
-  @revpkglist = @revpkglist3;
 
   # Incompatible packages (I-dependencies)
   my @ideppkglist;
