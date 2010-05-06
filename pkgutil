@@ -604,9 +604,11 @@ sub inst_loc_pkgs {
 # Install packages
 #   batchmode - whether we're updating some of the packages or doing new
 #               installs only (values: upgrade or install)
+#   updlistlen - number of packages to update
 #   pkglist - packages to install
 sub inst_pkgs {
   my $batchmode = shift;
+  my $updlistlen = shift;
   my @pkglist = @_;
   my $tmp = "";
   my $pkgadd = "/usr/sbin/pkgadd";
@@ -635,7 +637,7 @@ sub inst_pkgs {
 
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
-      print "=> Removing old version of $pkgname (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
+      print "=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
     }
   }
@@ -958,7 +960,7 @@ sub install {
 
   if ($mode == 0) {		# If -d not used, install
     if (scalar(@dlpkglist) > 0) {
-      inst_pkgs(scalar(@updpkglist) ? 'upgrade' : 'install', @dlpkglist);
+      inst_pkgs(scalar(@updpkglist) ? 'upgrade' : 'install', scalar(@updpkglist), @dlpkglist);
     }
   }
   myexit("","",0);
