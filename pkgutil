@@ -754,26 +754,11 @@ sub install {
   }
   print STDERR "pkglist ", join(",", @pkglist), "\n" if $debug;
 
-  # Clean list from excludes. Delete from the %pkgvers hash
-  foreach my $pkg (@exclude) {
-    if (exists $pkgvers{$pkg}) {
-      delete $pkgvers{$pkg};
-      push(@excludelist,$pkg);
-    }
-  }
-
   # Now reverse and deduplicate @pkglist. Need the last instance of each
   # package if reading @pkglist forwards
   my @tmprevpkglist = dedup(reverse @pkglist);
   foreach (@tmprevpkglist) {
     push(@revpkglist,$_) if $pkgvers{$_}; # Not if excluded
-  }
-
-  # Clean list from exclude patterns in pkgutil.conf
-  foreach my $pattern (split(/\s+?/,$config{exclude_pattern})) {
-    my @tmppkglist = grep(!/$pattern/,@revpkglist);
-    push(@excludelist,grep(/$pattern/,@revpkglist));
-    @revpkglist = @tmppkglist;
   }
 
   if ($mode == 2) {		# If -r used
@@ -828,6 +813,21 @@ sub install {
     }
     print STDERR"revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
     @revpkglist = @revpkglist3;
+  }
+
+  # Clean list from excludes. Delete from the %pkgvers hash
+  foreach my $pkg (@exclude) {
+    if (exists $pkgvers{$pkg}) {
+      delete $pkgvers{$pkg};
+      push(@excludelist,$pkg);
+    }
+  }
+
+  # Clean list from exclude patterns in pkgutil.conf
+  foreach my $pattern (split(/\s+?/,$config{exclude_pattern})) {
+    my @tmppkglist = grep(!/$pattern/,@revpkglist);
+    push(@excludelist,grep(/$pattern/,@revpkglist));
+    @revpkglist = @tmppkglist;
   }
 
   # Incompatible packages (I-dependencies)
