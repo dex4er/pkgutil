@@ -20,12 +20,10 @@ my $prefix = ".";
 my $tmpdir = "/tmp/chkcat.$$.$^T";
 my (%pkg,%pkgdep,%config);
 my $rc = 0;
-my $format = 8;
 
 GetOptions("v|verbose"		=> \$verbose,
 	   "h|help"		=> \$help,
 	   "q|quiet"		=> \$quiet,
-	   "f|format=s"		=> \$format,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
@@ -35,20 +33,15 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
-if ($format != 9) {
-  $format = 8;
-}
-
 sub usage {
   print <<EOF;
 chkcat, check CSW catalogs for problems.
 
-Usage: chkcat [-veqfh] <catalog file>
+Usage: chkcat [-veqh] <catalog file>
 
   -v, --verbose\t\tVerbose mode
   -e, --erroronly\tSuppress displaying warnings
   -q, --quiet\t\tNo output (only exit codes)
-  -f, --format=x\tSet catalog format ([8]|9)
   -h, --help\t\tShow this help
 
 Exit codes: 0 - OK, 1 - Warning, 2 - Error.
@@ -145,10 +138,10 @@ while (scalar(@tmp) > 0) {
   }
 
   # Number of fields
-  if (scalar(@field) != $format) {
+  if (scalar(@field) < 8 || scalar(@field) > 9) {
     retcode(2);
     if (! $quiet) {
-      print "\nERROR! ",scalar(@field)," fields instead of normal $format. [$line]\n";
+      print "\nERROR! ",scalar(@field)," fields instead of normal 8 or 9. [$line]\n";
     }
     next;
   }
@@ -387,7 +380,7 @@ chkcat - check CSW catalog for problems
 
 =head1 SYNOPSIS
 
-chkcat [-veqfh] <catalog file>
+chkcat [-veqh] <catalog file>
 
 =head1 DESCRIPTION
 
@@ -408,10 +401,6 @@ Only show errors (suppress warnings).
 =item B<-q, --quiet>
 
 No output (only exit codes).
-
-=item B<-f, --format=x>
-
-Set catalog format. Use 8 for the old 8 field format and 9 for the new 9 field format including incompatible packages.
 
 =item B<-h, --help>
 
