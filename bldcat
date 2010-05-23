@@ -19,7 +19,7 @@ my ($description,$common,$version,$package,$pkgfile,$hash,$size,
     $deps,$category,$help,$ideps);
 my %oldcatalog;
 my %olddescriptions;
-my $format = 8;
+my $format = 9;
 
 GetOptions("h|help"		=> \$help,
            "W|workdir=s"	=> \$tmpdir,
@@ -32,7 +32,7 @@ if (scalar(@ARGV) > 0) {
   usage();
 }
 
-$format = 8 if ($format != 9);
+$format = 9 if ($format != 8);
 
 sub usage {
   print <<EOF;
