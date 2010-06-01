@@ -214,6 +214,14 @@ while (scalar(@tmp) > 0) {
     }
   }
 
+  # Check for SUNW dependencies
+  if ($field[6] =~ /SUNW/) {
+    retcode(1);
+    if (! $erroronly && ! $quiet) {
+      print "\nWARNING! The dependency field of package $field[2] contains SUNW packages. [$line]\n";
+    }
+  }
+
   # Check that no dependencies are missing
   if ($field[6] ne "none") {
     foreach (split(/\|/,$field[6])) {
