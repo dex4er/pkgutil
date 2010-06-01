@@ -159,13 +159,13 @@ foreach my $file (glob "$pkgdir/*") {
       chomp;
       if (/^P\s+\S/) {
         ($deptmp) = (/P\s+(\S+)/);
-        if ($deptmp ne $pkgname && $deptmp ne "SUNW") { # Skip if circular or SUNW
+        if ($deptmp ne $pkgname && $deptmp !~ /^SUNW/) { # Skip if circular or SUNW
           $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
         }
       }
       if (/^I\s+\S/) {
         ($ideptmp) = (/I\s+(\S+)/);
-        if ($ideptmp ne $pkgname && $ideptmp ne "SUNW") { # Skip if circular or SUNW
+        if ($ideptmp ne $pkgname && $ideptmp !~ /^SUNW/) { # Skip if circular or SUNW
           $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
         }
       }
