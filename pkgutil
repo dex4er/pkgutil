@@ -1653,7 +1653,8 @@ sub stream {
   print $fh "Transforming packages into stream ($transfile) ...\n";
   my $status = system("/bin/touch $transfile");
   myexit("Could not create stream file","$!",1) if $status;
-  $status = system("/bin/pkgtrans -s $pkgdir $transfile all 2> /dev/null");
+  my $transpkgs = join(" ",@install_order);
+  $status = system("/bin/pkgtrans -s $pkgdir $transfile $transpkgs 2> /dev/null");
   myexit("Could not transform packages into stream","$!",1) if $status;
 
   foreach (@install_order) {		# Delete package directories
