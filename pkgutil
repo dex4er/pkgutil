@@ -1469,14 +1469,18 @@ sub rem_pkgs {
   my $pkgforce = "";
   my $pkgtrace = "";
   my ($pkg,$i,$j,$k,$l,$depinuse,$skip);
-  my (@cswpkgs,@deptmp,@rempkgs);
+  my (@cswpkgs,@deptmp,@rempkgs,@cswpkgstmp);
 
   $pkgforce = "-a $admin -n" if $yes;
   $pkgtrace = "-v" if $trace;
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print "Looking at installed CSW packages ...\n";
-  my @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
+  print "Looking at installed packages ...\n";
+  if ($noncsw) {
+    @cswpkgstmp = `/bin/pkginfo $root_path`;
+  } else {
+    @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
+  }
   foreach $pkg (@cswpkgstmp) {
     ($pkg) = ($pkg =~ /\s+?(\w+?)\s/);
     $skip = 0;
@@ -1839,6 +1843,8 @@ Upgrade package. A special argument is "all" which will upgrade all installed pa
 =item B<-r, --remove>
 
 Remove package. This will remove a package including all dependencies that are not in use by other packages.
+
+Note that this feature is experimental. Use with caution.
 
 =item B<-d, --download>
 
