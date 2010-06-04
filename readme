@@ -24,6 +24,30 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.0. Released 2010-06-10
+  - Improve loop algorithm, improves speed (Joe Baro)
+  - Non-root use now use ~/.pkgutil instead of current dir
+  - Add support for alternate root path (OpenCSW #4117)
+  - Add unrecognized option message (Sebastian) (OpenCSW #4395)
+  - Change project-URL to pkgutil.net
+  - Make descriptions file missing non fatal
+  - Use wgetopts in pkgutil.conf for advanced wget options
+    like proxy settings
+  - Add support for the non-CSW option in pkgutil.conf
+    to the remove feature (2907656@SF)
+  - Fix for stream option (3008549@SF)
+  - Fix number shown when removing during upgrades
+  - Fix bug with exclude
+  - Fix bug with -N
+  - Fix bug with removed admin file when multiple instances are detected (Dago)
+  - Fix that chkcat doesn't work with non-CSW
+  - Improve documentation for bldcat and chkcat
+  - Change default in bldcat to 9 fields
+  - chkcat: check that CSWcommon and CSWgzip are uncompressed
+  - bldcat: fix bug about skipping SUNW deps
+  - chkcat: warn about SUNW deps
+  - chkcat: error when number of fields not 8 or 9
+
 * v1.10. Released 2010-03-10
   - Add -p/--param option to override configuration options
     from pkgutil.conf (4045@OpenCSW)
