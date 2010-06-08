@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.0. Released 2010-06-07
+* v2.0. Released 2010-06-08
   - Improve loop algorithm, improves speed (Joe Baro)
   - Non-root use now use ~/.pkgutil instead of current dir
   - Add support for alternate root path (OpenCSW #4117)
