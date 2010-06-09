@@ -27,8 +27,8 @@ Version history
 * v2.0. Released 2010-06-08
   - Improve loop algorithm, improves speed (Joe Baro)
   - Non-root use now use ~/.pkgutil instead of current dir
-  - Add support for alternate root path (OpenCSW #4117)
-  - Add unrecognized option message (Sebastian) (OpenCSW #4395)
+  - Add support for alternate root path (4117@OpenCSW)
+  - Add unrecognized option message (Sebastian) (4395@OpenCSW)
   - Change project-URL to pkgutil.net
   - Make descriptions file missing non fatal
   - Use wgetopts in pkgutil.conf for advanced wget options
