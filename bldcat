@@ -10,9 +10,12 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 eval { require Digest::MD5; };
-die "\nMD5 support not available! Install CSWperl and use that\nfor pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+die "\nDigest::MD5 not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
 
-my $tmpdir = "/tmp/bldcat.$$.$^T";
+eval { require File::Temp; };
+die "\nFile::Temp not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+
+my $dir = "/tmp";
 my $pkgdir = ".";
 my ($deptmp,$status,$pkgname,$ideptmp);
 my ($description,$common,$version,$package,$pkgfile,$hash,$size,
@@ -22,7 +25,7 @@ my %olddescriptions;
 my $format = 9;
 
 GetOptions("h|help"		=> \$help,
-           "W|workdir=s"	=> \$tmpdir,
+           "W|workdir=s"	=> \$dir,
            "f|format=s"		=> \$format) || usage();
 
 usage() if $help;
@@ -95,9 +98,7 @@ foreach my $file (glob "$pkgdir/*") {
   print "Inspecting $file\n";
 
   # Unpack package
-  if (! -d "$tmpdir") {
-    mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
-  }
+  my $tmpdir = File::Temp::tempdir( DIR => $dir, CLEANUP => 1 );
   my $DECOMPRESS = ($file =~ /\.gz$/ ? "/bin/gzip -c -d $file" : "cat $file");
   $status = system("$DECOMPRESS | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
   die "Could not transform $file: $!" if $status;
@@ -172,10 +173,6 @@ foreach my $file (glob "$pkgdir/*") {
     }
     close FILE;
   }
-
-  # Clean up
-  $status = system("/bin/rm -rf $tmpdir");
-  die "Could not delete files in $tmpdir: $!" if $status;
 
   $deps = "none" unless $deps;
   $category = "none" unless $category;

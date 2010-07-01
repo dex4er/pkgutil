@@ -10,14 +10,15 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 eval { require Digest::MD5; };
-die "\nMD5 support not available! Install CSWperl and use that\nfor pkgutil. Do that by having /opt/csw/bin before\n/
-usr/bin in your path.\n" if ($@);
+die "\nDigest::MD5 not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+
+eval { require File::Temp; };
+die "\nFile::Temp not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
 
 my @pkglist;
 my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,
     $erroronly,$pkgver);
 my $prefix = ".";
-my $tmpdir = "/tmp/chkcat.$$.$^T";
 my (%pkg,%pkgdep,%config);
 my $rc = 0;
 
@@ -301,9 +302,7 @@ while (scalar(@tmp) > 0) {
       }
 
       # Unpack package if depends and/or categories are not "none"
-      if (! -d "$tmpdir") {
-        mkdir $tmpdir || die "Could not create directory $tmpdir: $!\n";
-      }
+      my $tmpdir = File::Temp::tempdir( DIR => "/tmp", CLEANUP => 1 );
       $status = system("/bin/gunzip -cf $prefix/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
       die "Could not transform $field[2]: $!" if $status;
 
@@ -357,10 +356,6 @@ while (scalar(@tmp) > 0) {
         retcode(2);
         print "ERROR! version in filename doesn't match version in pkginfo for $field[2].\n" unless $quiet;
       }
-
-      # Clean up
-      $status = system("/bin/rm -rf $tmpdir");
-      die "Could not delete files in $tmpdir: $!" if $status;
     }
   }
 
