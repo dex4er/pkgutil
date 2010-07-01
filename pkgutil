@@ -476,6 +476,7 @@ sub init {
              "exclude_pattern"		=> "",
              "gpg_homedir"		=> "",
              "root_path"		=> "",
+             "show_current"		=> "true",
              "catalog_not_cached"	=> "true",
              "catalog_update"		=> "14");
 
@@ -890,7 +891,7 @@ sub install {
       print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
 
-    if (scalar(@curpkglist) > 0) {
+    if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
       print "CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
     }
   }
