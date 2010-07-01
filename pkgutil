@@ -213,16 +213,22 @@ sub describe {
 #   email - address to send notications to
 sub email {
   my ($email) = @_;
-  my $file = "/tmp/pkgutil.$$.$^T";
+  my ($fh,$file);
+
+  eval { require File::Temp; };	# Check for File::Temp
+  $file = "/tmp/pkgutil.$$.$^T" if ($@);	# Use less safe method if File::Temp not available
 
   myexit("Mailx not found on system!","",1) unless (-x "/bin/mailx");
   my @update_list = compare(2);
   if (scalar(@update_list) > 0) {
-    open (FILE,">$file") or myexit("Can't open $file","$!",1);
-    foreach (@update_list) {
-      print FILE;
+    if (defined $file) {
+      open ($fh,">$file") or myexit("Can't open $file","$!",1);
+    } else {
+      ($fh,$file) = File::Temp::tempfile( DIR => "/tmp" );
     }
-    close FILE;
+    foreach (@update_list) {
+      print $fh $_;
+    }
     chomp(my $host = `uname -n`);
     my $subject = "$host: CSW updates available";
     my @args = ("/bin/mailx -s \"$subject\" $email < $file");
@@ -249,7 +255,7 @@ sub extract_pkg {
 #   url - url to download from
 #   filename - filename to use for local catalog
 sub fetch_catalog {
-  my($url, $filename) = @_;
+  my($url,$filename) = @_;
   my $wgetopts = "";
   my $status;
 
