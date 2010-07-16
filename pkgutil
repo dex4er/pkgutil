@@ -1487,7 +1487,7 @@ sub rem_pkgs {
     @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
   }
   foreach $pkg (@cswpkgstmp) {
-    ($pkg) = ($pkg =~ /\s+?(\w+?)\s/);
+    ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
     $skip = 0;
     foreach (@pkgs) {
       $skip = 1 if ($_ eq $pkg);
@@ -1496,7 +1496,7 @@ sub rem_pkgs {
   }
   print "Examining dependencies for:\n";
   foreach my $userpkg (@pkgs) {
-    $i = (split(/\-/, $userpkg))[0];
+    ($i) = ($userpkg =~ /(\S+)-/);
     print "  $i";
     $depinuse = 0;
     foreach $j (@cswpkgs) {
@@ -1516,8 +1516,8 @@ sub rem_pkgs {
     push(@rempkgs,$userpkg) unless $depinuse;
     $depinuse ? print " (in use)\n" : print " (remove)\n";
   }
-  if (scalar(@rempkgs) > 1 && ! $yes) {
-    print scalar(@rempkgs)," packages to remove. Do you want to continue? [Y,n] ";
+  if (scalar(@rempkgs) > 0 && ! $yes) {
+    print scalar(@rempkgs)," package(s) to remove. Do you want to continue? [Y,n] ";
     chomp (my $prompt = <STDIN>);
     myexit("","",0) if ($prompt =~ /^[nN]/);
   }
@@ -1525,7 +1525,7 @@ sub rem_pkgs {
     run_hooks('prebatchremove', @rempkgs);
 
     foreach (@rempkgs) {
-      my ($p, $v) = split(/\-/, $_);
+      my ($p,$v) = ($_ =~ /(\S+)-/);
       $retval = check_pkg($p,0);
       if ($retval ne "notinst") {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
@@ -1533,6 +1533,8 @@ sub rem_pkgs {
 	run_hooks('preremove', ($_));
         system("$pkgrm $root_path $pkgforce $pkgtrace $p");
 	run_hooks('postremove', ($_));
+      } else {
+        print "$p not installed\n";
       }
     }
 
