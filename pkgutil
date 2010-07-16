@@ -1236,7 +1236,7 @@ sub parse_cl {
   } elsif ($>) {	# If -W not used and non-root, use home dir
     $workdir = $ENV{HOME} . "/.pkgutil";
     if (! -d $workdir) {	# Create if non-existing
-      my $status = mkdir $workdir;
+      my $status = mkdir $workdir,0777;
       myexit("Could not create $workdir","$!",1) unless $status;
     }
     print STDERR "username: " . getpwuid($>) . "\n" if $debug;
