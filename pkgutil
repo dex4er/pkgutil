@@ -102,20 +102,18 @@ sub check_pkg {
   my ($pkg,$mode) = @_;
   my ($tmp,$exit_code,$retvalue);
 
-  $tmp = `/bin/pkgparam $pkg VERSION 2> /dev/null`;
-  $exit_code = $?;
-  chomp $tmp;
-  if (! $exit_code) {
+  if (! -d "/var/sadm/pkg/$pkg") {
+    $retvalue = "notinst";
+    print STDERR "$pkg not installed\n" if $debug;
+  } else {
+    $tmp = `/bin/pkgparam $pkg VERSION 2> /dev/null`;
+    chomp $tmp;
     if ($mode == 0) {
       $retvalue = $tmp;
     } else {
       ($retvalue) = ($tmp =~ /REV=(.+)$/);
     }
     print STDERR "$pkg installed, version $retvalue\n" if $debug;
-  }
-  if ($exit_code > 0) {
-    $retvalue = "notinst";
-    print STDERR "$pkg not installed\n" if $debug;
   }
   return $retvalue;
 }
