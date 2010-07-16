@@ -822,12 +822,11 @@ sub install {
     @revpkglist = @revpkglist3;
   }
 
-  # Clean list from excludes. Delete from the %pkgvers hash
-  foreach my $pkg (@exclude) {
-    if (exists $pkgvers{$pkg}) {
-      delete $pkgvers{$pkg};
-      push(@excludelist,$pkg);
-    }
+  # Clean list from command line exclude patterns
+  foreach my $pattern (@exclude) {
+    my @tmppkglist = grep(!/$pattern/,@revpkglist);
+    push(@excludelist,grep(/$pattern/,@revpkglist));
+    @revpkglist = @tmppkglist;
   }
 
   # Clean list from exclude patterns in pkgutil.conf
@@ -1897,9 +1896,9 @@ Specify architecture and OS release when downloading, e.g. i386:5.9 or sparc:5.1
 
 File name for package stream. Used with -s. A special argument is "-" which sends the stream to standard output, see example below. The default name is the first package argument followed by architecture and OS release, for example "bind.i386.5.10.pkg".
 
-=item B<-x, --exclude=package>
+=item B<-x, --exclude=pattern>
 
-Package to exclude. This option can be specified multiple times.
+Simple pattern that will exclude matching packages. This option can be specified multiple times.
 
 =item B<-W, --workdir=path>
 
@@ -2044,6 +2043,10 @@ Style of package list when installing/upgrading packages. 0 is the one used sinc
 C<root_path>
 
 Set alternate root path (-R with pkg commands). Default is /.
+
+C<show_current>
+
+Show the current list of packages or not. You can choose to not show the list of current packages to get less output when doing operations. Default is true.
 
 C<stop_on_hook_soft_error>
 
