@@ -881,30 +881,30 @@ sub install {
   # Only present incompatible packages when doing install/upgrade
   if ($mode == 0) {
     if (scalar(@ideppkglist) > 0) {
-      print "Remove INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+      print "Remove " . scalar(@ideppkglist) . " INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
     }
   }
 
   # Different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
-    print $fh ($mode == 0) ? "Install NEW packages" : "Package list";
+    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages" : "Package list";
     print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
   }
 
   # Only present updated and current packages when doing install/upgrade
   if ($mode == 0) {
     if (scalar(@updpkglist) > 0) {
-      print "Install UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      print "Install " . scalar(@updpkglist) . " UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
     }
 
     if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
-      print "CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
+      print scalar(@curpkglist) . " CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
     }
   }
 
   # Show excluded packages
   if (scalar(@excludelist) > 0) {
-    print $fh "EXCLUDED packages:$pkgsep", join("$pkgsep", sort @excludelist), "\n";
+    print $fh scalar(@excludelist) . " EXCLUDED packages:$pkgsep", join("$pkgsep", sort @excludelist), "\n";
   }
 
   # What packages do we need to fetch?
