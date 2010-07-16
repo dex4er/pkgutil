@@ -1699,7 +1699,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -C                    Same as -c but only show different versions
   -e, --email=address   Send e-mail with available updates
   -t, --temp=site       Temporarily use this site as primary for download
-  -x, --exclude=package Package to exclude
+  -x, --exclude=pattern Pattern to exclude
   -W, --workdir=path    Path to use for downloads
       --config=file     Use this configuration file
   -y, --yes             Answer yes on all prompts
