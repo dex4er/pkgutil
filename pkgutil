@@ -101,12 +101,14 @@ sub check_catalog {
 sub check_pkg {
   my ($pkg,$mode) = @_;
   my ($tmp,$exit_code,$retvalue);
+  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+  my $test_path = $config{root_path} ? $config{root_path} : "";
 
-  if (! -d "/var/sadm/pkg/$pkg") {
+  if (! -d "$test_path/var/sadm/pkg/$pkg") {
     $retvalue = "notinst";
     print STDERR "$pkg not installed\n" if $debug;
   } else {
-    $tmp = `/bin/pkgparam $pkg VERSION 2> /dev/null`;
+    $tmp = `/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
     chomp $tmp;
     if ($mode == 0) {
       $retvalue = $tmp;
@@ -551,7 +553,7 @@ sub inst_loc_pkgs {
   my $pkgadd = "/usr/sbin/pkgadd";
   my $pkgaddopts = "";
   my $pkgrm = "/usr/sbin/pkgrm";
-  my $pkginfo = "/usr/bin/pkginfo";
+  my $pkginfo = "/bin/pkginfo";
   my $file;
   my $pkgtrace = "";
 
@@ -737,7 +739,7 @@ sub install {
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
-          system("pkginfo $root_path -q $tmppkg2");
+          system("/bin/pkginfo $root_path -q $tmppkg2");
           next if $? == 0;	# Already installed...forgive its absence from the catalog
           myexit("Package $tmppkg2 not in catalog. Exiting.","",1);
         } else {
@@ -972,7 +974,7 @@ sub install {
 
 # List files in package
 sub list_file {
-  my $contents = "/var/sadm/install/contents";
+  my $contents = $config{root_path} ? "$config{root_path}/var/sadm/install/contents" : "/var/sadm/install/contents";
 
   foreach (@ARGV) {
     if (-r $_ && -f _) {	# Argument is a package file
