@@ -24,6 +24,18 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.1. Released 2010-0x-xx
+  - Option to suppress list of current packages
+  - Shows number of packages, e.g. 24 CURRENT packages
+  - Faster checking if a package is installed
+  - Safe file and dir creations in pkgutil, bldcat and chkcat
+  - More complete support for alternate root path
+  - Documentation fixes
+  - Add mask to mkdir to restore compatibility with Perl 5.5.3 in Solaris 8
+    (Thomas Pawlikaniec)
+  - Fix bug with packages containing dashes when using remove
+  - Fix bug with -x, now uses pattern just like in pkgutil.conf
+
 * v2.0. Released 2010-06-08
   - Improve loop algorithm, improves speed (Joe Baro)
   - Non-root use now use ~/.pkgutil instead of current dir
