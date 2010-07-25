@@ -33,6 +33,7 @@ Version history
   - Documentation fixes
   - Add mask to mkdir to restore compatibility with Perl 5.5.3 in Solaris 8
     (Thomas Pawlikaniec)
+  - Clean version fields from non-digits during compares (Mark Bannister)
   - Fix bug with packages containing dashes when using remove
   - Fix bug with -x, now uses pattern just like in pkgutil.conf
 
