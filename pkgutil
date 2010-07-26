@@ -34,7 +34,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 my $debug = 0;
-my $pkgutilver = "2.1b2";
+my $pkgutilver = "2.1b3";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -1778,7 +1778,7 @@ sub verscmp {
       for (my $i = 0; $i < scalar(@p1list); $i++) {
         $p1list[$i] =~ s/[^0-9]//g;	# Only digits
         $p2list[$i] =~ s/[^0-9]//g;
-        if (! $p2list[$i]) {
+        if ($i >= scalar(@p2list)) {	# p1list is longer than p2list
           $update = 1;
           last;
         }
