@@ -47,6 +47,7 @@ GetOptions("h|help"		=> \$help,
 usage() if $help;
 if (scalar(@ARGV) > 0) {
   $pkgdir = $ARGV[0];
+  ($pkgdir) = ($pkgdir =~ /^(.+)\/$/) if ($pkgdir =~ /\/$/);
 } else {
   usage();
 }
