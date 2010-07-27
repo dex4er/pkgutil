@@ -218,7 +218,7 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat [-fh] <package dir>
+bldcat [-fWh] <package dir>
 
 =head1 DESCRIPTION
 
