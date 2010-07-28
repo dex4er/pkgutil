@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.1. Released 2010-0x-xx
+* v2.1. Released 2010-07-28
   - Option to suppress list of current packages
   - Shows number of packages, e.g. 24 CURRENT packages
   - Faster checking if a package is installed
@@ -33,10 +33,14 @@ Version history
   - Documentation fixes
   - Add mask to mkdir to restore compatibility with Perl 5.5.3 in Solaris 8
     (Thomas Pawlikaniec)
+  - Add pkgutil to signal handler output
   - Clean version fields from non-digits during compares (Mark Bannister)
   - Fix detecting end of REV list during compares (Mark Bannister)
   - Fix bug with packages containing dashes when using remove
   - Fix bug with -x, now uses pattern just like in pkgutil.conf
+  - Add GNU stub to bldcat and chkcat
+  - bldcat: add missing -W in perldoc/man page
+  - bldcat: fix bug with trailing slash on package dir
 
 * v2.0. Released 2010-06-08
   - Improve loop algorithm, improves speed (Joe Baro)
