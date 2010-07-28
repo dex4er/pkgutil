@@ -149,7 +149,7 @@ foreach my $file (glob "$pkgdir/*") {
 
     # Field 4: filename
     if (! $pkgfile) {
-      ($pkgfile) = ($file =~ /\//) ? ($file =~ /\/(.+)$/) : ($file);
+      ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
     }
 
     # Field 5: md5 hash

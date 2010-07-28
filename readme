@@ -41,6 +41,7 @@ Version history
   - Add GNU stub to bldcat and chkcat
   - bldcat: add missing -W in perldoc/man page
   - bldcat: fix bug with trailing slash on package dir
+  - bldcat: fix bug with package dir being included in filename (Mark Bannister)
 
 * v2.0. Released 2010-06-08
   - Improve loop algorithm, improves speed (Joe Baro)
