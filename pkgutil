@@ -34,7 +34,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 my $debug = 0;
-my $pkgutilver = "2.1";
+my $pkgutilver = "2.2b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -443,7 +443,7 @@ sub gpg {
   close CATALOG;
   print STDERR "GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
-    print "Checking catalog integrity with gpg.\n";
+    print "Checking integrity of $catalog with gpg.\n";
     my $gpghomedir = "";
     $gpghomedir = "--homedir $config{gpg_homedir}" if $config{gpg_homedir};
     my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
