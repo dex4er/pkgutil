@@ -91,7 +91,7 @@ sub check_catalog {
     print STDERR "Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url, $filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
-    read_catalog($url, $filename); # Once per file
+    read_catalog($url,$filename); # Once per file
   }
 }
 
@@ -941,6 +941,19 @@ sub install {
     fetch_pkgs($mode,@dlpkglist);
   }
 
+  # display a list of files when downloading
+  if ($mode == 1) {
+    print "\nPackages downloaded to:\n";
+    foreach (@dlpkglist) {
+      my $file = parse_catalog($_,3);
+      $file = "$pkgdir/$file";
+      print "$file";
+      print " (OK)\n" if (-s $file);
+      print " (empty)\n" if (-z $file);
+      print " (missing)\n" if (! -e $file);
+    }
+  }
+
   extract_pkg(@dlpkglist) if ($mode == 5);	# --extract
 
   return @revpkglist if ($mode == 3 || $mode == 4);	# If -s used
@@ -1449,7 +1462,7 @@ sub pkgutilver {
 #   catalog - catalog to read
 #   filename - filename to use
 sub read_catalog {
-  my($catalog, $filename) = @_;
+  my ($catalog,$filename) = @_;
   my @llst;
 
   open (CATALOG,"<$filename") or myexit("Can't open $filename","$!",1);
