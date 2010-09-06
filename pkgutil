@@ -943,11 +943,11 @@ sub install {
 
   # display a list of files when downloading
   if ($mode == 1) {
-    print "\nPackages downloaded to:\n";
+    print "\nPackages downloaded to $pkgdir:\n";
     foreach (@dlpkglist) {
       my $file = parse_catalog($_,3);
-      $file = "$pkgdir/$file";
       print "$file";
+      $file = "$pkgdir/$file";
       print " (OK)\n" if (-s $file);
       print " (empty)\n" if (-z $file);
       print " (missing)\n" if (! -e $file);
