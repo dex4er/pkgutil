@@ -50,18 +50,35 @@ my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # Show available packages in catalog
+#   mode - 0 = display available packages
+#          1 = compare available packages to those installed
 sub available {
+  my ($mode) = @_;
+  my $tmp;
+  my $local_ver;
+
+  print "package\t\t\t  catalog\t\t    installed\n" if ($mode == 1);
+
   foreach my $common (sort keys %commonpkg) {
     my $pkgname = $commonpkg{$common};
-    foreach my $vers (sort keys %{$pkg{$pkgname}}) {
-      my($size) = (split /\s+/, $pkg{$pkgname}{$vers})[5];
-      my $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$vers,format_byte($size));
+    foreach my $remote_ver (sort keys %{$pkg{$pkgname}}) {
+      my($size) = (split /\s+/, $pkg{$pkgname}{$remote_ver})[5];
+
+      if ($mode == 0) {
+        $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$remote_ver,format_byte($size));
+      } else {
+        $local_ver = check_pkg($pkgname,0);
+        $local_ver = "SAME" if ($local_ver eq $remote_ver);
+        $local_ver = "not installed" if ($local_ver eq "notinst");
+        $tmp = sprintf ("%-25s %-25s %-25s\n",$pkgname,$remote_ver,$local_ver);
+      }
+
       if (scalar(@ARGV) > 0) {
         foreach (@ARGV) {
-          print $tmp if ("$pkgname-$vers" =~ /$_/ || "$common-$vers" =~ /$_/);
+          print $tmp if ("$pkgname-$remote_ver" =~ /$_/ || "$common-$remote_ver" =~ /$_/);
         }
       } else {
-         print $tmp;
+        print $tmp;
       }
     }
   }
@@ -1186,7 +1203,8 @@ sub parse_catalog {
 # Parse command line
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
-      $opt_compare,$opt_upd_cat,$opt_email,@opt_temp,$opt_help,$opt_version,
+      $opt_compare,$opt_compare_available,$opt_upd_cat,
+      $opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param);
@@ -1202,9 +1220,10 @@ sub parse_cl {
              "r|remove"		=> \$opt_remove,
              "d|download"	=> \$opt_download,
              "a|available"	=> \$opt_avail,
+             "A|compare-avail"	=> \$opt_compare_available,
              "describe"		=> \$opt_describe,
              "c|compare"	=> \$opt_compare,
-             "C"		=> \$opt_compare_diffonly,
+             "C|compare-diff"	=> \$opt_compare_diffonly,
              "config=s"		=> \$opt_config,
              "U|catalog"	=> \$opt_upd_cat,
              "e|email=s"	=> \$opt_email,
@@ -1360,7 +1379,8 @@ sub parse_cl {
   # Download and stream if both -d and -s selected
   stream($loc_arch,$loc_rel,$opt_output) if ($opt_stream && $opt_download);
   email($opt_email) if $opt_email;
-  available() if $opt_avail;
+  available(0) if $opt_avail;
+  available(1) if $opt_compare_available;
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(4) if ($opt_compare && $opt_single);
@@ -1729,7 +1749,8 @@ Usage: pkgutil [option]... [package](-[version])...
   -a, --available       Show available packages
       --describe        Describe available packages
   -c, --compare         Compare installed packages to current
-  -C                    Same as -c but only show different versions
+  -C, --compare-diff    Same as -c but only show different versions
+  -A, --compare-avail   Compare available packages to those installed
   -e, --email=address   Send e-mail with available updates
   -t, --temp=site       Temporarily use this site as primary for download
   -x, --exclude=pattern Pattern to exclude
@@ -1907,9 +1928,13 @@ Describe available packages.
 
 Compare installed packages to current.
 
-=item B<-C>
+=item B<-C, --compare-diff>
 
 Compare installed packages to current, show only different versions.
+
+=item B<-A, --compare-avail>
+
+Compare available packages to those installed.
 
 =item B<-e, --email=address>
 
