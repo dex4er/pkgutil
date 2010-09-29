@@ -587,7 +587,7 @@ sub inst_loc_pkgs {
     my $pkgforce = "";
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     
-    print "=> Installing $_\n";
+    print "\n=> Installing $_\n";
     $file = $_;
     if ($_ =~ /\.gz$/) {	# Not all packages are compressed
       my $status = locate_gzip();
@@ -608,7 +608,7 @@ sub inst_loc_pkgs {
     ($pkgname) = ($pkgname =~ /\s(.+?)\s/);
     my $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
-      print "=> Removing currently installed $pkgname\n";
+      print "\n=> Removing currently installed $pkgname\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
     }
 
@@ -666,7 +666,7 @@ sub inst_pkgs {
 
       $per_package_hook = 'upgrade';
       run_hooks("pre$per_package_hook", $_);
-      print "=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
+      print "\n=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
     }
   }
@@ -678,7 +678,7 @@ sub inst_pkgs {
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
     $file = parse_catalog($_,3);
     $name = parse_catalog($_,2);
-    print "=> Installing $_ (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
+    print "\n=> Installing $_ (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
     if ($file =~ /\.gz$/) {		# Not all packages are compressed
       my $status = locate_gzip();
       if (! $status) {
@@ -999,7 +999,7 @@ sub install {
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
 
     foreach (@ideppkglist) {
-      print "=> Removing incompatible package $_\n";
+      print "\n=> Removing incompatible package $_\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $_");
     }
   }
@@ -1581,7 +1581,7 @@ sub rem_pkgs {
       $retval = check_pkg($p,0);
       if ($retval ne "notinst") {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
-        print "=> Removing $p\n";
+        print "\n=> Removing $p\n";
 	run_hooks('preremove', ($_));
         system("$pkgrm $root_path $pkgforce $pkgtrace $p");
 	run_hooks('postremove', ($_));
