@@ -292,9 +292,14 @@ sub fetch_pkgs {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
   if (scalar(@pkglist) > 1 && ! $yes) {
-    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n] ";
+    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n,(a)uto] ";
     chomp (my $prompt = <STDIN>);
-    myexit("","",0) if ($prompt =~ /^[nN]/);
+    if ($prompt =~ /^[nN]/) {
+	myexit("","",0);
+    } elsif ($prompt =~ /^a(uto)*/i) {
+	print "Turning on automatic mode as if --yes was passed.\n";
+	$yes = 1;
+    }
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
   my $i = 1;
@@ -964,13 +969,19 @@ sub install {
     my $pkgtrace = "";
     my $pkgforce = "";
 
+    if (! $yes) {
+      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,(a)uto] ";
+      chomp (my $prompt = <STDIN>);
+      if ($prompt =~ /^[nN]/) {
+	  myexit("","",0) if ($prompt =~ /^[nN]/);
+      } elsif ($prompt =~ /^a(uto)*/i) {
+	  print "Turning on automatic mode as if --yes was passed.\n";
+	  $yes = 1
+      }
+    }
+
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
 
-    if (! $yes) {
-      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n] ";
-      chomp (my $prompt = <STDIN>);
-      myexit("","",0) if ($prompt =~ /^[nN]/);
-    }
     foreach (@ideppkglist) {
       print "=> Removing incompatible package $_\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $_");
