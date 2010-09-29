@@ -295,10 +295,10 @@ sub fetch_pkgs {
     print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n,auto] ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
-	myexit("","",0);
+      myexit("","",0);
     } elsif ($prompt =~ /^a(uto)*/i) {
-	print "Turning on automatic mode as if --yes was passed.\n";
-	$yes = 1;
+      print "Turning on automatic mode as if --yes was passed.\n";
+      $yes = 1;
     }
   }
   $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
@@ -973,13 +973,12 @@ sub install {
       print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,auto] ";
       chomp (my $prompt = <STDIN>);
       if ($prompt =~ /^[nN]/) {
-	  myexit("","",0) if ($prompt =~ /^[nN]/);
+        myexit("","",0);
       } elsif ($prompt =~ /^a(uto)*/i) {
-	  print "Turning on automatic mode as if --yes was passed.\n";
-	  $yes = 1
+        print "Turning on automatic mode as if --yes was passed.\n";
+        $yes = 1
       }
     }
-
     $pkgforce = "-a $admin -n" if ($yes && -r $admin);
 
     foreach (@ideppkglist) {
@@ -1502,7 +1501,6 @@ sub rem_pkgs {
   my ($pkg,$i,$j,$k,$l,$depinuse,$skip);
   my (@cswpkgs,@deptmp,@rempkgs,@cswpkgstmp);
 
-  $pkgforce = "-a $admin -n" if $yes;
   $pkgtrace = "-v" if $trace;
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
@@ -1542,11 +1540,19 @@ sub rem_pkgs {
     push(@rempkgs,$userpkg) unless $depinuse;
     $depinuse ? print " (in use)\n" : print " (remove)\n";
   }
+
   if (scalar(@rempkgs) > 0 && ! $yes) {
-    print scalar(@rempkgs)," package(s) to remove. Do you want to continue? [Y,n] ";
+    print scalar(@rempkgs)," package" . (scalar(@rempkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,auto] ";
     chomp (my $prompt = <STDIN>);
-    myexit("","",0) if ($prompt =~ /^[nN]/);
+    if ($prompt =~ /^[nN]/) {
+      myexit("","",0);
+    } elsif ($prompt =~ /^a(uto)*/i) {
+      print "Turning on automatic mode as if --yes was passed.\n";
+      $yes = 1
+    }
   }
+  $pkgforce = "-a $admin -n" if $yes;
+
   if (scalar(@rempkgs) > 0) {
     run_hooks('prebatchremove', @rempkgs);
 
