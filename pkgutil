@@ -292,7 +292,7 @@ sub fetch_pkgs {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
   if (scalar(@pkglist) > 1 && ! $yes) {
-    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n,(a)uto] ";
+    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n,auto] ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
 	myexit("","",0);
@@ -970,7 +970,7 @@ sub install {
     my $pkgforce = "";
 
     if (! $yes) {
-      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,(a)uto] ";
+      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,auto] ";
       chomp (my $prompt = <STDIN>);
       if ($prompt =~ /^[nN]/) {
 	  myexit("","",0) if ($prompt =~ /^[nN]/);
