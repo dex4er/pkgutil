@@ -205,6 +205,17 @@ sub dedup {
   return @tmplist;
 }
 
+# Display package dependencies as a tree
+sub deptree {
+  print "deptree testing...\n";
+  foreach (@ARGV) {
+    my $pkg = parse_catalog($_,2);
+    my $deps = parse_catalog($_,6);
+    print "pkg: $pkg\tdeps: $deps\n";
+  }
+  myexit("","",0);
+}
+
 # Describe available packages
 sub describe {
   my $desc_file = mangle_url($mirror[0]);
@@ -1203,7 +1214,7 @@ sub parse_catalog {
 # Parse command line
 sub parse_cl {
   my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
-      $opt_compare,$opt_compare_available,$opt_upd_cat,
+      $opt_compare,$opt_compare_available,$opt_upd_cat,$opt_deptree,
       $opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
@@ -1244,6 +1255,7 @@ sub parse_cl {
              "F|findfile"	=> \$opt_findfile,
              "extract"		=> \$opt_extract,
              "single"		=> \$opt_single,
+             "deptree"		=> \$opt_deptree,
              "N|nodeps"		=> \$opt_nodeps,
              "p|param=s"	=> \@opt_param,
              "V|syscheck"	=> \$opt_syscheck) || usage();
@@ -1381,6 +1393,7 @@ sub parse_cl {
   email($opt_email) if $opt_email;
   available(0) if $opt_avail;
   available(1) if $opt_compare_available;
+  deptree() if $opt_deptree;
   describe() if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(4) if ($opt_compare && $opt_single);
