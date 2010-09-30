@@ -207,11 +207,45 @@ sub dedup {
 
 # Display package dependencies as a tree
 sub deptree {
-  print "deptree testing...\n";
+  my (@pkgarray,@rest,@j);
+  my $level = 0;
+  my $true;
+
   foreach (@ARGV) {
-    my $pkg = parse_catalog($_,2);
-    my $deps = parse_catalog($_,6);
-    print "pkg: $pkg\tdeps: $deps\n";
+    undef @pkgarray;
+    $pkgarray[0] = $_;
+
+    foreach (@pkgarray) {
+      my $pkg = parse_catalog($_,2);	# Get package name
+      my $deps = parse_catalog($_,6);	# Get dependencies
+
+      unless ($pkg eq "CSWcommon" && $config{deptree_filter_common} eq "true") {
+        for(my $i = 0; $i < $level; $i++) {
+          print "    ";
+        }
+        print "$pkg\n";
+      }
+
+      if ($deps ne "none") {
+        my @tmplist = split(/\|/,$deps);
+        unshift(@rest,@tmplist);		# Add deps to rest list
+        $level++;				# Increment level
+        $j[$level] = scalar(@tmplist);	# Nr of deps on this level
+      }
+
+      push(@pkgarray,shift(@rest)) if (scalar(@rest) > 0);
+
+      $true = 1;
+      while ($true && $level > 0) {	# How many levels do we need to back up?
+        if ($deps eq "none" && $j[$level] == 0) {
+          $level--;
+        } else {
+          $true = 0;
+        }
+      }
+
+      $j[$level]--;	# Lower nr of remaining deps on this level
+    }
   }
   myexit("","",0);
 }
@@ -515,6 +549,7 @@ sub init {
              "exclude_pattern"		=> "",
              "gpg_homedir"		=> "",
              "root_path"		=> "",
+             "deptree_filter_common"	=> "",
              "show_current"		=> "true",
              "catalog_not_cached"	=> "true",
              "catalog_update"		=> "14");
@@ -1038,7 +1073,7 @@ sub list_file {
           print "$file\n";
         }
       } else {
-        print "Package file name [$_] must end in .pkg\n";
+        print "Package file name ($_) must end in .pkg\n";
         next;
       }
     } else {	# Argument is a package name
@@ -1780,6 +1815,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -V, --syscheck        System check
   -L, --listfile        List files in package
   -F, --findfile        Find files in package
+      --deptree         Display dependency tree
       --extract         Extract package content (use with -d)
   -s, --stream          Build a package stream (use with -d)
   -o, --output=file     File name for package stream (use with -s)
