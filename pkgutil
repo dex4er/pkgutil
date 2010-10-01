@@ -106,9 +106,10 @@ sub check_catalog {
     my $age = 0;
     $age = -M $filename if (-r $filename);
     print STDERR "Catalog $url age in days: $age\n" if $debug;
-    fetch_catalog($url, $filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
+    fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
-    read_catalog($url,$filename); # Once per file
+    my $entries = read_catalog($url,$filename); # Once per file
+    print "$entries packages loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
   }
 }
 
@@ -494,6 +495,7 @@ sub format_byte {
 }
 
 # Check signature on catalog
+#   catalog - filename of catalog to gpg check
 sub gpg {
   my ($catalog) = @_;
   my $line;
@@ -1542,6 +1544,7 @@ sub pkgutilver {
 sub read_catalog {
   my ($catalog,$filename) = @_;
   my @llst;
+  my $i = 0;
 
   open (CATALOG,"<$filename") or myexit("Can't open $filename","$!",1);
   while (my $line = <CATALOG>) {
@@ -1552,10 +1555,12 @@ sub read_catalog {
         $pkg{$llst[2]}{$llst[1]} = $line;
         $commonpkg{$llst[0]} = $llst[2];
         push(@{$pkgmirror{$llst[3]}},$catalog);
+        $i++;
       }
     }
   }
   close CATALOG;
+  return $i;
 }
 
 # Remove packages
