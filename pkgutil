@@ -1831,7 +1831,7 @@ Usage: pkgutil [option]... [package](-[version])...
 
 Example: pkgutil -i CSWwget\ (install wget and its dependencies)
 
-Written and maintained by Peter Bonivart.
+Written and maintained by Peter Bonivart. Web site: http://pkgutil.net.
 EOF
   myexit("","",0);
 }
