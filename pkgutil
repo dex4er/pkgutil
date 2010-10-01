@@ -1126,9 +1126,10 @@ sub locate_wget {
     }
   } 
   if (! $wget) {
-    $wget = "$libexec/wget" if (-x "$libexec/wget");
+    chomp(my $loc_arch = `uname -p`);	# Arch type sparc|i386
+    $wget = "$libexec/wget-$loc_arch" if (-x "$libexec/wget-$loc_arch");
   }
-  print STDERR "wget: $wget\n" if $debug;
+  print STDERR "wget: " . ($wget ? $wget : "-") . "\n" if $debug;
   return 1 if (! $wget);
 }
 
