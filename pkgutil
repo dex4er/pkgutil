@@ -1915,6 +1915,8 @@ parse_cl();
 
 myexit("","",0);
 
+# POD start
+
 =head1 NAME
 
 pkgutil - install Solaris packages the easy way
@@ -2061,6 +2063,10 @@ List files in packages. Works on both installed packages as well as on (uncompre
 
 Find files in installed packages.
 
+=item B<--deptree>
+
+Display dependency tree.
+
 =item B<--extract>
 
 Will fetch and extract package content. Must be used with -d.
@@ -2116,6 +2122,10 @@ Tells your proxy server to disable caching during fetching of the catalog and de
 C<catalog_update>
 
 Number of days between automatic catalog updates. Special cases are -1 if you want to disable automatic updates and 0 if you always want to update the catalog. Default is 14.
+
+C<deptree_filter_common>
+
+Filter out CSWcommon from --deptree output. Useful since almost every package depends on CSWcommon, setting this option to true reduces the number of lines a lot without affecting the actual information much. Default is false.
 
 C<exclude_pattern>
 
@@ -2182,7 +2192,7 @@ http://sourceforge.net/projects/pkgutil
 
 =head1 TODO
 
-Some functionality and lots of error handling.
+Add unit testing.
 
 =head1 AUTHOR
 
