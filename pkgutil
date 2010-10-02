@@ -109,7 +109,7 @@ sub check_catalog {
     fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
     my $entries = read_catalog($url,$filename); # Once per file
-    print "$entries packages loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
+    print "==> $entries packages loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
   }
 }
 
@@ -668,7 +668,7 @@ sub inst_loc_pkgs {
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
       chomp(my $prompt = <STDIN>);
-      myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
+      myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
     }  
 
     if ($_ =~ /\.gz$/) {		# Not all packages are compressed
@@ -757,7 +757,7 @@ sub inst_pkgs {
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
       chomp(my $prompt = <STDIN>);
-      myexit("Exiting pkgutil","",1) if ($prompt =~ /^[yY]/);
+      myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
     }  
 
     unlink "$pkgdir/$file" or myexit("Can't delete $pkgdir/$file","$!",1);
