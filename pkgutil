@@ -1178,7 +1178,7 @@ sub md5 {
       $md5 = `/opt/csw/bin/gmd5sum $file`;
       ($md5) = ($md5 =~ /^(.*\w) /);
     } else {
-      myexit("\nMD5 support not available! Install CSWtextutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.","",1);
+      myexit("\nMD5 support not available! Install CSWcoreutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.","",1);
     }
   } else {
     open (FILE,"<$file") or myexit("Can't open $file","$!",1);
@@ -1521,7 +1521,7 @@ sub pkgutilver {
       print "MD5 binary\t/opt/csw/bin/gmd5sum\n";
     } else {
       print "MD5 binary\tnot found";
-      print " (suggestion: install CSWtextutils)" unless $flag;
+      print " (suggestion: install CSWcoreutils)" unless $flag;
       print "\n";
       $flag = 0;
     }
@@ -2200,7 +2200,7 @@ This option determines whether or not execution will be halted if a hook returns
 C<use_gpg>
 C<use_md5>
 
-These two can enable (default is disabled for both) checking the catalogs integrity (GPG) and that each downloaded file is unchanged from the published one (MD5). To use GPG you need CSWgnupg installed. MD5 is supported by default in Solaris 10 and on Solaris 8 and 9 if you have CSWperl installed and have /opt/csw/bin first in your path. You can also install CSWtextutils to get MD5 support.
+These two can enable (default is disabled for both) checking the catalogs integrity (GPG) and that each downloaded file is unchanged from the published one (MD5). To use GPG you need CSWgnupg installed. MD5 is supported by default in Solaris 10 and on Solaris 8 and 9 if you have CSWperl installed and have /opt/csw/bin first in your path. You can also install CSWcoreutils to get MD5 support.
  
 C<wgetopts>
 
