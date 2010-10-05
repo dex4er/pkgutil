@@ -329,18 +329,35 @@ sub fetch_catalog {
 
   my $desc_file = $filename;
   $desc_file =~ s|/catalog\.?|/descriptions\.|;
-  if ($url =~ /^file:/) {
+  unlink "${filename}.tmp","${desc_file}.tmp";
+  if ($url =~ /^file:/) {	# file method used, use cp
     my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
-    $status = system("/bin/cp $tmpcatsrc/catalog $filename");
-    myexit("\nFetching of catalog failed.","",1) if $status;
-    $status = system("/bin/cp $tmpcatsrc/descriptions $desc_file");
-    print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
-  } else {
+    $status = system("/bin/cp $tmpcatsrc/catalog ${filename}.tmp");
+    if ($status) {
+      myexit("\nFetching of catalog failed.","",1);
+    } else {
+      rename "${filename}.tmp",$filename;
+    }
+    $status = system("/bin/cp $tmpcatsrc/descriptions ${desc_file}.tmp");
+    if ($status) {
+      print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
+    } else {
+      rename "${desc_file}.tmp",$desc_file;
+    }
+  } else {	# http/ftp used, use wget
     locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
-    $status = system("$wget $wgetopts -O $filename $url/catalog");
-    myexit("\nFetching of catalog failed.","",1) if $status;
-    $status = system("$wget $wgetopts -O $desc_file $url/descriptions");
-    print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
+    $status = system("$wget $wgetopts -O ${filename}.tmp $url/catalog");
+    if ($status) {
+      myexit("\nFetching of catalog failed.","",1);
+    } else {
+      rename "${filename}.tmp",$filename;
+    }
+    $status = system("$wget $wgetopts -O ${desc_file}.tmp $url/descriptions");
+    if ($status) {
+      print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
+    } else {
+      rename "${desc_file}.tmp",$desc_file;
+    }
   }
   system("/bin/touch $filename") if (-w $filename);
 }
@@ -381,17 +398,18 @@ sub fetch_pkgs {
       my $tried;
       foreach (@{$pkgmirror{$file}}) {
         $tried = 1;
+        unlink "$pkgdir/${file}.tmp";
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
           run_hooks("prefetch", "$tmpcatsrc/$file", $pkg);
-          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/$file");
+          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/${file}.tmp");
         } else {
           run_hooks("prefetch", "$_/$file", $pkg);
 
           ## Testing curl as download method
           ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
 
-          $status = system("$wget $wgetopts -O $pkgdir/$file $_/$file");
+          $status = system("$wget $wgetopts -O $pkgdir/${file}.tmp $_/$file");
         }
         unless ($status) {
           run_hooks("postfetch", "$_/$file", $pkg);
@@ -400,6 +418,8 @@ sub fetch_pkgs {
       }
       if ($status || ! $tried) {
         myexit("\nFetching of $pkg failed. Try updating your catalog with pkgutil -U.","",1);
+      } else {
+        rename "$pkgdir/${file}.tmp","$pkgdir/$file";
       }
     }
     md5($pkg,"$pkgdir/$file",$mode) if $use_md5;
