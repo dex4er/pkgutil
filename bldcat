@@ -35,12 +35,14 @@ my $dir = "/tmp";
 my $pkgdir = ".";
 my ($deptmp,$status,$pkgname,$ideptmp);
 my ($description,$common,$version,$package,$pkgfile,$hash,$size,
-    $deps,$category,$help,$ideps);
+    $deps,$category,$help,$fast,$ideps,$sizeCatalog);
 my %oldcatalog;
+my %oldcatalog_bypkgfile;
 my %olddescriptions;
 my $format = 9;
 
 GetOptions("h|help"		=> \$help,
+           "F|fast"		=> \$fast,
            "W|workdir=s"	=> \$dir,
            "f|format=s"		=> \$format) || usage();
 
@@ -58,9 +60,10 @@ sub usage {
   print <<EOF;
 bldcat, build CSW catalogs.
 
-Usage: bldcat [-fWh] <package dir>
+Usage: bldcat [-fFWh] <package dir>
 
-  -f, --format=x\tSet catalog format (8|[9])
+  -f, --format=x\tSet catalog format (8,[9])
+  -F, --fast\t\tUse fast mode
   -W, --workdir=x\tSet work directory (default: /tmp)
   -h, --help\t\tShow this help
 
@@ -75,6 +78,8 @@ if (open (CATALOG,"$pkgdir/catalog")) {
     my @line = split /\s+/;
     my $hash = $line[4];
     $oldcatalog{$hash} = \@line;
+    my $pkgfile = $line[3];
+    $oldcatalog_bypkgfile{$pkgfile} = \@line;
   }
   close CATALOG;
 }
@@ -96,6 +101,15 @@ foreach my $file (glob "$pkgdir/*") {
   ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category,$ideps) = ("","","","","","","","","");
   next unless (-r $file);		# Must be a readable file
   next unless ($file =~ /\.pkg(\.gz)?$/);	# Must end with .pkg or .pkg.gz
+
+  $size = (stat($file))[7];
+  $sizeCatalog = $oldcatalog_bypkgfile{(split(/\//,$file))[-1]}[5];
+
+  if ($fast && defined $sizeCatalog && $size == $sizeCatalog) {
+    # When using fastmode we reuse a checksum from the catalog if the filename matches
+    # If there was no entry in the catalog $hash will stay undefined
+    $hash = $oldcatalog_bypkgfile{(split(/\//,$file))[-1]}[4];
+  }
 
   # Calculate hash before we do anything else to look up the cache
   if (! $hash) {
@@ -156,9 +170,7 @@ foreach my $file (glob "$pkgdir/*") {
     # Already computed
 
     # Field 6: file size
-    if (! $size) {
-      $size = (stat($file))[7];
-    }
+    # Already computed
 
     # Field 8: categories
     if ($line =~ /^CSW_CATEGORY=/) {
@@ -218,7 +230,7 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat [-fWh] <package dir>
+bldcat [-fFWh] <package dir>
 
 =head1 DESCRIPTION
 
@@ -231,6 +243,10 @@ Build a CSW catalog from packages in a directory.
 =item B<-f, --format=x>
 
 Set catalog format. Use 8 for the old 8-field format and 9 for the new 9-field format including incompatible packages. Default is 9.
+
+=item B<-F, --fast>
+
+Make timesaving assumptions. Usually bldcat guarantees to produce working catalogs, no matter what you throw in. This requires computing checksums for each package to see if it has changed. Using --fast assumes that if the filename has not been changed the checksum hasn't either.
 
 =item B<-W, --workdir=x>
 
