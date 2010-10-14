@@ -372,7 +372,7 @@ sub fetch_pkgs {
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
 
   if (scalar(@pkglist) > 1 && ! $yes) {
-    print scalar(@pkglist)," packages to fetch. Do you want to continue? [Y,n,auto] ";
+    print scalar(@pkglist)," packages to fetch. Do you want to continue? ([y],n,auto) ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
       myexit("","",0);
@@ -686,7 +686,7 @@ sub inst_loc_pkgs {
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
-      print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
+      print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
     }  
@@ -775,7 +775,7 @@ sub inst_pkgs {
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
-      print "Exit from pkgutil and fix this issue first (recommended)? [Y,n] ";
+      print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
     }  
@@ -880,7 +880,7 @@ sub install {
     foreach (@revpkglist2) {
       if (scalar(@revpkglist2) > $maxpkglist) {
         print "Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.\n";
-        print "Do you want to continue anyway? [Y/n] ";
+        print "Do you want to continue anyway? ([y],n) ";
         chomp (my $prompt = <STDIN>);
         myexit("","",0) if ($prompt =~ /^[nN]/);
         @revpkglist3 = dedup(@revpkglist2);
@@ -1055,7 +1055,7 @@ sub install {
     my $pkgforce = "";
 
     if (! $yes) {
-      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,auto] ";
+      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
       chomp (my $prompt = <STDIN>);
       if ($prompt =~ /^[nN]/) {
         myexit("","",0);
@@ -1638,7 +1638,7 @@ sub rem_pkgs {
   }
 
   if (scalar(@rempkgs) > 0 && ! $yes) {
-    print scalar(@rempkgs)," package" . (scalar(@rempkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? [Y,n,auto] ";
+    print scalar(@rempkgs)," package" . (scalar(@rempkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
     chomp (my $prompt = <STDIN>);
     if ($prompt =~ /^[nN]/) {
       myexit("","",0);

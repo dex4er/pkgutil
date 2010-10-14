@@ -246,7 +246,7 @@ Set catalog format. Use 8 for the old 8-field format and 9 for the new 9-field f
 
 =item B<-F, --fast>
 
-Make timesaving assumptions. Usually bldcat guarantees to produce working catalogs, no matter what you throw in. This requires computing checksums for each package to see if it has changed. Using --fast assumes that if the filename has not been changed the checksum hasn't either.
+Make timesaving assumptions. Usually bldcat guarantees to produce working catalogs, no matter what you throw in. This requires computing checksums for each package to see if it has changed. Using --fast assumes that if the filename and size has not been changed the checksum hasn't either.
 
 =item B<-W, --workdir=x>
 
