@@ -24,24 +24,28 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.2. Released 2010-10-xx
+* v2.2. Released 2010-10-21
   - Add option --deptree to display dependencies in a similar way to ptree
     (3078744@SF)
   - Add option -A/--compare-avail to compare catalog with local packages
     (Mark Bannister)
   - Add auto mode install/remove (on the fly --yes) (Ben Walton)
-  - New option (deptree_filter_common) in pkgutil.conf to filter CSWcommon from
-    --deptree output
+  - New option (deptree_filter_common) in pkgutil.conf to filter out CSWcommon
+    from --deptree output
   - Add long option name, --compare-diff, to -C (Mark Bannister)
-  - Modify download list output (4530@OpenCSW) (Dago, Sebastian)
   - Add list of downloaded packages when using -d (Dago)
+  - Modify download list output (4530@OpenCSW) (Dago, Sebastian)
   - Add info about which catalog is being gpg checked (Mark Bannister)
   - Display number of loaded packages per catalog (when updating the catalog or
     using debug) (Mark Bannister)
   - Group install/remove output better (Dago)
-  - Change default ibiblio-URL to
-    http://mirrors.ibiblio.org/pub/mirrors/opencsw/current
+  - Change default URL to http://mirror.opencsw.org/opencsw/unstable
   - User agent example in pkgutil.conf
+  - Fix bug with exit-prompt (y not default)
+  - More robust downloads
+  - Recommend CSWcoreutils instead of obsolete CSWtextutils for MD5 support
+  - Documentation fixes
+  - bldcat: improve speed with --fast option (Dago)
 
 * v2.1. Released 2010-07-28
   - Option to suppress list of current packages
