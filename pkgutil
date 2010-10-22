@@ -1542,6 +1542,7 @@ sub pkgutilver {
     print "\n- Configuration -\n";
     print "catalog_not_cached\t$config{catalog_not_cached} (default: true)\n";
     print "catalog_update\t\t" . (($config{catalog_update}) ? $config{catalog_update} : "not set") . " (default: 14)\n";
+    print "deptree_filter_common\t" . (($config{deptree_filter_common} eq "true") ? "true" : "false") . " (default: false)\n";
     print "exclude_pattern\t\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
     print "gpg_homedir\t\t" . (($config{gpg_homedir}) ? $config{gpg_homedir} : "not set") . " (default: none)\n";
     print "maxpkglist\t\t$maxpkglist (default: 10000)\n";
