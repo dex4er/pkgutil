@@ -114,7 +114,6 @@ while (scalar(@tmp) > 0) {
   if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
     shift @tmp;
     shift @tmp;
-    shift @tmp;
     next;
   }
   last if ($line =~ /-BEGIN PGP SIGNATURE-/);
@@ -136,7 +135,6 @@ while (scalar(@tmp) > 0) {
   # If gpg signed catalog, skip a few lines in the beginning
   if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
     print "Skipping signature at start of file.\n" unless ($erroronly || $quiet);
-    shift @tmp;
     shift @tmp;
     shift @tmp;
     next;
