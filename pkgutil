@@ -34,7 +34,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 my $debug = 0;
-my $pkgutilver = "2.2";
+my $pkgutilver = "2.3b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -685,6 +685,9 @@ sub inst_loc_pkgs {
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
+      # If failed pkgadd op and --yes used, exit immediately
+      myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
+
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
@@ -774,6 +777,9 @@ sub inst_pkgs {
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
+      # If failed pkgadd op and --yes used, exit immediately
+      myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
+
       printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
