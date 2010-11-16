@@ -151,7 +151,7 @@ sub compare {
   print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
   if ($mode == 4) {
     $cswpkgs[0] = "a " . parse_catalog($ARGV[0],2) . " a";
-    myexit("not in catalog","",1) if ($cswpkgs[0] eq "a not in catalog a");
+    myexit("Not in catalog","",0) if ($cswpkgs[0] eq "a not in catalog a");
   } else {
     if ($noncsw) {
       @cswpkgs = `/bin/pkginfo $root_path`;
