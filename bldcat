@@ -102,6 +102,7 @@ foreach my $file (glob "$pkgdir/*") {
   next unless (-r $file);		# Must be a readable file
   next unless ($file =~ /\.pkg(\.gz)?$/);	# Must end with .pkg or .pkg.gz
 
+  # Get size of file and from catalog
   $size = (stat($file))[7];
   $sizeCatalog = $oldcatalog_bypkgfile{(split(/\//,$file))[-1]}[5];
 
@@ -120,10 +121,15 @@ foreach my $file (glob "$pkgdir/*") {
   }
 
   if (exists $oldcatalog{$hash} && exists $olddescriptions{$oldcatalog{$hash}[0]}) {
-    print "Reusing old information for $file\n";
-    print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
-    print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
-    next;
+    # Has the filename changed even though the hash is the same?
+    ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
+    my $filenameCatalog = $oldcatalog{$hash}[3];
+    if ($pkgfile eq $filenameCatalog) {
+      print "Reusing old information for $file\n";
+      print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
+      print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
+      next;
+    }
   }
 
   print "Inspecting $file\n";
