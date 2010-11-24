@@ -121,15 +121,21 @@ foreach my $file (glob "$pkgdir/*") {
   }
 
   if (exists $oldcatalog{$hash} && exists $olddescriptions{$oldcatalog{$hash}[0]}) {
+    print "Reusing old information for $file";
     # Has the filename changed even though the hash is the same?
     ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
     my $filenameCatalog = $oldcatalog{$hash}[3];
     if ($pkgfile eq $filenameCatalog) {
-      print "Reusing old information for $file\n";
+      print "\n";
       print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
-      print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
-      next;
+    } else {
+      print " (filename changed)\n";
+      my @tmplist = @{$oldcatalog{$hash}};
+      $tmplist[3] = $pkgfile;
+      print CATALOG join(' ', @tmplist), "\n";
     }
+    print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
+    next;
   }
 
   print "Inspecting $file\n";
