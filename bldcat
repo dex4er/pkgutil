@@ -76,10 +76,12 @@ if (open (CATALOG,"$pkgdir/catalog")) {
   while (<CATALOG>) {
     chomp;
     my @line = split /\s+/;
-    my $hash = $line[4];
-    $oldcatalog{$hash} = \@line;
-    my $pkgfile = $line[3];
-    $oldcatalog_bypkgfile{$pkgfile} = \@line;
+    if (scalar(@line) >= 8 && $_ =~ /^\w/) {
+      my $hash = $line[4];
+      $oldcatalog{$hash} = \@line;
+      my $pkgfile = $line[3];
+      $oldcatalog_bypkgfile{$pkgfile} = \@line;
+    }
   }
   close CATALOG;
 }
