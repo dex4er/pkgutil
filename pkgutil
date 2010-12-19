@@ -50,10 +50,11 @@ my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # Show available packages in catalog
-#   mode - 0 = display available packages
-#          1 = compare available packages to those installed
+#   mode  - 0 = display available packages
+#           1 = compare available packages to those installed
+#   parse - 0 = normal output, 1 = machine parsable output
 sub available {
-  my ($mode) = @_;
+  my ($mode,$parse) = @_;
   my $tmp;
   my $local_ver;
 
@@ -99,7 +100,7 @@ sub check_binary {
 # Check catalog
 #   always - always update catalog
 sub check_catalog {
-  my($always) = @_;
+  my ($always) = @_;
 
   foreach my $url (@mirror) {
     my $filename = mangle_url($url);
@@ -252,7 +253,9 @@ sub deptree {
 }
 
 # Describe available packages
+#   parse - 0 = normal output, 1 = machine parsable output
 sub describe {
+  my ($parse) = @_;
   my $desc_file = mangle_url($mirror[0]);
   $desc_file =~ s|/catalog\.|/descriptions\.|;
 
@@ -260,6 +263,7 @@ sub describe {
   open(DESC,"<$desc_file");
   while (my $line = <DESC>) {
     chomp $line;
+    $line = join("\t",split(/ - /,$line)) if $parse;
     if (scalar(@ARGV) > 0) {
       foreach (@ARGV) {
         print "$line\n" if ($line =~ /$_/);
@@ -1320,7 +1324,7 @@ sub parse_cl {
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
-      $opt_list);
+      $opt_list,$opt_parse);
 
   usage() unless scalar(@ARGV);
 
@@ -1360,6 +1364,7 @@ sub parse_cl {
              "single"		=> \$opt_single,
              "deptree"		=> \$opt_deptree,
              "N|nodeps"		=> \$opt_nodeps,
+             "parse"		=> \$opt_parse,
              "p|param=s"	=> \@opt_param,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
@@ -1495,10 +1500,10 @@ sub parse_cl {
   # Download and stream if both -d and -s selected
   stream($loc_arch,$loc_rel,$opt_output) if ($opt_stream && $opt_download);
   email($opt_email) if $opt_email;
-  available(0) if $opt_avail;
+  available(0,$opt_parse) if $opt_avail;
   available(1) if $opt_compare_available;
   deptree() if $opt_deptree;
-  describe() if $opt_describe;
+  describe($opt_parse) if $opt_describe;
   compare(3) if $opt_compare_diffonly;
   compare(4) if ($opt_compare && $opt_single);
   compare(0) if $opt_compare;
@@ -1896,6 +1901,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -T, --target=arch:rel Specify architecture and OS release for download
       --single          Single package check (use with -c)
   -p, --param=opt:val   Override configuration option
+      --parse           Machine parsable output
 
 Example: pkgutil -i CSWwget\ (install wget and its dependencies)
 
@@ -2153,9 +2159,13 @@ Will fetch and extract package content. Must be used with -d.
 
 Single package check. This is much faster than checking all installed packages, note that using something like "-c foo" still checks all packages, it just filters the output to only show lines containing foo. Must be used with -c.
 
-=item B<,p --param=opt:val>
+=item B<-p, --param=opt:val>
 
 Override configuration option. All configuration options in pkgutil.conf can be overridden except the mirror option (use -t for that). This can be useful if you temporarily want to disable gpg checks for example.
+
+=item B<--parse>
+
+Machine parsable output. Use this together with scripts to get a reliable output format that is simpler to parse.
 
 =back
 
