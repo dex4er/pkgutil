@@ -724,6 +724,17 @@ sub inst_pkgs {
 
   run_hooks("prebatch$batchmode", @pkglist);
 
+  # Handle pkgutil as a special case, always complete pkgutil upgrade
+  # before proceeding with rest of list
+  if (scalar(@pkglist) > 1) {
+    if (my @tmplist = grep { /^CSWpkgutil-/ } @pkglist) {
+      print "\n=> Updating pkgutil first...\n";
+      @pkglist = grep { !/^CSWpkgutil-/ } @pkglist;
+      $updlistlen--;
+      inst_pkgs('upgrade',1,$tmplist[0]);
+    }
+  }
+
   # Removing old version of all packages being upgraded
   my $i = 1;
   foreach (reverse @pkglist) {
