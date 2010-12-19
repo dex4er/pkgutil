@@ -1135,6 +1135,28 @@ sub list_file {
   myexit("","",0);
 }
 
+# List installed packages
+sub list_pkgs {
+  my $pkginfo = "/bin/pkginfo";
+  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+
+  my (@tmp) = `$pkginfo $root_path`;
+
+  foreach (@tmp) {
+    if (/^\S+\s+CSW/) {
+      my ($line) = ($_ =~ /^\S+\s+(\S+)\s/);
+      if (scalar(@ARGV) > 0) {
+        foreach (@ARGV) {
+          print "$line\n" if ($line =~ /$_/);
+        }
+      } else {
+        print "$line\n";
+      }
+    }
+  }
+  myexit("","",0);
+}
+
 # Find gzip
 sub locate_gzip {
   my @locations = ("/opt/csw/bin","/bin","/usr/local/bin");
@@ -1232,7 +1254,7 @@ sub myexit {
 #   mode - what we want to return, field number from catalog
 sub parse_catalog {
   my ($pkg,$mode) = @_;
-  my ($retvalue, $name);
+  my ($retvalue,$name);
 
   print STDERR "Parsing catalog ... looking for: $pkg (mode $mode)\n" if $debug;
 
@@ -1297,7 +1319,8 @@ sub parse_cl {
       $opt_email,@opt_temp,$opt_help,$opt_version,
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param);
+      $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
+      $opt_list);
 
   usage() unless scalar(@ARGV);
 
@@ -1330,6 +1353,7 @@ sub parse_cl {
              "trace"		=> \$trace,
              "h|help"		=> \$opt_help,
              "v|version"	=> \$opt_version,
+             "l|list"		=> \$opt_list,
              "L|listfile"	=> \$opt_listfile,
              "F|findfile"	=> \$opt_findfile,
              "extract"		=> \$opt_extract,
@@ -1358,6 +1382,7 @@ sub parse_cl {
   }
 
   init($opt_config,@opt_param) if ($opt_config || scalar(@opt_param));
+  list_pkgs() if $opt_list;
   pkgutilver(1) if $opt_syscheck;
   locate_wget();
   locate_gzip();
@@ -1861,6 +1886,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -h, --help            Show this help
   -v, --version         Show version
   -V, --syscheck        System check
+  -l, --list            List installed packages
   -L, --listfile        List files in package
   -F, --findfile        Find files in package
       --deptree         Display dependency tree
@@ -2102,6 +2128,10 @@ Show pkgutil version.
 =item B<-V, --syscheck>
 
 System check. This shows info about binaries and more that pkgutil needs to support all features.
+
+=item B<-l, --list>
+
+List installed packages.
 
 =item B<-L, --listfile>
 
