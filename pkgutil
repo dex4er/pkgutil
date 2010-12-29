@@ -58,7 +58,7 @@ sub available {
   my $tmp;
   my $local_ver;
 
-  unless ($parse) {
+  unless ($parse) {	# No header when --parse is being used
     if ($mode == 0) {
       print "common               package              catalog                        size\n";
     } else {
@@ -154,16 +154,19 @@ sub check_pkg {
 }
 
 # Compare current to available packages (-c/C)
-#   mode - 0 = print full list, 1 = return list of old packages
-#          2 = return full list of old packages, 3 = same as 0 but only diffs
-#          4 = compare a single package (much faster, used with Puppet)
+#   mode  - 0 = print full list, 1 = return list of old packages
+#           2 = return full list of old packages, 3 = same as 0 but only diffs
+#           4 = compare a single package (much faster, used with Puppet)
+#   parse - 0 = normal output, 1 = machine parsable output
 sub compare {
-  my ($mode) = @_;
+  my ($mode,$parse) = @_;
   my (@cswpkgs,@retlist);
   my ($pkg,$local_ver,$remote_ver,$tmp);
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
+  unless ($parse) {	# No header when --parse is being used
+    print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
+  }
   if ($mode == 4) {
     $cswpkgs[0] = "a " . parse_catalog($ARGV[0],2) . " a";
     myexit("Not in catalog","",0) if ($cswpkgs[0] eq "a not in catalog a");
@@ -182,7 +185,11 @@ sub compare {
     if ($mode == 1) {
       push(@retlist,$pkg) if ($remote_ver ne "SAME" && $remote_ver ne "not in catalog");
     } else {
-      $tmp = sprintf ("%-25s %-25s %-25s\n",$pkg,$local_ver,$remote_ver);
+      if ($parse) {
+        $tmp = "$pkg\t$local_ver\t$remote_ver\n";
+      } else {
+        $tmp = sprintf ("%-25s %-25s %-25s\n",$pkg,$local_ver,$remote_ver);
+      }
       if ($mode == 2) {
         push(@retlist,$tmp) if ($remote_ver ne "SAME" && $remote_ver ne "not in catalog");
       } else {
@@ -1520,9 +1527,9 @@ sub parse_cl {
   available(1,$opt_parse) if $opt_compare_available;
   deptree() if $opt_deptree;
   describe($opt_parse) if $opt_describe;
-  compare(3) if $opt_compare_diffonly;
-  compare(4) if ($opt_compare && $opt_single);
-  compare(0) if $opt_compare;
+  compare(3,$opt_parse) if $opt_compare_diffonly;
+  compare(4,$opt_parse) if ($opt_compare && $opt_single);
+  compare(0,$opt_parse) if $opt_compare;
   # Download and extract if both -d and --extract selected
   install(5,$opt_nodeps) if ($opt_extract && $opt_download);
   install(0,$opt_nodeps) if $opt_install;
@@ -1535,7 +1542,7 @@ sub parse_cl {
       # Need to manipulate ARGV to match installed CSW packages
       # that need upgrading (use -c mode 1)
       print "Looking for packages that can be upgraded ...\n";
-      my @cswpkgs = compare(1);
+      my @cswpkgs = compare(1,0);
       my $i = 0;
       foreach (@cswpkgs) {
         $ARGV[$i++] = $_;
