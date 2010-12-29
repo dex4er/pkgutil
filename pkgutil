@@ -49,7 +49,7 @@ my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$has
 my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
-# Show available packages in catalog
+# Show available packages in catalog (-a/A)
 #   mode  - 0 = display available packages
 #           1 = compare available packages to those installed
 #   parse - 0 = normal output, 1 = machine parsable output
@@ -139,7 +139,7 @@ sub check_pkg {
   return $retvalue;
 }
 
-# Compare current to available packages
+# Compare current to available packages (-c/C)
 #   mode - 0 = print full list, 1 = return list of old packages
 #          2 = return full list of old packages, 3 = same as 0 but only diffs
 #          4 = compare a single package (much faster, used with Puppet)
@@ -207,7 +207,7 @@ sub dedup {
   return @tmplist;
 }
 
-# Display package dependencies as a tree
+# Display package dependencies as a tree (--deptree)
 sub deptree {
   my (@pkgarray,@rest,@j);
   my $level = 0;
@@ -252,7 +252,7 @@ sub deptree {
   myexit("","",0);
 }
 
-# Describe available packages
+# Describe available packages (--describe)
 #   parse - 0 = normal output, 1 = machine parsable output
 sub describe {
   my ($parse) = @_;
@@ -276,7 +276,7 @@ sub describe {
   myexit("","",0);
 }
 
-# Email notifications when updates are available
+# Email notifications when updates are available (-e)
 #   email - address to send notications to
 sub email {
   my ($email) = @_;
@@ -305,7 +305,7 @@ sub email {
   myexit("","",0);
 }
 
-# Extract downloaded packages
+# Extract downloaded packages (--extract)
 #   pkglist - list of packages to extract (from install sub)
 sub extract_pkg {
   my (@pkglist) = @_;
@@ -1101,7 +1101,7 @@ sub install {
   myexit("","",0);
 }
 
-# List files in package
+# List files in package (-L)
 sub list_file {
   my $contents = $config{root_path} ? "$config{root_path}/var/sadm/install/contents" : "/var/sadm/install/contents";
 
@@ -1139,7 +1139,7 @@ sub list_file {
   myexit("","",0);
 }
 
-# List installed packages
+# List installed packages (-l)
 sub list_pkgs {
   my $pkginfo = "/bin/pkginfo";
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
@@ -1532,7 +1532,7 @@ sub parse_cl {
   print "You need to select a valid option!\n" if (! $opt_upd_cat);
 }
 
-# Show version info
+# Show version info (-v/V)
 #   mode - 0 = print only version, 1 = system check
 sub pkgutilver {
   my ($mode) = @_;
@@ -1636,7 +1636,7 @@ sub read_catalog {
   return $i;
 }
 
-# Remove packages
+# Remove packages (-r)
 #   pkglist - packages to remove
 sub rem_pkgs {
   my @pkgs = @_;
@@ -1799,7 +1799,7 @@ sub signal_handler {
   myexit("\npkgutil caught a SIG$signame. Exiting.","",1);
 }
 
-# Build package streams
+# Build package streams (-s)
 #   target - arch and os release
 #   output - file name for package stream
 sub stream {
