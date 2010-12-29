@@ -1,0 +1,174 @@
+#!/usr/bin/env perl -w
+
+# chkdesc - check that a CSW description file is consistent
+# Copyright (C) 2010 Peter Bonivart
+
+# $Id$
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+#
+# The author, Peter Bonivart, can be contacted by email at bonivart@opencsw.org
+
+use strict;
+use Getopt::Long;
+Getopt::Long::Configure qw(no_ignore_case bundling);
+
+my ($description,$help,$quiet,$erroronly);
+my $rc = 0;
+
+GetOptions("h|help"		=> \$help,
+	   "q|quiet"		=> \$quiet,
+	   "e|erroronly"	=> \$erroronly) || usage();
+
+usage() if $help;
+if (scalar(@ARGV) > 0) {
+  $description = $ARGV[0];
+} else {
+  usage();
+}
+
+sub usage {
+  print <<EOF;
+chkdesc, check CSW description files for problems.
+
+Usage: chkdesc [-eqh] <description file>
+
+  -e, --erroronly\tSuppress displaying warnings
+  -q, --quiet\t\tNo output (only exit codes)
+  -h, --help\t\tShow this help
+
+Exit codes: 0 - OK, 1 - Warning, 2 - Error.
+
+Written and maintained by Peter Bonivart.
+EOF
+  exit 1;
+}
+
+sub retcode {
+  my ($rctmp) = @_;
+
+  $rc = $rctmp if ($rctmp > $rc);
+}
+
+(-r $description) || die "Can't open $description";	# Must be a readable file
+
+my (@tmp) = `cat $description`;
+
+while (scalar(@tmp) > 0) {
+  my $line = $tmp[0];
+  shift @tmp;
+  chomp $line;
+  my (@field) = split(/ - /,$line);
+
+  # If line starts with a comment, skip
+  if ($line =~ /^#/) {
+    print "Skipping comment.\n" unless ($erroronly || $quiet);
+    next;
+  }
+
+  # Number of fields
+  if (scalar(@field) ne 2) {
+    retcode(2);
+    if (! $quiet) {
+      print "\nERROR! ",scalar(@field)," fields instead of normal 2. [$line]\n";
+    }
+    next;
+  }
+
+  # GAR adds Perl module names with hyphens so double colons should not be there
+  if ($line =~ /::/) {
+    retcode(1);
+    if (! $erroronly && ! $quiet) {
+      print "\nWARNING! Description contains double colons. [$line]\n";
+    }
+  }
+}
+
+exit $rc;
+
+=head1 NAME
+
+chkdesc - check CSW description files for problems
+
+=head1 SYNOPSIS
+
+chkdesc [-eqh] <description file>
+
+=head1 DESCRIPTION
+
+Check CSW description files for problems.
+
+=head1 OPTIONS
+
+=over 5
+
+=item B<-e, --erroronly>
+
+Only show errors (suppress warnings).
+
+=item B<-q, --quiet>
+
+No output (only exit codes).
+
+=item B<-h, --help>
+
+Show this help.
+
+=back
+
+=head1 EXAMPLES
+
+=head2 Example 1
+
+C<# chkdesc description>
+
+Will check description file for problems.
+
+=head2 Example 2
+
+C<# chkdesc -q description>
+
+Will supress all output and only generate an exit code, 0 for OK, 1 for warnings found and 2 for errors found. This is recommended for use in scripts.
+
+=head1 EXIT CODES
+
+The following exit codes are returned:
+
+	0	OK
+
+	1	Warning
+
+	2	Error
+
+=head1 SEE ALSO
+
+http://pkgutil.net
+
+http://sourceforge.net/projects/pkgutil
+
+=head1 AUTHOR
+
+Peter Bonivart <bonivart@opencsw.org>
+
+=head1 COPYRIGHT AND DISCLAIMER
+
+Copyright (C) 2010 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+
+=cut
+
