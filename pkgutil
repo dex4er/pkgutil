@@ -263,7 +263,7 @@ sub describe {
   open(DESC,"<$desc_file");
   while (my $line = <DESC>) {
     chomp $line;
-    $line = join("\t",split(/ - /,$line)) if $parse;
+    $line =~ s/ - /\t/ if $parse;
     if (scalar(@ARGV) > 0) {
       foreach (@ARGV) {
         print "$line\n" if ($line =~ /$_/);
