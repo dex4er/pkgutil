@@ -1147,7 +1147,7 @@ sub list_pkgs {
   my (@tmp) = `$pkginfo $root_path`;
 
   foreach (@tmp) {
-    if (/^\S+\s+CSW/) {
+    if ($noncsw || /^\S+\s+CSW/) {
       my ($line) = ($_ =~ /^\S+\s+(\S+)\s/);
       if (scalar(@ARGV) > 0) {
         foreach (@ARGV) {
