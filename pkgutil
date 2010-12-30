@@ -2188,7 +2188,7 @@ Override configuration option. All configuration options in pkgutil.conf can be 
 
 =item B<--parse>
 
-Machine parsable output. Use this together with scripts to get a reliable output format that is simpler to parse.
+Machine parsable output, no headers and all columns are separated by one tab. Use this together with scripts to get a reliable output format that is simpler to parse.
 
 =back
 
