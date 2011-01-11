@@ -962,15 +962,15 @@ sub install {
 
   # Clean list from command line exclude patterns
   foreach my $pattern (@exclude) {
-    my @tmppkglist = grep(!/$pattern/,@revpkglist);
-    push(@excludelist,grep(/$pattern/,@revpkglist));
+    my @tmppkglist = grep { !/$pattern/ } @revpkglist;
+    push(@excludelist,grep { /$pattern/ } @revpkglist);
     @revpkglist = @tmppkglist;
   }
 
   # Clean list from exclude patterns in pkgutil.conf
   foreach my $pattern (split(/\s+?/,$config{exclude_pattern})) {
-    my @tmppkglist = grep(!/$pattern/,@revpkglist);
-    push(@excludelist,grep(/$pattern/,@revpkglist));
+    my @tmppkglist = grep { !/$pattern/ } @revpkglist;
+    push(@excludelist,grep { /$pattern/ } @revpkglist);
     @revpkglist = @tmppkglist;
   }
 
@@ -1778,7 +1778,7 @@ sub run_hooks {
 		     'preargproc',
 		     'postargproc');
 
-  myexit("Invalid hook: $hook_name","",1) unless (grep(/$hook_name/, @valid_hooks));
+  myexit("Invalid hook: $hook_name","",1) unless (grep { /$hook_name/ } @valid_hooks);
 
   if (! -d $hook_dir) {
     print STDERR "No $hook_name hook scripts.\n" if $debug;
