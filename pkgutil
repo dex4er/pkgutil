@@ -872,8 +872,12 @@ sub install {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
           system("/bin/pkginfo $root_path -q $tmppkg2");
-          next if $? == 0;	# Already installed...forgive its absence from the catalog
-          myexit("Package $tmppkg2 not in catalog. Exiting.","",1);
+          if ($? == 0) {	# Already installed...forgive its absence from the catalog
+            print STDERR "Warning: $tmppkg2 not in catalog.\n";
+            next;
+          } else {
+            myexit("Package $tmppkg2 not in catalog. Exiting.","",1);
+          }
         } else {
           @tmpdeps = split(/\|/,$retvalue);
           print STDERR "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
@@ -1332,6 +1336,9 @@ sub parse_catalog {
     }
   } else {
     $retvalue = "not in catalog" if (! $retvalue);
+  }
+  if ($mode == 6) {	# Filter out SUNW deps
+    $retvalue = join('|',grep { !/^SUNW/ } split(/\|/,$retvalue));
   }
   print STDERR "Return value: $retvalue\n" if $debug;
   return $retvalue;
