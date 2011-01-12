@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # bldcat - build a CSW catalog from packages in a directory
-# Copyright (C) 2008-2010 Peter Bonivart
+# Copyright (C) 2008-2011 Peter Bonivart
 
 # $Id$
 

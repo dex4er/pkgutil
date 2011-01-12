@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # chkdesc - check that a CSW description file is consistent
-# Copyright (C) 2010 Peter Bonivart
+# Copyright (C) 2010-2011 Peter Bonivart
 
 # $Id$
 

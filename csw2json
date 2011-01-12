@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # csw2json - build a JSON catalog from a CSW catalog
-# Copyright (C) 2009-2010 Peter Bonivart
+# Copyright (C) 2009-2011 Peter Bonivart
 
 # $Id$
 

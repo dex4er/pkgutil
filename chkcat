@@ -1,7 +1,7 @@
 #!/usr/bin/env perl -w
 
 # chkcat - check that a CSW catalog is consistent
-# Copyright (C) 2008-2010 Peter Bonivart
+# Copyright (C) 2008-2011 Peter Bonivart
 
 # $Id$
 
