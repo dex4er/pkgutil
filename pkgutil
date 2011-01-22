@@ -33,6 +33,10 @@ $| = 1;
 $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
+# Ensure we always work from a directory that won't
+# be yanked out from under pkgadd/pkgrm.
+chdir('/');
+
 my $debug = 0;
 my $pkgutilver = "2.3b1";
 my $use_md5 = 0;
