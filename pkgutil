@@ -109,7 +109,7 @@ sub available {
 sub check_binary {
   my ($bin) = @_;
 
-  print "Checking binary: $bin ... " if $debug;
+  print STDERR "DEBUG:Checking binary: $bin ... " if $debug;
   my $status = system("/bin/sh -c '$bin --version' >/dev/null 2>/dev/null");
   print "" . (($status) ? "fail" : "OK") . "\n" if $debug;
   return 1 if $status;
@@ -124,7 +124,7 @@ sub check_catalog {
     my $filename = mangle_url($url);
     my $age = 0;
     $age = -M $filename if (-r $filename);
-    print STDERR "Catalog $url age in days: $age\n" if $debug;
+    print STDERR "DEBUG:Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename) if $use_gpg;
     my $entries = read_catalog($url,$filename); # Once per file
@@ -143,7 +143,7 @@ sub check_pkg {
 
   if (! -d "$test_path/var/sadm/pkg/$pkg") {
     $retvalue = "notinst";
-    print STDERR "$pkg not installed\n" if $debug;
+    print STDERR "DEBUG:$pkg not installed\n" if $debug;
   } else {
     $tmp = `/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
     chomp $tmp;
@@ -152,7 +152,7 @@ sub check_pkg {
     } else {
       ($retvalue) = ($tmp =~ /REV=(.+)$/);
     }
-    print STDERR "$pkg installed, version $retvalue\n" if $debug;
+    print STDERR "DEBUG:$pkg installed, version $retvalue\n" if $debug;
   }
   return $retvalue;
 }
@@ -559,19 +559,19 @@ sub gpg {
     last;
   }
   close CATALOG;
-  print STDERR "GPG catalog: $gpg_signed_catalog\n" if $debug;
+  print STDERR "DEBUG:GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
     print "Checking integrity of $catalog with gpg.\n";
     my $gpghomedir = "";
     $gpghomedir = "--homedir $config{gpg_homedir}" if $config{gpg_homedir};
     my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
-    print STDERR "GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
+    print STDERR "DEBUG:GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
     myexit("Bad signature detected in catalog!","",1) if $status;
     rename($catalog, $catalog . ".asc") or myexit("Could not rename catalog!","",1);
     $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2>/dev/null");
     myexit("Catalog signature is not correct!","",1) if $status;
     rename($catalog . ".asc", $catalog) or myexit("Could not rename catalog!","",1);
-    print STDERR "Status GPG: $status\n" if $debug;
+    print STDERR "DEBUG:Status GPG: $status\n" if $debug;
   } else {
     myexit("Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.","",1);
   }
@@ -607,7 +607,7 @@ sub init {
 
   foreach my $file (@conf_file) {
     if (-r $file) {	# If conf file found, parse it
-      print STDERR "Conf file: $file\n" if $debug; 
+      print STDERR "DEBUG:Conf file: $file\n" if $debug; 
       open (CONFIG,"<$file") or myexit("Can't open $file","$!",1);
       while (<CONFIG>) {
         chomp;	# Remove newline
@@ -620,7 +620,7 @@ sub init {
 	  print "Unrecognized option (in $file): $var\n";
 	  next;
         }
-        print STDERR "Found $var = $value\n" if $debug;
+        print STDERR "DEBUG:Found $var = $value\n" if $debug;
         my $r = ref($config{$var});
         if (! $r) {
          $config{$var} = $value;
@@ -653,7 +653,7 @@ sub init {
 
   if ($debug) {
     foreach (sort keys %config) {
-      print "$_: " . (($_ eq "mirror") ? join("\t", @{$config{$_}}) : $config{$_}) . "\n";
+      print STDERR "DEBUG:$_: " . (($_ eq "mirror") ? join("\t", @{$config{$_}}) : $config{$_}) . "\n";
     }
   }
 
@@ -717,7 +717,7 @@ sub inst_loc_pkgs {
       # If failed pkgadd op and --yes used, exit immediately
       myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
 
-      printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
+      printf "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
@@ -810,7 +810,7 @@ sub inst_pkgs {
 
     # Support response (pkgask) files
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
-    print STDERR "pkgaddopts: $pkgaddopts\n" if $debug;
+    print STDERR "DEBUG:pkgaddopts: $pkgaddopts\n" if $debug;
     
     # Install
     system("$pkgadd $root_path $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
@@ -820,7 +820,7 @@ sub inst_pkgs {
       # If failed pkgadd op and --yes used, exit immediately
       myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
 
-      printf STDERR "\npkgadd failed with exit code: %d\n",$? >> 8;
+      printf "\npkgadd failed with exit code: %d\n",$? >> 8;
       print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
       chomp(my $prompt = <STDIN>);
       myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
@@ -864,7 +864,7 @@ sub install {
     foreach my $tmppkg2 (@pkglist) {
       # N.B. This array grows and we keep looping until we've satisfied all
       # of the dependencies
-      print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+      print STDERR "DEBUG:Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
 
       my @tmpdeps;
 
@@ -884,7 +884,7 @@ sub install {
           }
         } else {
           @tmpdeps = split(/\|/,$retvalue);
-          print STDERR "depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
+          print STDERR "DEBUG:depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
         }
       } else {
         next;
@@ -901,7 +901,7 @@ sub install {
       next;
     }
   }
-  print STDERR "pkglist ", join(",", @pkglist), "\n" if $debug;
+  print STDERR "DEBUG:pkglist ", join(",", @pkglist), "\n" if $debug;
 
   # Now reverse and deduplicate @pkglist. Need the last instance of each
   # package if reading @pkglist forwards
@@ -920,8 +920,8 @@ sub install {
     }
   }
 
-  print STDERR "revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n" if $debug;
-  print STDERR "Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+  print STDERR "DEBUG:revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n" if $debug;
+  print STDERR "DEBUG:Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
 
   unless ($deps) {
     print $fh "Solving dependency order ...\n";
@@ -960,7 +960,7 @@ sub install {
         }
       }
     }
-    print STDERR"revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
+    print STDERR "DEBUG:revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
     @revpkglist = @revpkglist3;
   }
 
@@ -1054,15 +1054,15 @@ sub install {
       my ($j) = ($_ =~ /^(.+)-/);
       if ($i eq $j) {
         $hit = 1;
-        print STDERR "i: $i j: $j hit: $hit\n" if $debug;
+        print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
         last;
       }
-      print STDERR "i: $i j: $j hit: $hit\n" if $debug;
+      print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
     }
     my $tmp = "$i-$pkgvers{$i}";
     push(@dlpkglist,$tmp) unless $hit;
   }
-  print STDERR "dlpkglist ", join(",", @dlpkglist), "\n" if $debug;
+  print STDERR "DEBUG:dlpkglist: " . scalar(@dlpkglist) . "\n", join(",", @dlpkglist), "\n" if $debug;
 
   # Print info before exiting if there's nothing to do
   myexit("\nNothing to do.","",0) if (scalar(@dlpkglist) == 0);
@@ -1201,7 +1201,7 @@ sub locate_gzip {
       last;
     }
   } 
-  print STDERR "gzip: $gzip\n" if $debug;
+  print STDERR "DEBUG:gzip: $gzip\n" if $debug;
   return 1 if (! $gzip);
 }
 
@@ -1225,7 +1225,7 @@ sub locate_wget {
   if (! $wget) {
     $wget = "$libexec/wget" if (-x "$libexec/wget");
   }
-  print STDERR "wget: " . ($wget ? $wget : "-") . "\n" if $debug;
+  print STDERR "DEBUG:wget: " . ($wget ? $wget : "-") . "\n" if $debug;
   return 1 if (! $wget);
 }
 
@@ -1263,7 +1263,7 @@ sub md5 {
     close FILE;
   }
   my $md5cat = parse_catalog($pkg,4);
-  print STDERR "$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n" if $debug;
+  print STDERR "DEBUG:$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n" if $debug;
   myexit("MD5 for $pkg doesn't match catalog!","",1) if ($md5 ne $md5cat);
   print $fh "MD5 for $pkg matched.\n";
 }
@@ -1289,7 +1289,7 @@ sub parse_catalog {
   my ($pkg,$mode) = @_;
   my ($retvalue,$name);
 
-  print STDERR "Parsing catalog ... looking for: $pkg (mode $mode)\n" if $debug;
+  print STDERR "DEBUG:Parsing catalog ... looking for: $pkg (mode $mode)\n" if $debug;
 
   # Do we have an embedded version?
   my @p = split /-/, $pkg;
@@ -1345,7 +1345,7 @@ sub parse_catalog {
 ##  if ($mode == 6) {	# Filter out SUNW deps
 ##    $retvalue = join('|',grep { !/^SUNW/ } split(/\|/,$retvalue));
 ##  }
-  print STDERR "Return value: $retvalue\n" if $debug;
+  print STDERR "DEBUG:Return value: $retvalue\n" if $debug;
   return $retvalue;
 }
 
@@ -1362,7 +1362,7 @@ sub parse_cl {
   usage() unless scalar(@ARGV);
  
   # This call gives hooks a chance to look at the unaltered argument list
-  print STDERR "preargproc: " . join(' ',@ARGV) . "\n" if $debug;
+  print STDERR "DEBUG:preargproc: " . join(' ',@ARGV) . "\n" if $debug;
   run_hooks("preargproc", @ARGV);
 
   $opt_parse = 0;
@@ -1413,7 +1413,7 @@ sub parse_cl {
     my $notalocpkg = 0;
     foreach (@ARGV) {
       $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
-      print STDERR "$_ : $notalocpkg\n" if $debug;
+      print STDERR "DEBUG:$_ : $notalocpkg\n" if $debug;
     }
     unless ($notalocpkg) {
       print "Installing your local packages ...\n";
@@ -1429,16 +1429,16 @@ sub parse_cl {
 
   if ($opt_workdir) {	# Set/create optional working dir
     $workdir = $opt_workdir;
-    print STDERR "new workdir: $workdir\n" if $debug;
   } elsif ($>) {	# If -W not used and non-root, use home dir
     $workdir = $ENV{HOME} . "/.pkgutil";
     if (! -d $workdir) {	# Create if non-existing
       my $status = mkdir $workdir,0777;
       myexit("Could not create $workdir","$!",1) unless $status;
     }
-    print STDERR "username: " . getpwuid($>) . "\n" if $debug;
+    print STDERR "DEBUG:username: " . getpwuid($>) . "\n" if $debug;
     print "You're not root and didn't set -W, using home dir.\n";
   }
+  print STDERR "DEBUG:workdir: $workdir\n" if $debug;
   $pkgdir = "$workdir/packages";
 
   # Create runtime copy of admin to make sure we have one
@@ -1491,7 +1491,7 @@ sub parse_cl {
     chomp($loc_arch = `uname -p`);	# Arch type sparc|i386
     chomp($loc_rel = `uname -r`);	# OS version, e.g. 5.10
   }
-  print STDERR "arch: $loc_arch\nos rel: $loc_rel\n" if $debug;
+  print STDERR "DEBUG:arch: $loc_arch\nDEBUG:os rel: $loc_rel\n" if $debug;
 
   foreach (@supp_arch) {
     if ($loc_arch eq $_) {
@@ -1514,7 +1514,7 @@ sub parse_cl {
     $mirror[$i] .= "/" . $loc_arch . "/" . $loc_rel;
   }
 
-  print STDERR "primary mirror: $mirror[0]\n" if $debug;
+  print STDERR "DEBUG:primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
     check_catalog(1);	# Reread everything
   } else {
@@ -1527,7 +1527,7 @@ sub parse_cl {
   foreach (@ARGV) {
     push(@norm_argv,parse_catalog($_,2));
   }
-  print STDERR "postargproc: " . join(' ',@norm_argv) . "\n" if $debug;
+  print STDERR "DEBUG:postargproc: " . join(' ',@norm_argv) . "\n" if $debug;
   run_hooks("postargproc", @norm_argv);
 
   # Complex options
@@ -1710,7 +1710,7 @@ sub rem_pkgs {
         (@deptmp) = split(/\|/,$retval);
         foreach $k (@deptmp) {
           if ($k eq $i) {
-            print STDERR "\n$i is in use by $j\n" if $debug;
+            print STDERR "DEBUG:\n$i is in use by $j\n" if $debug;
             $depinuse = 1;
             last;
           }
@@ -1786,19 +1786,19 @@ sub run_hooks {
   myexit("Invalid hook: $hook_name","",1) unless (grep { /$hook_name/ } @valid_hooks);
 
   if (! -d $hook_dir) {
-    print STDERR "No $hook_name hook scripts.\n" if $debug;
+    print STDERR "DEBUG:No $hook_name hook scripts.\n" if $debug;
   } else {
     $oldwd = getcwd();
     chdir($hook_dir) or myexit("Could not cd to $hook_dir","",1);
 
     @hooks_to_run = glob("*");
 
-    print STDERR "Executing $hook_name hook scripts.\n" if (scalar(@hooks_to_run) && $debug);
+    print STDERR "DEBUG:Executing $hook_name hook scripts.\n" if (scalar(@hooks_to_run) && $debug);
 
     foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
       $hook = "$hook_dir/$hookfile";
       if (-x $hook) {
-        print STDERR "Running $hook.\n" if $debug;
+        print STDERR "DEBUG:Running $hook.\n" if $debug;
 
 	# @hook_args is (in most cases) a list of
 	# CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
@@ -1808,7 +1808,7 @@ sub run_hooks {
         $status = $?;
         $code = $status >> 8;
 
-        print STDERR "Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
+        print STDERR "DEBUG:Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
 
         # This allows a hook to stop execution of any further
         # package actions
@@ -1855,11 +1855,11 @@ sub stream {
     $output = "$ARGV[0].$arch.$rel.pkg";
     $transfile = "$pkgdir/$output";
   }
-  print STDERR "output: $output\ntransfile: $transfile\n" if $debug;
+  print STDERR "DEBUG:output: $output\ntransfile: $transfile\n" if $debug;
 
   my @install_order = install($mode,0);	# Download packages needed
   myexit("","",1) if (scalar(@install_order) == 0); # Empty list, nothing to do
-  print STDERR "install order: " . join(' ',@install_order) . "\n" if $debug;
+  print STDERR "DEBUG:install order: " . join(' ',@install_order) . "\n" if $debug;
 
   foreach (@install_order) {		# Delete package directories
     my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
@@ -2004,10 +2004,10 @@ sub verscmp {
           } else {
             $update = -1;
           }
-          print STDERR "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
+          print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n" if $debug;
           last;
         }
-        print STDERR "$i $p1list[$i] $p2list[$i] $update\n" if $debug;
+        print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n" if $debug;
       }
       $update = -1 if (! $update && scalar(@p2list) > scalar(@p1list));
 
