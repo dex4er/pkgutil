@@ -889,7 +889,7 @@ sub install {
       } else {
         next;
       }
-      if ($tmpdeps[0] ne "none") {
+      if ($tmpdeps[0] ne "none" && $tmpdeps[0] ne "not in catalog") {
         foreach my $dep (@tmpdeps) {
           # There is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
           if (! exists $pkgvers{$dep}) {
@@ -937,7 +937,7 @@ sub install {
         last;
       }
       my $dep = parse_catalog($_,6);
-      if ($dep eq "none") {
+      if ($dep eq "none" || $dep eq "not in catalog") {
         push(@revpkglist3,$_);
       } else {
         my $allhit = 1;
@@ -1706,7 +1706,7 @@ sub rem_pkgs {
     $depinuse = 0;
     foreach $j (@cswpkgs) {
       $retval = parse_catalog($j,6);
-      if ($retval ne "none" && $i ne $j) { 
+      if ($retval ne "none" && $retval ne "not in catalog" && $i ne $j) { 
         (@deptmp) = split(/\|/,$retval);
         foreach $k (@deptmp) {
           if ($k eq $i) {
