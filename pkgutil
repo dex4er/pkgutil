@@ -1341,10 +1341,6 @@ sub parse_catalog {
   } else {
     $retvalue = "not in catalog" if (! $retvalue);
   }
-## Disable for now, maybe handled by an option later on?
-##  if ($mode == 6) {	# Filter out SUNW deps
-##    $retvalue = join('|',grep { !/^SUNW/ } split(/\|/,$retvalue));
-##  }
   print STDERR "DEBUG:Return value: $retvalue\n" if $debug;
   return $retvalue;
 }
