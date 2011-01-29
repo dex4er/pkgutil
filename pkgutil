@@ -1436,7 +1436,7 @@ sub parse_cl {
       myexit("Could not create $workdir","$!",1) unless $status;
     }
     print STDERR "DEBUG:username: " . getpwuid($>) . "\n" if $debug;
-    print "You're not root and didn't set -W, using home dir.\n";
+    print STDERR "You're not root and didn't set -W, using home dir.\n";
   }
   print STDERR "DEBUG:workdir: $workdir\n" if $debug;
   $pkgdir = "$workdir/packages";
@@ -1456,7 +1456,7 @@ sub parse_cl {
       myexit("Another instance of pkgutil is already running!","",1);
     } else {
       unlink "$workdir/admin.run" if (-r "$workdir/admin.run");
-      print "Stale lock file ($workdir/admin.run) removed\n";
+      print STDERR "Stale lock file ($workdir/admin.run) removed\n";
     } 
   }
   open (ADMCPY,">$workdir/admin.run") or myexit("Can't open $workdir/admin.run","$!",1);
