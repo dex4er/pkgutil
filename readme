@@ -24,6 +24,26 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.3. Released 2011-02-xx
+  - Add option --parse for machine parsable output. No headers are displayed
+    and columns are separated by a tab. Works with -a/A/c/C and --describe
+  - Add option -l/--list to list installed packages only with names
+  - When an upgrade includes pkgutil, pkgutil is always completely upgraded
+    before proceeding with the rest of the packages
+  - Exit with status 0 when comparing a single pkg not in catalog (to help
+    Puppet)
+  - Do not prompt at pkgadd error when using --yes, exit immediately instead
+    (Mark Bannister)
+  - Add deptree_filter_common (pkgutil.conf option) missing from pkgutil -V
+    output
+  - Better handle packages not in catalog (Mark Bannister)
+  - Redirect some messages to STDERR
+  - Prefix debug messages with DEBUG
+  - Fix bug with last resort wget (Claes Lindvall)
+  - bldcat: play nice with old catalogs that are gpg signed (Mark Bannister)
+  - bldcat: do not reuse info if filename changed (Mark Bannister)
+  - chkcat: fix bug with gpg signed catalogs (Mark Bannister)
+
 * v2.2. Released 2010-10-21
   - Add option --deptree to display dependencies in a similar way to ptree
     (3078744@SF)
