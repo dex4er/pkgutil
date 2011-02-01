@@ -485,7 +485,7 @@ sub fetch_pkgs {
 ##print "progress: $progress\n";
 ##print "last: $last\n";
 
-##  # Looking at the results...
+##  # Looking at the results ...
 ##  if ($retcode == 0) {
 ##    print("Transfer went ok\n");
 ##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
@@ -757,7 +757,7 @@ sub inst_pkgs {
   # before proceeding with rest of list
   if (scalar(@pkglist) > 1) {
     if (my @tmplist = grep { /^CSWpkgutil-/ } @pkglist) {
-      print "\n=> Updating pkgutil first...\n";
+      print "\n=> Updating pkgutil first ...\n";
       @pkglist = grep { !/^CSWpkgutil-/ } @pkglist;
       $updlistlen--;
       inst_pkgs('upgrade',1,$tmplist[0]);
