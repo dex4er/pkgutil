@@ -38,7 +38,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 chdir('/');
 
 my $debug = 0;
-my $pkgutilver = "2.3b1";
+my $pkgutilver = "2.3b2";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -54,8 +54,8 @@ my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # Show available packages in catalog (-a/A)
-#   mode  - 0 = display available packages
-#           1 = compare available packages to those installed
+#   mode  - 0 = display available packages (-a)
+#           1 = compare available packages to those installed (-A)
 #   parse - 0 = normal output, 1 = machine parsable output
 sub available {
   my ($mode,$parse) = @_;
@@ -70,6 +70,7 @@ sub available {
     }
   }
 
+  my $hit = 0;
   foreach my $common (sort keys %commonpkg) {
     my $pkgname = $commonpkg{$common};
     foreach my $remote_ver (sort keys %{$pkg{$pkgname}}) {
@@ -94,13 +95,36 @@ sub available {
 
       if (scalar(@ARGV) > 0) {
         foreach (@ARGV) {
-          print $tmp if ("$pkgname-$remote_ver" =~ /$_/ || "$common-$remote_ver" =~ /$_/);
+          if ("$pkgname-$remote_ver" =~ /$_/ || "$common-$remote_ver" =~ /$_/) {
+            print $tmp;
+            $hit = 1;
+          }
         }
       } else {
         print $tmp;
+        $hit = 1;
       }
     }
   }
+
+  # Do fuzzy matching if nothing found
+  unless ($hit || $parse || $mode) {
+    print "\nNo exact matches found, doing fuzzy matching for first argument ($ARGV[0]) ...\n";
+    eval { require String::Approx; };	# Check for String::Approx
+    if ($@) {
+      myexit("String::Approx required for fuzzy matching not found, install with pkgutil -i CSWpmstringapprox to enable.","",0);
+    } else {
+      my @match = String::Approx::amatch($ARGV[0],%commonpkg);
+      if (scalar(@match)) {
+        print "Suggestions: ";
+        foreach (@match) {
+          print "$_ ";
+        }
+        print "\n";
+      }
+    }
+  }
+
   myexit("","",0);
 }
 
