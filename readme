@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.3. Released 2011-02-xx
+* v2.3. Released 2011-02-12
   - Add option --parse for machine parsable output. No headers are displayed
     and columns are separated by a tab. Works with -a/A/c/C and --describe
   - Add option -l/--list to list installed packages only with names
@@ -37,6 +37,7 @@ Version history
   - Add deptree_filter_common (pkgutil.conf option) missing from pkgutil -V
     output
   - Better handle packages not in catalog (Mark Bannister)
+  - Add fuzzy matching as last resort when using -a
   - Redirect some messages to STDERR
   - Prefix debug messages with DEBUG
   - Fix bug with last resort wget (Claes Lindvall)
