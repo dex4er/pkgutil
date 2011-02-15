@@ -28,6 +28,7 @@ Version history
   - Add option --parse for machine parsable output. No headers are displayed
     and columns are separated by a tab. Works with -a/A/c/C and --describe
   - Add option -l/--list to list installed packages only with names
+  - Add fuzzy matching as last resort when using -a to find packages
   - When an upgrade includes pkgutil, pkgutil is always completely upgraded
     before proceeding with the rest of the packages
   - Exit with status 0 when comparing a single pkg not in catalog (to help
