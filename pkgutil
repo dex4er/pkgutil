@@ -38,7 +38,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 chdir('/');
 
 my $debug = 0;
-my $pkgutilver = "2.3";
+my $pkgutilver = "2.4b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -49,8 +49,8 @@ my $defaultmirror = ("http://mirror.opencsw.org/opencsw/unstable");
 my $workdir = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
-my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename,$hash);
-my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace);
+my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename);
+my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace,$hash);
 my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
 
 # Show available packages in catalog (-a/A)
@@ -567,6 +567,19 @@ sub format_byte {
   return sprintf ("%1.1f %s",$size,$suffix);
 }
 
+# Get which distribution a package is in
+#   package - package to check
+sub get_dist {
+  my ($package) = @_;
+
+  my $file = parse_catalog($_,3);
+  my @catalog = (@{$pkgmirror{$file}});
+  my ($dist) = ($catalog[0] =~ m,/(\w+)/[i386|sparc],);
+  print STDERR "DEBUG:dist:$dist\n" if $debug;
+
+  return $dist;
+}
+
 # Check signature on catalog
 #   catalog - filename of catalog to gpg check
 sub gpg {
@@ -1051,13 +1064,28 @@ sub install {
   # Different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
     print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages" : "Package list";
-    print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+    if ($pkgliststyle == 2) {
+      foreach (sort @newpkglist) {
+        print "$pkgsep$_ (" . get_dist($_) . ")";
+      }
+      print "\n";
+    } else {
+      print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+    }
   }
 
   # Only present updated and current packages when doing install/upgrade
   if ($mode == 0) {
     if (scalar(@updpkglist) > 0) {
-      print "Install " . scalar(@updpkglist) . " UPDATED packages:$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      print "Install " . scalar(@updpkglist) . " UPDATED packages";
+      if ($pkgliststyle == 2) {
+        foreach (sort @updpkglist) {
+          print "$pkgsep$_ (" . get_dist($_) . ")";
+        }
+        print "\n";
+      } else {
+        print $fh ":$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      }
     }
 
     if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
@@ -2300,7 +2328,7 @@ Send options to pkgadd, one example is -G that will only install the packages in
 
 C<pkgliststyle>
 
-Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read.
+Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read. 2 is the same as 1 but also displays which distribution a package comes from, e.g. unstable or stable.
 
 C<root_path>
 
