@@ -872,18 +872,19 @@ sub inst_pkgs {
 }
 
 # Install (-i) option
-#   mode - 0 = install, 1 = download only, 2 = remove, 3 = stream,
-#          4 = stream silent, 5 = extract
-#   deps - option --nodeps set or not
+#   mode  - 0 = install, 1 = download only, 2 = remove, 3 = stream,
+#           4 = stream silent, 5 = extract
+#   deps  - option --nodeps set or not
+#   parse - option --parse set or not
 sub install {
-  my ($mode,$deps) = @_;
+  my ($mode,$deps,$parse) = @_;
   my $retvalue;
   my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
   my $fh = ($mode == 4 ? *STDERR : *STDOUT);
   my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
   my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print $fh "Solving needed dependencies ...\n" unless $deps;
+  print $fh "Solving needed dependencies ...\n" unless ($deps || $parse);
 
   foreach my $tmppkg (@ARGV) {
     my $tmp = parse_catalog($tmppkg,2);
@@ -961,7 +962,7 @@ sub install {
   print STDERR "DEBUG:Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
 
   unless ($deps) {
-    print $fh "Solving dependency order ...\n";
+    print $fh "Solving dependency order ...\n" unless $parse;
     my @revpkglist2 = @revpkglist;
     my @revpkglist3;
     foreach (@revpkglist2) {
@@ -1063,12 +1064,16 @@ sub install {
 
   # Different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
-    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages" : "Package list";
+    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages" : "Package list" unless $parse;
     if ($pkgliststyle == 2) {
       foreach (sort @newpkglist) {
-        print "$pkgsep$_ (" . get_dist($_) . ")";
+        if ($parse) {
+          print parse_catalog($_,0) . "\t" . get_dist($_) . "\t" . parse_catalog($_,4) . "\n";
+        } else {
+          print "$pkgsep$_ (" . get_dist($_) . ")";
+        }
       }
-      print "\n";
+      print "\n" unless $parse;
     } else {
       print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
     }
@@ -1120,13 +1125,14 @@ sub install {
   myexit("\nNothing to do.","",0) if (scalar(@dlpkglist) == 0);
 
   # Print size of download
-  if (scalar(@dlpkglist) > 0) {
+  if (scalar(@dlpkglist) > 0 && $parse == 0) {
     foreach (@dlpkglist) {
       $size += parse_catalog($_,5);
     }
     print $fh "Total size: " . format_byte($size) . "\n";
   }
 
+  myexit("","",0) if $parse;
   myexit("Option -n selected, stopping here.","",0) if $nomod;
 
   if (scalar(@dlpkglist) > 0) {
@@ -1591,10 +1597,10 @@ sub parse_cl {
   compare(4,$opt_parse) if ($opt_compare && $opt_single);
   compare(0,$opt_parse) if $opt_compare;
   # Download and extract if both -d and --extract selected
-  install(5,$opt_nodeps) if ($opt_extract && $opt_download);
-  install(0,$opt_nodeps) if $opt_install;
-  install(2,$opt_nodeps) if $opt_remove;	# Remove instead of install
-  install(1,$opt_nodeps) if $opt_download;	# Download only
+  install(5,$opt_nodeps,$opt_parse) if ($opt_extract && $opt_download);
+  install(0,$opt_nodeps,$opt_parse) if $opt_install;
+  install(2,$opt_nodeps,$opt_parse) if $opt_remove; # Remove instead of install
+  install(1,$opt_nodeps,$opt_parse) if $opt_download; # Download only
 
   # Upgrade is a special case of install
   if ($opt_upgrade) {
