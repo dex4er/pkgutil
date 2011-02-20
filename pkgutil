@@ -600,7 +600,15 @@ sub gpg {
   if ($gpg_signed_catalog) {
     print "Checking integrity of $catalog with gpg.\n";
     my $gpghomedir = "";
-    $gpghomedir = "--homedir $config{gpg_homedir}" if $config{gpg_homedir};
+    if ($config{gpg_homedir}) {
+      $gpghomedir = "--homedir $config{gpg_homedir}";
+    } else {
+      if (check_pkg("CSWcswpki",0) eq "notinst") {
+        $gpghomedir = "";
+      } else {
+        $gpghomedir = "--homedir /var/opt/csw/pki";
+      }
+    }
     my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
     print STDERR "DEBUG:GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
     myexit("Bad signature detected in catalog!","",1) if $status;
@@ -2310,7 +2318,7 @@ Space separated list of simple patterns that will exclude matching packages when
 
 C<gpg_homedir>
 
-The path to the gpg directory (instead of ~/.gnupg) when verifying the catalogs integrity.
+The path to the gpg directory (instead of ~/.gnupg or /var/opt/csw/pkgi if CSWpki is installed) when verifying the catalogs integrity.
 
 C<maxpkglist>
 
