@@ -42,7 +42,7 @@ my $pkgutilver = "2.4b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
-my $pkgliststyle = 0;
+my $pkgliststyle = 2;
 my $maxpkglist = 100000;
 my @mirror;
 my $defaultmirror = ("http://mirror.opencsw.org/opencsw/unstable");
@@ -1623,7 +1623,7 @@ sub parse_cl {
         $ARGV[$i++] = $_;
       }
     }
-    install(0,$opt_nodeps);
+    install(0,$opt_nodeps,$opt_parse);
   }
 
   # Arguments but no options
