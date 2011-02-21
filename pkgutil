@@ -638,7 +638,7 @@ sub init {
              "wgetopts"			=> "",
              "use_gpg"			=> "",
              "use_md5"			=> "",
-             "pkgliststyle"		=> "",
+             "pkgliststyle"		=> "0",
              "maxpkglist"		=> "",
              "noncsw"			=> "",
              "stop_on_hook_soft_error"	=> "",
@@ -1072,10 +1072,10 @@ sub install {
 
   # Different text for install/upgrade vs. the rest
   if (scalar(@newpkglist) > 0) {
-    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages" : "Package list" unless $parse;
-    if ($pkgliststyle == 2) {
+    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages:" : "Package list:" unless $parse;
+    if ($pkgliststyle == 2 || $parse) {
       foreach (sort @newpkglist) {
-        if ($parse) {
+        if ($parse) {	# parse mode to display catalog name, catalog and md5
           print parse_catalog($_,0) . "\t" . get_dist($_) . "\t" . parse_catalog($_,4) . "\n";
         } else {
           print "$pkgsep$_ (" . get_dist($_) . ")";
@@ -1083,7 +1083,7 @@ sub install {
       }
       print "\n" unless $parse;
     } else {
-      print $fh ":$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
+      print $fh "$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
     }
   }
 
