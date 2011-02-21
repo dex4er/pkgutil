@@ -574,7 +574,8 @@ sub get_dist {
 
   my $file = parse_catalog($_,3);
   my @catalog = (@{$pkgmirror{$file}});
-  my ($dist) = ($catalog[0] =~ m,/(\w+)/[i386|sparc],);
+  my ($dist) = ($catalog[0] =~ /^.*\/(\S+)\/[i386|sparc]/);
+##  my ($dist) = ($catalog[0] =~ /^.*\/(\S+\/\S+)\/[i386|sparc]/); # show two last columns
   print STDERR "DEBUG:dist:$dist\n" if $debug;
 
   return $dist;
