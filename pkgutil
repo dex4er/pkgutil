@@ -181,6 +181,28 @@ sub check_pkg {
   return $retvalue;
 }
 
+# Clean up obsolete packages (--cleanup)
+sub cleanup {
+  my @obsolete;
+
+  my @legacy = list_legacy();
+
+  print STDERR "DEBUG:" . scalar(@legacy) . " legacy: " . join(" ",@legacy) . "\n" if $debug;
+
+  my @deps = list_deps();
+
+  print STDERR "DEBUG:" . scalar(@deps) . " deps: " . join(" ",@deps) . "\n" if $debug;
+
+  foreach my $pkg (@legacy) {
+    push(@obsolete,$pkg) unless (grep { /^$pkg$/ } @deps);
+  }
+
+  print STDERR "DEBUG:" . scalar(@obsolete) . " obsolete: " . join(" ",@obsolete) . "\n" if $debug;
+  print STDERR "DEBUG:" . scalar(@obsolete) . " obsolete: " . join(" ",@obsolete) . "\n";
+
+  myexit("","",0);
+}
+
 # Compare current to available packages (-c/C)
 #   mode  - 0 = print full list, 1 = return list of old packages
 #           2 = return full list of old packages, 3 = same as 0 but only diffs
@@ -639,7 +661,7 @@ sub init {
              "wgetopts"			=> "",
              "use_gpg"			=> "",
              "use_md5"			=> "",
-             "pkgliststyle"		=> "0",
+             "pkgliststyle"		=> "2",
              "maxpkglist"		=> "",
              "noncsw"			=> "",
              "stop_on_hook_soft_error"	=> "",
@@ -1197,6 +1219,27 @@ sub install {
   myexit("","",0);
 }
 
+# List dependencies (part of --cleanup)
+sub list_deps {
+  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+  my %deps;
+
+  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
+  foreach (glob("CSW*")) {
+    if (-r "$_/install/depend") {
+      open (FILE,"<$_/install/depend");
+      while (<FILE>) {
+        chomp;
+        if (/^P\s+\S/) {
+          my ($deptmp) = (/P\s+(\S+)/);
+          $deps{$deptmp} = 1 if ($deptmp ne $_ && $deptmp !~ /^SUNW/); # Skip if circular or SUNW
+        }
+      }
+    }
+  }
+  return sort keys %deps;
+}
+
 # List files in package (-L)
 sub list_file {
   my $contents = $config{root_path} ? "$config{root_path}/var/sadm/install/contents" : "/var/sadm/install/contents";
@@ -1233,6 +1276,19 @@ sub list_file {
     }
   }
   myexit("","",0);
+}
+
+# List legacy files (part of --cleanup)
+sub list_legacy {
+  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+  my @legacy;
+
+  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
+  foreach (glob("CSW*")) {
+    push(@legacy,$_) if (-e "$_/install/i-am-legacy");
+###    push(@legacy,$_) if (-e "$_/install/depend");
+  }
+  return @legacy;
 }
 
 # List installed packages (-l)
@@ -1420,7 +1476,7 @@ sub parse_cl {
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
-      $opt_list,$opt_parse);
+      $opt_list,$opt_parse,$opt_cleanup);
 
   usage() unless scalar(@ARGV);
  
@@ -1464,6 +1520,7 @@ sub parse_cl {
              "N|nodeps"		=> \$opt_nodeps,
              "parse"		=> \$opt_parse,
              "p|param=s"	=> \@opt_param,
+             "cleanup"		=> \$opt_cleanup,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   # Simple options
@@ -1485,6 +1542,7 @@ sub parse_cl {
   }
 
   init($opt_config,@opt_param) if ($opt_config || scalar(@opt_param));
+  cleanup() if $opt_cleanup;
   list_pkgs() if $opt_list;
   pkgutilver(1) if $opt_syscheck;
   locate_wget();
