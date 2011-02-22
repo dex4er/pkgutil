@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # pkgutillog - log pkgutil commands via preargproc hook mechanism
-# Copyright (C) 2009-2010 Peter Bonivart
+# Copyright (C) 2009-2011 Peter Bonivart
 
 # $Id$
 
