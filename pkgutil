@@ -183,23 +183,24 @@ sub check_pkg {
 
 # Clean up obsolete packages (--cleanup)
 sub cleanup {
-  my @obsolete;
-
-  my @legacy = list_legacy();
-
+  my @legacy = list_obsolete();
   print STDERR "DEBUG:" . scalar(@legacy) . " legacy: " . join(" ",@legacy) . "\n" if $debug;
 
   my @deps = list_deps();
-
   print STDERR "DEBUG:" . scalar(@deps) . " deps: " . join(" ",@deps) . "\n" if $debug;
 
+  my @obsolete;
   foreach my $pkg (@legacy) {
     push(@obsolete,$pkg) unless (grep { /^$pkg$/ } @deps);
   }
-
-  print STDERR "DEBUG:" . scalar(@obsolete) . " obsolete: " . join(" ",@obsolete) . "\n" if $debug;
-  print STDERR "DEBUG:" . scalar(@obsolete) . " obsolete: " . join(" ",@obsolete) . "\n";
-
+  my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
+  print scalar(@obsolete) . " OBSOLETE packages";
+  if (scalar(@obsolete)) {
+    print ":$pkgsep" . join("$pkgsep",@obsolete) . "\n";
+    rem_pkgs(@obsolete);
+  } else {
+    print ".\n\n";
+  }
   myexit("","",0);
 }
 
@@ -985,7 +986,7 @@ sub install {
       foreach my $p (@revpkglist) {
 	push(@rmpkgs, "$p-" . $pkgvers{$p});
       }
-      rem_pkgs(reverse @rmpkgs);
+      remove(reverse @rmpkgs);
     }
   }
 
@@ -1278,15 +1279,14 @@ sub list_file {
   myexit("","",0);
 }
 
-# List legacy files (part of --cleanup)
-sub list_legacy {
+# List obsolete files (part of --cleanup)
+sub list_obsolete {
   my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
   my @legacy;
 
   chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
   foreach (glob("CSW*")) {
-    push(@legacy,$_) if (-e "$_/install/i-am-legacy");
-###    push(@legacy,$_) if (-e "$_/install/depend");
+    push(@legacy,$_) if (-e "$_/install/obsolete");
   }
   return @legacy;
 }
@@ -1793,8 +1793,8 @@ sub read_catalog {
 }
 
 # Remove packages (-r)
-#   pkglist - packages to remove
-sub rem_pkgs {
+#   pkgs - packages to remove
+sub remove {
   my @pkgs = @_;
   my $retval = "";
   my $pkgrm = "/usr/sbin/pkgrm";
@@ -1856,7 +1856,7 @@ sub rem_pkgs {
   $pkgforce = "-a $admin -n" if $yes;
 
   if (scalar(@rempkgs) > 0) {
-    run_hooks('prebatchremove', @rempkgs);
+    run_hooks('prebatchremove',@rempkgs);
 
     foreach (@rempkgs) {
       my ($p,$v) = ($_ =~ /(\S+)-/);
@@ -1864,19 +1864,59 @@ sub rem_pkgs {
       if ($retval ne "notinst") {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
         print "\n=> Removing $p\n";
-	run_hooks('preremove', ($_));
+        run_hooks('preremove',($_));
         system("$pkgrm $root_path $pkgforce $pkgtrace $p");
-	run_hooks('postremove', ($_));
+        run_hooks('postremove',($_));
       } else {
         print "$p not installed\n";
       }
     }
 
-    run_hooks('postbatchremove', @rempkgs);
+    run_hooks('postbatchremove',@rempkgs);
   } else {
     print "Nothing to remove.\n";
   }
   myexit("","",0);
+}
+
+# Remove list of packages with pkgrm
+#   pkgs - packages to remove
+sub rem_pkgs {
+  my @pkgs = @_;
+  my $pkgrm = "/usr/sbin/pkgrm";
+  my $pkgforce = "";
+  my $pkgtrace = "";
+
+  if (scalar(@pkgs) > 0 && ! $yes) {
+    print scalar(@pkgs)," package" . (scalar(@pkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
+    chomp (my $prompt = <STDIN>);
+    if ($prompt =~ /^[nN]/) {
+      myexit("","",0);
+    } elsif ($prompt =~ /^a(uto)*/i) {
+      print "Turning on automatic mode as if --yes was passed.\n";
+      $yes = 1
+    }
+  }
+
+  $pkgforce = "-a $admin -n" if $yes;
+  $pkgtrace = "-v" if $trace;
+  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+
+  if (scalar(@pkgs) > 0) {
+    run_hooks('prebatchremove',@pkgs);
+
+    foreach (@pkgs) {
+      myexit("Option -n selected, stopping here.","",0) if $nomod;
+      print "\n=> Removing $_\n";
+      run_hooks('preremove',($_));
+      system("$pkgrm $root_path $pkgforce $pkgtrace $_");
+      run_hooks('postremove',($_));
+    }
+
+    run_hooks('postbatchremove',@pkgs);
+  } else {
+    print "Nothing to remove.\n";
+  }
 }
 
 # Run hooks
