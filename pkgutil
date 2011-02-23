@@ -1293,21 +1293,16 @@ sub list_obsolete {
 
 # List installed packages (-l)
 sub list_pkgs {
-  my $pkginfo = "/bin/pkginfo";
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
 
-  my (@tmp) = `$pkginfo $root_path`;
-
-  foreach (@tmp) {
-    if ($noncsw || /^\S+\s+CSW/) {
-      my ($line) = ($_ =~ /^\S+\s+(\S+)\s/);
-      if (scalar(@ARGV) > 0) {
-        foreach (@ARGV) {
-          print "$line\n" if ($line =~ /$_/);
-        }
-      } else {
-        print "$line\n";
+  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
+  foreach ($noncsw ? glob("*") : glob("CSW*")) {
+    if (scalar(@ARGV) > 0) {
+      foreach my $arg (@ARGV) {
+        print "$_\n" if ($_ =~ /$arg/);
       }
+    } else {
+      print "$_\n";
     }
   }
   myexit("","",0);
