@@ -646,7 +646,8 @@ sub gpg {
   }
 }
 
-# Initialize
+# Initialize (note that this section is before options are parsed so
+#             -D does not work here. Set debug to 1 at top of script)
 #   conf - custom configuration
 #   param - configuration overrides
 sub init {
@@ -692,9 +693,13 @@ sub init {
         print STDERR "DEBUG:Found $var = $value\n" if $debug;
         my $r = ref($config{$var});
         if (! $r) {
-         $config{$var} = $value;
+          $config{$var} = $value;
         } elsif ($r eq 'ARRAY') {
-          push(@{$config{$var}},$value);
+          if (grep { /^$value$/ } @{$config{$var}}) {
+            print STDERR "Duplicate mirror definition skipped ($value).\n";
+          } else {
+            push(@{$config{$var}},$value);
+          }
         }
       }
       close CONFIG;
@@ -722,7 +727,7 @@ sub init {
 
   if ($debug) {
     foreach (sort keys %config) {
-      print STDERR "DEBUG:$_: " . (($_ eq "mirror") ? join("\t", @{$config{$_}}) : $config{$_}) . "\n";
+      print STDERR "DEBUG:$_: " . (($_ eq "mirror") ? join(" ", @{$config{$_}}) : $config{$_}) . "\n";
     }
   }
 
@@ -1746,7 +1751,7 @@ sub pkgutilver {
     print "exclude_pattern\t\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
     print "gpg_homedir\t\t" . (($config{gpg_homedir}) ? $config{gpg_homedir} : "not set") . " (default: none)\n";
     print "maxpkglist\t\t$maxpkglist (default: 10000)\n";
-    print "mirror\t\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t", @{$config{mirror}}) : "not set") . "\n\t\t\t(default: $defaultmirror)\n";
+    print "mirror\t\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t\t", @{$config{mirror}}) : "not set") . "\n\t\t\t(default: $defaultmirror)\n";
     print "noncsw\t\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
     print "pkgaddopts\t\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
     print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
