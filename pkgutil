@@ -194,12 +194,12 @@ sub cleanup {
     push(@obsolete,$pkg) unless (grep { /^$pkg$/ } @deps);
   }
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
-  print scalar(@obsolete) . " OBSOLETE packages";
+  print scalar(@obsolete) . " OBSOLETE package" . (scalar(@obsolete) > 1 ? "s" : "");
   if (scalar(@obsolete)) {
     print ":$pkgsep" . join("$pkgsep",@obsolete) . "\n";
     rem_pkgs(@obsolete);
   } else {
-    print ".\n\n";
+    print "s.\n\n";
   }
   myexit("","",0);
 }
