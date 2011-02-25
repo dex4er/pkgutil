@@ -141,8 +141,9 @@ sub check_binary {
 
 # Check catalog
 #   always - always update catalog
+#   parse  - pass through to silence gpg checks
 sub check_catalog {
-  my ($always) = @_;
+  my ($always,$parse) = @_;
 
   foreach my $url (@mirror) {
     my $filename = mangle_url($url);
@@ -150,7 +151,7 @@ sub check_catalog {
     $age = -M $filename if (-r $filename);
     print STDERR "DEBUG:Catalog $url age in days: $age\n" if $debug;
     fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
-    gpg($filename) if $use_gpg;
+    gpg($filename,$parse) if $use_gpg;
     my $entries = read_catalog($url,$filename); # Once per file
     print "==> $entries packages loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
   }
@@ -597,8 +598,8 @@ sub get_dist {
 
   my $file = parse_catalog($_,3);
   my @catalog = (@{$pkgmirror{$file}});
-##  my ($dist) = ($catalog[0] =~ /^.*\/(\S+)\/[i386|sparc]/);
-  my ($dist) = ($catalog[0] =~ /^.*\/(\S+\/\S+)\/[i386|sparc]/); # show two last columns
+  #my ($dist) = ($catalog[0] =~ /^.*\/(\S+)\/[i386|sparc]/); # show last part
+  my ($dist) = ($catalog[0] =~ /^.*\/(\S+\/\S+)\/[i386|sparc]/); # show two last parts
   print STDERR "DEBUG:dist:$dist\n" if $debug;
 
   return $dist;
@@ -606,8 +607,9 @@ sub get_dist {
 
 # Check signature on catalog
 #   catalog - filename of catalog to gpg check
+#   parse   - silence output if set
 sub gpg {
-  my ($catalog) = @_;
+  my ($catalog,$parse) = @_;
   my $line;
   my $gpg_signed_catalog = 0;
 
@@ -622,7 +624,7 @@ sub gpg {
   close CATALOG;
   print STDERR "DEBUG:GPG catalog: $gpg_signed_catalog\n" if $debug;
   if ($gpg_signed_catalog) {
-    print "Checking integrity of $catalog with gpg.\n";
+    print "Checking integrity of $catalog with gpg.\n" unless $parse;
     my $gpghomedir = "";
     if ($config{gpg_homedir}) {
       $gpghomedir = "--homedir $config{gpg_homedir}";
@@ -1637,9 +1639,9 @@ sub parse_cl {
 
   print STDERR "DEBUG:primary mirror: $mirror[0]\n" if $debug;
   if ($opt_upd_cat || @opt_temp) {
-    check_catalog(1);	# Reread everything
+    check_catalog(1,$opt_parse);	# Reread everything
   } else {
-    check_catalog();
+    check_catalog(0,$opt_parse);
   }
 
   # Running the hook now should pass only things that remain in ARGV,
