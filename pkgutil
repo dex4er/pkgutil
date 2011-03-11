@@ -1544,7 +1544,6 @@ sub parse_cl {
   }
 
   init($opt_config,@opt_param) if ($opt_config || scalar(@opt_param));
-  cleanup() if $opt_cleanup;
   list_pkgs() if $opt_list;
   pkgutilver(1) if $opt_syscheck;
   locate_wget();
@@ -1589,6 +1588,9 @@ sub parse_cl {
   close ADMSRC;
   close ADMCPY;
   $admin = "$workdir/admin.run";
+
+  # Cleanup supports yes/auto so it needs to have $admin set
+  cleanup() if $opt_cleanup;
 
   my $status = system("/bin/mkdir -p $pkgdir");
   myexit("Could not create $pkgdir","$!",1) if $status;
