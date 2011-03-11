@@ -35,7 +35,7 @@ my $dir = "/tmp";
 my $pkgdir = ".";
 my ($deptmp,$status,$pkgname,$ideptmp);
 my ($description,$common,$version,$package,$pkgfile,$hash,$size,
-    $deps,$category,$help,$fast,$ideps,$sizeCatalog);
+    $deps,$category,$help,$fast,$ideps,$sizeCatalog,$quiet);
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
 my %olddescriptions;
@@ -44,6 +44,7 @@ my $format = 9;
 GetOptions("h|help"		=> \$help,
            "F|fast"		=> \$fast,
            "W|workdir=s"	=> \$dir,
+           "q|quiet"		=> \$quiet,
            "f|format=s"		=> \$format) || usage();
 
 usage() if $help;
@@ -60,11 +61,12 @@ sub usage {
   print <<EOF;
 bldcat, build CSW catalogs.
 
-Usage: bldcat [-fFWh] <package dir>
+Usage: bldcat [-fFWqh] <package dir>
 
   -f, --format=x\tSet catalog format (8,[9])
   -F, --fast\t\tUse fast mode
   -W, --workdir=x\tSet work directory (default: /tmp)
+  -q, --quiet\t\tNo output
   -h, --help\t\tShow this help
 
 Written and maintained by Peter Bonivart.
@@ -123,15 +125,15 @@ foreach my $file (glob "$pkgdir/*") {
   }
 
   if (exists $oldcatalog{$hash} && exists $olddescriptions{$oldcatalog{$hash}[0]}) {
-    print "Reusing old information for $file";
+    print "Reusing old information for $file" unless $quiet;
     # Has the filename changed even though the hash is the same?
     ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
     my $filenameCatalog = $oldcatalog{$hash}[3];
     if ($pkgfile eq $filenameCatalog) {
-      print "\n";
+      print "\n" unless $quiet;
       print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
     } else {
-      print " (filename changed)\n";
+      print " (filename changed)\n" unless $quiet;
       my @tmplist = @{$oldcatalog{$hash}};
       $tmplist[3] = $pkgfile;
       print CATALOG join(' ', @tmplist), "\n";
@@ -140,7 +142,7 @@ foreach my $file (glob "$pkgdir/*") {
     next;
   }
 
-  print "Inspecting $file\n";
+  print "Inspecting $file\n" unless $quiet;
 
   # Unpack package
   my $tmpdir = File::Temp::tempdir( DIR => $dir, CLEANUP => 1 );
@@ -244,7 +246,7 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat [-fFWh] <package dir>
+bldcat [-fFWqh] <package dir>
 
 =head1 DESCRIPTION
 
@@ -265,6 +267,10 @@ Make timesaving assumptions. Usually bldcat guarantees to produce working catalo
 =item B<-W, --workdir=x>
 
 Set work directory. Default /tmp.
+
+=item B<-q, --quiet>
+
+No output.
 
 =item B<-h, --help>
 
