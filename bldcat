@@ -71,7 +71,7 @@ Usage: bldcat [-fFWqh] <package dir>
 
 Written and maintained by Peter Bonivart.
 EOF
-  exit 1;
+  exit 0;
 }
 
 if (open (CATALOG,"$pkgdir/catalog")) {

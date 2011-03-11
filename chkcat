@@ -65,7 +65,7 @@ Exit codes: 0 - OK, 1 - Warning, 2 - Error.
 
 Written and maintained by Peter Bonivart.
 EOF
-  exit 1;
+  exit 0;
 }
 
 sub init {
@@ -163,7 +163,7 @@ while (scalar(@tmp) > 0) {
 
   # Packages that are not compressed, normal for gzip and pkg-get
   if ($field[3] !~ /\.gz$/) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! Package $field[2] is not compressed. [$line]\n";
     }
@@ -188,28 +188,28 @@ while (scalar(@tmp) > 0) {
   }
 
   if ($arch && ($arch ne 'i386' && $arch ne 'sparc' && $arch ne 'all')) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! Package $field[2] has an unknown architecture. [$line]\n";
     }
   }
 
   if ($rest) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! Package $field[2] does not meet the CSW naming standard - too many hyphens. [$line]\n";
     }
   }
 
   if ($field[3] !~ /\.pkg(\.gz)?$/) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! Package $field[2] does not meet the CSW naming standard - should end in .pkg(.gz). [$line]\n";
     }
   }
 
   if (! $version || $version !~ /[0-9\.]+,REV=(\d{4})\.(\d{2})\.(\d{2})/) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! Package $field[2] does not meet the CSW naming standard - REV section incorrect. [$line]\n";
     }
@@ -231,7 +231,7 @@ while (scalar(@tmp) > 0) {
 
   # Check for SUNW dependencies
   if ($field[6] =~ /SUNW/) {
-    retcode(1);
+    retcode(1) unless $erroronly;
     if (! $erroronly && ! $quiet) {
       print "\nWARNING! The dependency field of package $field[2] contains SUNW packages. [$line]\n";
     }
@@ -271,7 +271,7 @@ while (scalar(@tmp) > 0) {
     }
     my $deplenmax = $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
     if ($deplen++ > $deplenmax) {
-      retcode(1);
+      retcode(1) unless $erroronly;
       print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
       last;
     }
