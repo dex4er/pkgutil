@@ -33,7 +33,7 @@ die "\nFile::Temp not available! Install CSWperl and use that\nfor chkcat. Do th
 
 my @pkglist;
 my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,
-    $erroronly,$pkgver);
+    $erroronly,$pkgver,$nocyclic);
 my $prefix = ".";
 my (%pkg,%pkgdep,%config);
 my $rc = 0;
@@ -41,6 +41,7 @@ my $rc = 0;
 GetOptions("v|verbose"		=> \$verbose,
 	   "h|help"		=> \$help,
 	   "q|quiet"		=> \$quiet,
+	   "c|nocyclic"		=> \$nocyclic,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
@@ -59,6 +60,7 @@ Usage: chkcat [-veqh] <catalog file>
   -v, --verbose\t\tVerbose mode
   -e, --erroronly\tSuppress displaying warnings
   -q, --quiet\t\tNo output (only exit codes)
+  -c, --nocyclic\tNo cyclic dependency checking (improves speed)
   -h, --help\t\tShow this help
 
 Exit codes: 0 - OK, 1 - Warning, 2 - Error.
@@ -258,26 +260,28 @@ while (scalar(@tmp) > 0) {
   }
 
   # Check for cyclic dependencies
-  my @deplist = ();
-  my $deplen = 0;
-  push (@deplist,split (/\|/,$field[6])) unless $field[6] eq "none";
-  while (scalar(@deplist) > 0) {
-    my $tmppkg = $deplist[0];
-    shift @deplist;
-    if ($tmppkg eq $field[2]) {
-      retcode(2);
-      print "\nERROR! Cyclic dependency detected in package $field[2].\n" unless $quiet;
-      last;
-    }
-    my $deplenmax = $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
-    if ($deplen++ > $deplenmax) {
-      retcode(1) unless $erroronly;
-      print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
-      last;
-    }
-    if ($tmppkg ne "none" && $tmppkg ne "CSWcommon" && $pkgdep{$tmppkg}) {
-      my @newdeps = split (/\|/,$pkgdep{$tmppkg});
-      push (@deplist,@newdeps);
+  unless ($nocyclic) {
+    my @deplist = ();
+    my $deplen = 0;
+    push (@deplist,split (/\|/,$field[6])) unless $field[6] eq "none";
+    while (scalar(@deplist) > 0) {
+      my $tmppkg = $deplist[0];
+      shift @deplist;
+      if ($tmppkg eq $field[2]) {
+        retcode(2);
+        print "\nERROR! Cyclic dependency detected in package $field[2].\n" unless $quiet;
+        last;
+      }
+      my $deplenmax = $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
+      if ($deplen++ > $deplenmax) {
+        retcode(1) unless $erroronly;
+        print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
+        last;
+      }
+      if ($tmppkg ne "none" && $tmppkg ne "CSWcommon" && $pkgdep{$tmppkg}) {
+        my @newdeps = split (/\|/,$pkgdep{$tmppkg});
+        push (@deplist,@newdeps);
+      }
     }
   }
 
@@ -418,6 +422,10 @@ Only show errors (suppress warnings).
 =item B<-q, --quiet>
 
 No output (only exit codes).
+
+=item B<-c, --nocyclic>
+
+No cyclic dependency checking. This option improves speed a lot.
 
 =item B<-h, --help>
 
