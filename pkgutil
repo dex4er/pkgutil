@@ -821,7 +821,7 @@ sub inst_pkgs {
   my $pkgrm = "/usr/sbin/pkgrm";
   my ($file,$name);
   my $pkgtrace = "";
-  my @upglist = ();
+  my $per_package_hook = "install";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgtrace = "-v" if $trace;
@@ -851,8 +851,8 @@ sub inst_pkgs {
       # A small sanity check
       myexit("Batch hook 'install' was run, but we've found a package being upgraded. Bailing out.","",1) if ($batchmode eq 'install');
 
-      push(@upglist, $_);
-      run_hooks("preupgrade", $_);
+      $per_package_hook = 'upgrade';
+      run_hooks("pre$per_package_hook", $_);
       print "\n=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
       system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
     }
@@ -882,7 +882,7 @@ sub inst_pkgs {
 
     # We may have already run preupgrade above. Running upgrade _and_ install
     # is invalid
-    run_hooks("preinstall", $_) unless (grep { /^$_$/ } @upglist);
+    run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
 
     # Support response (pkgask) files
     $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
@@ -904,11 +904,8 @@ sub inst_pkgs {
 
     unlink "$pkgdir/$file" or myexit("Can't delete $pkgdir/$file","$!",1);
 
-    if (grep { /^$_$/ } @upglist) {
-	run_hooks("postupgrade", $_);
-    } else {
-	run_hooks("postinstall", $_);
-    }
+    run_hooks("post$per_package_hook", $_);
+    $per_package_hook = 'install'; # Reset for next package in the list
   }
   run_hooks("postbatch$batchmode", @pkglist);
 }
