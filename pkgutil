@@ -38,7 +38,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 chdir('/');
 
 my $debug = 0;
-my $pkgutilver = "2.4b2";
+my $pkgutilver = "2.4b3";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -822,6 +822,7 @@ sub inst_pkgs {
   my ($file,$name);
   my $pkgtrace = "";
   my $per_package_hook = "install";
+  my $pkgask = "";
 
   $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
   $pkgtrace = "-v" if $trace;
@@ -885,11 +886,11 @@ sub inst_pkgs {
     run_hooks("pre$per_package_hook", $_) if ($per_package_hook eq 'install');
 
     # Support response (pkgask) files
-    $pkgaddopts .= " -r $workdir/pkgask/$name" if (-r "$workdir/pkgask/$name");
-    print STDERR "DEBUG:pkgaddopts: $pkgaddopts\n" if $debug;
+    $pkgask = (-r "$workdir/pkgask/$name") ? "-r $workdir/pkgask/$name" : "";
+    print STDERR "DEBUG:pkgask: $pkgask\n" if $debug;
     
     # Install
-    system("$pkgadd $root_path $pkgforce $pkgtrace $pkgaddopts -d $pkgdir/$file $name");
+    system("$pkgadd $root_path $pkgforce $pkgtrace $pkgask $pkgaddopts -d $pkgdir/$file $name");
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
