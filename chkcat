@@ -45,17 +45,18 @@ GetOptions("v|verbose"		=> \$verbose,
 	   "e|erroronly"	=> \$erroronly) || usage();
 
 usage() if $help;
-if (scalar(@ARGV) > 0) {
-  $catalog = $ARGV[0];
-} else {
-  usage();
-}
+usage() unless (scalar(@ARGV) > 0);
+#if (scalar(@ARGV) > 0) {
+#  $catalog = $ARGV[0];
+#} else {
+#  usage();
+#}
 
 sub usage {
   print <<EOF;
 chkcat, check CSW catalogs for problems.
 
-Usage: chkcat [-veqh] <catalog file>
+Usage: chkcat [-veqch] <catalog file>...
 
   -v, --verbose\t\tVerbose mode
   -e, --erroronly\tSuppress displaying warnings
@@ -103,11 +104,17 @@ sub retcode {
 # Read configuration file (/etc/opt/csw/pkgutil.conf)
 init();
 
-(-r $catalog) || die "Can't open $catalog";	# Must be a readable file
+####(-r $catalog) || die "Can't open $catalog";	# Must be a readable file
 
-($prefix) = ($catalog =~ /^(.+)\//) if ($verbose && $catalog =~ /\//);
+####($prefix) = ($catalog =~ /^(.+)\//) if ($verbose && $catalog =~ /\//);
 
-my (@tmp) = `cat $catalog`;
+####my (@tmp) = `cat $catalog`;
+
+my @tmp;
+foreach (@ARGV) {
+  (-r $_) || die "Can't open $_";	# Must be a readable file
+  push(@tmp,`cat $_`);
+}
 
 while (scalar(@tmp) > 0) {
   my $line = $tmp[0];
@@ -126,7 +133,12 @@ while (scalar(@tmp) > 0) {
   $pkgdep{$line[2]} = $line[6];
 }
 
-(@tmp) = `cat $catalog`;
+###(@tmp) = `cat $catalog`;
+@tmp = ();
+foreach (@ARGV) {
+  (-r $_) || die "Can't open $_";	# Must be a readable file
+  push(@tmp,`cat $_`);
+}
 
 while (scalar(@tmp) > 0) {
   my $line = $tmp[0];
@@ -401,7 +413,7 @@ chkcat - check CSW catalog for problems
 
 =head1 SYNOPSIS
 
-chkcat [-veqh] <catalog file>
+chkcat [-veqch] <catalog file>...
 
 =head1 DESCRIPTION
 
