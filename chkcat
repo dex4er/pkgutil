@@ -32,9 +32,8 @@ eval { require File::Temp; };
 die "\nFile::Temp not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
 
 my @pkglist;
-my ($verbose,$hash,$catalog,$status,$deps,$deptmp,$cat,$help,$quiet,
+my ($verbose,$hash,$status,$deps,$deptmp,$cat,$help,$quiet,
     $erroronly,$pkgver,$nocyclic);
-my $prefix = ".";
 my (%pkg,%pkgdep,%config);
 my $rc = 0;
 
@@ -46,11 +45,6 @@ GetOptions("v|verbose"		=> \$verbose,
 
 usage() if $help;
 usage() unless (scalar(@ARGV) > 0);
-#if (scalar(@ARGV) > 0) {
-#  $catalog = $ARGV[0];
-#} else {
-#  usage();
-#}
 
 sub usage {
   print <<EOF;
@@ -104,37 +98,35 @@ sub retcode {
 # Read configuration file (/etc/opt/csw/pkgutil.conf)
 init();
 
-####(-r $catalog) || die "Can't open $catalog";	# Must be a readable file
-
-####($prefix) = ($catalog =~ /^(.+)\//) if ($verbose && $catalog =~ /\//);
-
-####my (@tmp) = `cat $catalog`;
-
-my @tmp;
 foreach (@ARGV) {
   (-r $_) || die "Can't open $_";	# Must be a readable file
-  push(@tmp,`cat $_`);
-}
 
-while (scalar(@tmp) > 0) {
-  my $line = $tmp[0];
-  shift @tmp;
-  chomp $line;
-  if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
-    shift @tmp;
-    shift @tmp;
-    next;
+  my (@catalog) = `cat $_`;
+
+  my $prefix = ".";
+  ($prefix) = ($_ =~ /^(.+)\//) if ($verbose && $_ =~ /\//);
+
+  # Read up all packages in a hash plus all deps in another hash
+  while (scalar(@catalog) > 0) {
+    my $line = $catalog[0];
+    shift @catalog;
+    chomp $line;
+    if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
+      shift @catalog;
+      shift @catalog;
+      next;
+    }
+    last if ($line =~ /-BEGIN PGP SIGNATURE-/);
+    next if ($line =~ /^#/);
+    my @line = split(/\s+/,$line);
+    next unless (scalar(@line) == 8 || scalar(@line) == 9);
+    $pkg{$line[2]} = $prefix if ($line[2] =~ /\w+/);
+    $pkgdep{$line[2]} = $line[6];
   }
-  last if ($line =~ /-BEGIN PGP SIGNATURE-/);
-  next if ($line =~ /^#/);
-  my @line = split(/\s+/,$line);
-  next unless (scalar(@line) == 8 || scalar(@line) == 9);
-  $pkg{$line[2]} = 1 if ($line[2] =~ /\w+/);
-  $pkgdep{$line[2]} = $line[6];
 }
 
-###(@tmp) = `cat $catalog`;
-@tmp = ();
+
+my @tmp;
 foreach (@ARGV) {
   (-r $_) || die "Can't open $_";	# Must be a readable file
   push(@tmp,`cat $_`);
@@ -314,15 +306,15 @@ while (scalar(@tmp) > 0) {
   # If in verbose mode, check catalog entries against packages if found in
   # same directory as catalog
   if ($verbose) {
-    if (! -r "$prefix/$field[3]") {	# Does the file exist?
+    if (! -r "$pkg{$field[2]}/$field[3]") {	# Does the file exist?
       retcode(2);
       print "ERROR! File $field[3] not found.\n" unless $quiet;
     } else {
-      if ($field[5] != (stat("$prefix/$field[3]"))[7]) { # Correct size?
+      if ($field[5] != (stat("$pkg{$field[2]}/$field[3]"))[7]) { # Correct size?
         retcode(2);
         print "ERROR! Size does not match for $field[2].\n" unless $quiet;
       }
-      open (FILE,"<$prefix/$field[3]");		# MD5 check
+      open (FILE,"<$pkg{$field[2]}/$field[3]");		# MD5 check
       binmode (FILE);
       $hash = Digest::MD5->new->addfile(*FILE)->hexdigest;
       close FILE;
@@ -333,7 +325,7 @@ while (scalar(@tmp) > 0) {
 
       # Unpack package if depends and/or categories are not "none"
       my $tmpdir = File::Temp::tempdir( DIR => "/tmp", CLEANUP => 1 );
-      $status = system("/bin/gunzip -cf $prefix/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
+      $status = system("/bin/gunzip -cf $pkg{$field[2]}/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
       die "Could not transform $field[2]: $!" if $status;
 
       # Check deps against depend file in package
@@ -425,7 +417,7 @@ Check CSW catalog for problems.
 
 =item B<-v, --verbose>
 
-Verbose mode. Will compare size, MD5 hash, dependencies and categories specified in catalog against the information in the actual package. The packages must be in the current directory.
+Verbose mode. Will compare size, MD5 hash, dependencies and categories specified in catalog against the information in the actual package. The packages must be in the same directory as the catalog referencing them.
 
 =item B<-e, --erroronly>
 
