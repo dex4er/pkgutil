@@ -1,4 +1,7 @@
-#!/usr/bin/env perl -w
+#!/bin/sh
+#! -*- perl -*- 
+eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}'
+  if 0;
 
 # pkgutil - manages packages on Sun Solaris systems
 # Copyright (C) 2008-2011 Peter Bonivart
