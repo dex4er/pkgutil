@@ -2004,7 +2004,8 @@ sub signal_handler {
 }
 
 # Build package streams (-s)
-#   target - arch and os release
+#   arch   - architecture
+#   rel    - os release
 #   output - file name for package stream
 sub stream {
   my ($arch,$rel,$output) = @_;
@@ -2019,14 +2020,26 @@ sub stream {
   }
  
   if ($output) {
-    $transfile = ($output eq "-" ? "/dev/fd/1" : "$pkgdir/$output");
+    if ($output eq "-") {
+      $transfile =  "/dev/fd/1";
+    } else {
+      if ($output =~ /\//) {
+        if ($output =~ /^\//) {
+          $transfile = $output; # Output given is an absolute path
+        } else {
+          myexit("Relative output paths are not allowed","",1);
+        }
+      } else {
+        $transfile = "$pkgdir/$output";
+      }
+    }
   } else {
     $output = "$ARGV[0].$arch.$rel.pkg";
     $transfile = "$pkgdir/$output";
   }
   print STDERR "DEBUG:output: $output\ntransfile: $transfile\n" if $debug;
 
-  my @install_order = install($mode,0);	# Download packages needed
+  my @install_order = install($mode,0,0);	# Download packages needed
   myexit("","",1) if (scalar(@install_order) == 0); # Empty list, nothing to do
   print STDERR "DEBUG:install order: " . join(' ',@install_order) . "\n" if $debug;
 
