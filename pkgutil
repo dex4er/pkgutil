@@ -818,7 +818,7 @@ sub inst_pkgs {
   my $batchmode = shift;
   my $updlistlen = shift;
   my @pkglist = @_;
-  my %upg_pkglist = {};
+  my %upg_pkglist;
   my $tmp = "";
   my $pkgadd = "/usr/sbin/pkgadd";
   my $pkgaddopts = "";
@@ -1919,9 +1919,10 @@ sub rem_pkgs {
     foreach (@pkgs) {
       myexit("Option -n selected, stopping here.","",0) if $nomod;
       print "\n=> Removing $_\n";
-      run_hooks('preremove',($_));
+      my $pkgver = check_pkg($_,0);
+      run_hooks('preremove',("$_-$pkgver"));
       system("$pkgrm $root_path $pkgforce $pkgtrace $_");
-      run_hooks('postremove',($_));
+      run_hooks('postremove',("$_-$pkgver"));
     }
 
     run_hooks('postbatchremove',@pkgs);
