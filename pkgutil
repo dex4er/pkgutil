@@ -2123,6 +2123,7 @@ Usage: pkgutil [option]... [package](-[version])...
       --single          Single package check (use with -c)
   -p, --param=opt:val   Override configuration option
       --parse           Machine parsable output
+      --cleanup         Clean up obsolete packages
 
 Example: pkgutil -i CSWwget\ (install wget and its dependencies)
 
@@ -2387,6 +2388,10 @@ Override configuration option. All configuration options in pkgutil.conf can be 
 =item B<--parse>
 
 Machine parsable output, no headers and all columns are separated by one tab. Use this together with scripts to get a reliable output format that is simpler to parse.
+
+=item B<--cleanup>
+
+Clean up obsolete packages. For example a renamed package that is not needed any more.
 
 =back
 
