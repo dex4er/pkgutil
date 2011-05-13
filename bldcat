@@ -34,7 +34,7 @@ die "\nFile::Temp not available! Install CSWperl and use that\nfor bldcat. Do th
 my $dir = "/tmp";
 my $pkgdir = ".";
 my ($deptmp,$status,$pkgname,$ideptmp);
-my ($description,$common,$version,$package,$pkgfile,$hash,$size,
+my ($name,$description,$common,$version,$package,$pkgfile,$hash,$size,
     $deps,$category,$help,$fast,$ideps,$sizeCatalog,$quiet);
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
@@ -161,6 +161,7 @@ foreach my $file (glob "$pkgdir/*") {
 
     # Field 1: common name
     if ($line =~ /^NAME=/) {
+      $name = $';
       ($description,$common) = ($line =~ /=((.+?)\s.*)/);
       next;
     }
@@ -196,6 +197,10 @@ foreach my $file (glob "$pkgdir/*") {
     }
   }
   close FILE;
+
+  # Provide sane default values
+  $common = $name unless $common;
+  $description = "$common - no description" unless $description;
 
   # Field 7 and 9: dependencies
   $deps = $ideps = "";

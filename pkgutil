@@ -810,10 +810,10 @@ sub inst_loc_pkgs {
 }
 
 # Install packages
-#   batchmode - whether we're updating some of the packages or doing new
-#               installs only (values: upgrade or install)
+#   batchmode  - whether we're updating some of the packages or doing new
+#                installs only (values: upgrade or install)
 #   updlistlen - number of packages to update
-#   pkglist - packages to install
+#   pkglist    - packages to install
 sub inst_pkgs {
   my $batchmode = shift;
   my $updlistlen = shift;
