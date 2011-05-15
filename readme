@@ -24,26 +24,26 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.4. Released 2011-05-14
-  - Fix bug in hook support (Ben Walton)
-  - Support absolute paths in --output (Dago)
-  - pkgutil: eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}' (PCA)
-  - pkgutil: fix pkgask/response bug (3205333@SF) (Julian Clifton-Thompson)
-  - pkgutil: fix a bug in --cleanup when using --yes or auto (admin not set)
-  - Silence "Checking integrity ..." when --parse is on (4693@OpenCSW)
-  - Show last two parts of mirror path as distribution (e.g. dublin/core)
+* v2.4. Released 2011-05-15
   - pkgutil: new option --cleanup. When invoked, scans for
     /var/sadm/pkg/*/install/obsolete. If it finds
     /var/sadm/pkg/CSWlibfoo/install/obsolete and nothing installed depends on
     CSWlibfoo, then CSWlibfoo gets removed from the system
-  - Do not duplicate mirrors present in pkgutil.conf in both
-    /opt and /etc (4693@OpenCSW)
-  - Speed up option -l with glob
-  - Change default pkgliststyle to 2
   - Support key package (/etc/opt/csw/pki, /var/opt/csw/pki). Change default
     homedir (Ben Walton)
   - Parse option for download, incl. catalog and md5 (Maciej Blizinski)
   - Include distribution (e.g. unstable) with pkgliststyle 2
+  - Support absolute paths in --output (Dago)
+  - Show last two parts of mirror path as distribution (e.g. dublin/core)
+  - Change default pkgliststyle to 2
+  - Speed up option -l with glob
+  - Silence "Checking integrity ..." when --parse is on (4693@OpenCSW)
+  - pkgutil: eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}' (PCA)
+  - pkgutil: fix pkgask/response bug (3205333@SF) (Julian Clifton-Thompson)
+  - pkgutil: fix a bug in --cleanup when using --yes or auto (admin not set)
+  - Do not duplicate mirrors present in pkgutil.conf in both
+    /opt and /etc (4693@OpenCSW)
+  - Fix bug in hook support (Ben Walton)
   - bldcat: add -q/--quiet option
   - bldcat: improve support for non-CSW packages (3300709@SF) (Mark Heily)
   - chkcat: add -c/--nocyclic option to skip cyclic dependency checking,
