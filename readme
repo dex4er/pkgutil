@@ -24,6 +24,10 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.5. Released 2011-0x-xx
+  - bldcat: change default work dir from /tmp to /var/tmp since it's safer
+    (Mark Phillips)
+
 * v2.4. Released 2011-05-15
   - pkgutil: new option --cleanup. When invoked, scans for
     /var/sadm/pkg/*/install/obsolete. If it finds

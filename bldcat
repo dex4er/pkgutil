@@ -31,7 +31,7 @@ die "\nDigest::MD5 not available! Install CSWperl and use that\nfor bldcat. Do t
 eval { require File::Temp; };
 die "\nFile::Temp not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
 
-my $dir = "/tmp";
+my $dir = "/var/tmp";
 my $pkgdir = ".";
 my ($deptmp,$status,$pkgname,$ideptmp);
 my ($name,$description,$common,$version,$package,$pkgfile,$hash,$size,
@@ -65,7 +65,7 @@ Usage: bldcat [-fFWqh] <package dir>
 
   -f, --format=x\tSet catalog format (8,[9])
   -F, --fast\t\tUse fast mode
-  -W, --workdir=x\tSet work directory (default: /tmp)
+  -W, --workdir=x\tSet work directory (default: /var/tmp)
   -q, --quiet\t\tNo output
   -h, --help\t\tShow this help
 
@@ -271,7 +271,7 @@ Make timesaving assumptions. Usually bldcat guarantees to produce working catalo
 
 =item B<-W, --workdir=x>
 
-Set work directory. Default /tmp.
+Set work directory. Default /var/tmp.
 
 =item B<-q, --quiet>
 
