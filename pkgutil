@@ -284,7 +284,9 @@ sub dedup {
 }
 
 # Display package dependencies as a tree (--deptree)
+#   depth - number of levels to show
 sub deptree {
+  my ($depth) = @_;
   my (@pkgarray,@rest,@j);
   my $level = 0;
   my $true;
@@ -297,9 +299,9 @@ sub deptree {
       my $pkg = parse_catalog($_,2);	# Get package name
       my $deps = parse_catalog($_,6);	# Get dependencies
 
-      unless ($pkg eq "CSWcommon" && $config{deptree_filter_common} eq "true") {
+      unless ($pkg eq "CSWcommon" && $config{deptree_filter_common} eq "true" || $level > $depth) {
         for(my $i = 0; $i < $level; $i++) {
-          print "    ";
+          print "- ";
         }
         print "$pkg\n";
       }
@@ -1525,7 +1527,7 @@ sub parse_cl {
              "F|findfile"	=> \$opt_findfile,
              "extract"		=> \$opt_extract,
              "single"		=> \$opt_single,
-             "deptree"		=> \$opt_deptree,
+             "deptree=i"	=> \$opt_deptree,
              "N|nodeps"		=> \$opt_nodeps,
              "parse"		=> \$opt_parse,
              "p|param=s"	=> \@opt_param,
@@ -1676,7 +1678,7 @@ sub parse_cl {
   email($opt_email) if $opt_email;
   available(0,$opt_parse) if $opt_avail;
   available(1,$opt_parse) if $opt_compare_available;
-  deptree() if $opt_deptree;
+  deptree($opt_deptree) if $opt_deptree;
   describe($opt_parse) if $opt_describe;
   compare(3,$opt_parse) if $opt_compare_diffonly;
   compare(4,$opt_parse) if ($opt_compare && $opt_single);
@@ -2123,7 +2125,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -l, --list            List installed packages
   -L, --listfile        List files in package
   -F, --findfile        Find files in package
-      --deptree         Display dependency tree
+      --deptree=depth   Display dependency tree
       --extract         Extract package content (use with -d)
   -s, --stream          Build a package stream (use with -d)
   -o, --output=file     File name for package stream (use with -s)
@@ -2381,9 +2383,9 @@ List files in packages. Works on both installed packages as well as on (uncompre
 
 Find files in installed packages.
 
-=item B<--deptree>
+=item B<--deptree=depth>
 
-Display dependency tree.
+Display dependency tree. Depth is the number of levels to show, minumum is 1.
 
 =item B<--extract>
 
