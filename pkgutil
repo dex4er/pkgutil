@@ -156,7 +156,7 @@ sub check_catalog {
     fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
     gpg($filename,$parse) if $use_gpg;
     my $entries = read_catalog($url,$filename); # Once per file
-    print "==> $entries packages loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
+    print "==> $entries package" . ($entries > 1 ? "s" : "") . " loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
   }
 }
 
