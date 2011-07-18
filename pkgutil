@@ -41,7 +41,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 chdir('/');
 
 my $debug = 0;
-my $pkgutilver = "2.4";
+my $pkgutilver = "2.5b1";
 my $use_md5 = 0;
 my $use_gpg = 0;
 my $noncsw = 0;
@@ -1485,7 +1485,7 @@ sub parse_cl {
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
-      $opt_list,$opt_parse,$opt_cleanup);
+      $opt_list,$opt_parse,$opt_cleanup,$opt_pkgdir);
 
   usage() unless scalar(@ARGV);
  
@@ -1530,6 +1530,7 @@ sub parse_cl {
              "parse"		=> \$opt_parse,
              "p|param=s"	=> \@opt_param,
              "cleanup"		=> \$opt_cleanup,
+             "P|pkgdir=s"	=> \$opt_pkgdir,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   # Simple options
@@ -1568,7 +1569,13 @@ sub parse_cl {
     print STDERR "You're not root and didn't set -W, using home dir.\n";
   }
   print STDERR "DEBUG:workdir: $workdir\n" if $debug;
-  $pkgdir = "$workdir/packages";
+
+  if ($opt_pkgdir) {	# Set/create optional package dir
+    $pkgdir = $opt_pkgdir;
+  } else {
+    $pkgdir = "$workdir/packages";
+  }
+  print STDERR "DEBUG:pkgdir: $pkgdir\n" if $debug;
 
   # Create runtime copy of admin to make sure we have one
   # available even during upgrade of pkgutil itself
@@ -2101,7 +2108,8 @@ Usage: pkgutil [option]... [package](-[version])...
   -e, --email=address   Send e-mail with available updates
   -t, --temp=site       Temporarily use this site as primary for download
   -x, --exclude=pattern Pattern to exclude
-  -W, --workdir=path    Path to use for downloads
+  -W, --workdir=path    Path to use for work directory
+  -P, --pkgdir=path     Path to use for package downloads
       --config=file     Use this configuration file
   -y, --yes             Answer yes on all prompts
   -f, --force           Force updates (sync with mirror)
@@ -2315,7 +2323,11 @@ Simple pattern that will exclude matching packages. This option can be specified
 
 =item B<-W, --workdir=path>
 
-Path to use for downloads. This can be used to run pkgutil as non-root, e.g. called from a web server.
+Path to use for work directory. This can be used to run pkgutil as non-root, e.g. called from a web server.
+
+=item B<-P, --pkgdir=path>
+
+Path to use for package downloads. This can be used to run pkgutil as non-root, e.g. called from a web server. Default is <workdir>/package.
 
 =item B<--config=file>
 
