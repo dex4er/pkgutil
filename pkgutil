@@ -3,7 +3,7 @@
 eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}'
   if 0;
 
-# pkgutil - manages packages on Sun Solaris systems
+# pkgutil - manages packages on Sun/Oracle Solaris systems
 # Copyright (C) 2008-2011 Peter Bonivart
 
 # $Id$
@@ -35,6 +35,10 @@ $| = 1;
 # Signal handlers
 $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
+
+# Untainting
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};	# Make %ENV safer
+$ENV{'PATH'} = '/bin:/usr/bin';
 
 # Ensure we always work from a directory that won't
 # be yanked out from under pkgadd/pkgrm.
@@ -414,13 +418,13 @@ sub fetch_catalog {
   unlink "${filename}.tmp","${desc_file}.tmp";
   if ($url =~ /^file:/) {	# file method used, use cp
     my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
-    $status = system("/bin/cp $tmpcatsrc/catalog ${filename}.tmp");
+    $status = system("/bin/cp","$tmpcatsrc/catalog","${filename}.tmp");
     if ($status) {
       myexit("\nFetching of catalog failed.","",1);
     } else {
       rename "${filename}.tmp",$filename;
     }
-    $status = system("/bin/cp $tmpcatsrc/descriptions ${desc_file}.tmp");
+    $status = system("/bin/cp","$tmpcatsrc/descriptions","${desc_file}.tmp");
     if ($status) {
       print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
     } else {
@@ -428,20 +432,20 @@ sub fetch_catalog {
     }
   } else {	# http/ftp used, use wget
     locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
-    $status = system("$wget $wgetopts -O ${filename}.tmp $url/catalog");
+    $status = system("$wget",split(' ',$wgetopts),"-O","${filename}.tmp","$url/catalog");
     if ($status) {
       myexit("\nFetching of catalog failed.","",1);
     } else {
       rename "${filename}.tmp",$filename;
     }
-    $status = system("$wget $wgetopts -O ${desc_file}.tmp $url/descriptions");
+    $status = system("$wget",split(' ',$wgetopts),"-O","${desc_file}.tmp","$url/descriptions");
     if ($status) {
       print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
     } else {
       rename "${desc_file}.tmp",$desc_file;
     }
   }
-  system("/bin/touch $filename") if (-w $filename);
+  system("/bin/touch",$filename) if (-w $filename);
 }
 
 # Get wanted package and its dependencies
@@ -484,14 +488,14 @@ sub fetch_pkgs {
         if ($_ =~ /^file:/) {
           my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
           run_hooks("prefetch", "$tmpcatsrc/$file", $pkg);
-          $status = system("/bin/cp $tmpcatsrc/$file $pkgdir/${file}.tmp");
+          $status = system("/bin/cp","$tmpcatsrc/$file","$pkgdir/${file}.tmp");
         } else {
           run_hooks("prefetch", "$_/$file", $pkg);
 
           ## Testing curl as download method
           ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
 
-          $status = system("$wget $wgetopts -O $pkgdir/${file}.tmp $_/$file");
+          $status = system("$wget",split(' ',$wgetopts),"-O","$pkgdir/${file}.tmp","$_/$file");
         }
         unless ($status) {
           run_hooks("postfetch", "$_/$file", $pkg);
@@ -640,11 +644,11 @@ sub gpg {
         $gpghomedir = "--homedir /var/opt/csw/pki";
       }
     }
-    my $status = system("/opt/csw/bin/gpg $gpghomedir --verify $catalog");
+    my $status = system("/opt/csw/bin/gpg",split(' ',$gpghomedir),"--verify","$catalog");
     print STDERR "DEBUG:GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
     myexit("Bad signature detected in catalog!","",1) if $status;
     rename($catalog, $catalog . ".asc") or myexit("Could not rename catalog!","",1);
-    $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2>/dev/null");
+    $status = system("/opt/csw/bin/gpg",split(' ',$gpghomedir),"$catalog.asc","2>","/dev/null");
     myexit("Catalog signature is not correct!","",1) if $status;
     rename($catalog . ".asc", $catalog) or myexit("Could not rename catalog!","",1);
     print STDERR "DEBUG:Status GPG: $status\n" if $debug;
@@ -787,11 +791,11 @@ sub inst_loc_pkgs {
     my $tmp = check_pkg($pkgname,0);
     if ($tmp ne "notinst") {
       print "\n=> Removing currently installed $pkgname\n";
-      system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
+      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$pkgname");
     }
 
     # Install
-    system("$pkgadd $root_path $pkgforce $pkgtrace $pkgaddopts -d $file");
+    system("$pkgadd",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),split(' ',$pkgaddopts),"-d","$file");
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
@@ -860,7 +864,7 @@ sub inst_pkgs {
       $upg_pkglist{$_} = 1;
       run_hooks("preupgrade", $_);
       print "\n=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
-      system("$pkgrm $root_path $pkgforce $pkgtrace $pkgname");
+      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$pkgname");
     }
   }
 
@@ -895,7 +899,7 @@ sub inst_pkgs {
     print STDERR "DEBUG:pkgask: $pkgask\n" if $debug;
     
     # Install
-    system("$pkgadd $root_path $pkgforce $pkgtrace $pkgask $pkgaddopts -d $pkgdir/$file $name");
+    system("$pkgadd",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),split(' ',$pkgask),split(' ',$pkgaddopts),"-d","$pkgdir/$file","$name");
 
     # Check if pkgadd operation exited successfully
     if ($? != 0) {
@@ -961,7 +965,7 @@ sub install {
       if ($tmppkg2 ne "CSWcommon") {
         $retvalue = parse_catalog($tmppkg2,6);
         if ($retvalue eq "not in catalog") {
-          system("/bin/pkginfo $root_path -q $tmppkg2");
+          system("/bin/pkginfo",split(' ',$root_path),"-q","$tmppkg2");
           if ($? == 0) {	# Already installed...forgive its absence from the catalog
             print STDERR "Warning: $tmppkg2 not in catalog.\n";
             next;
@@ -1224,7 +1228,7 @@ sub install {
 
     foreach (@ideppkglist) {
       print "\n=> Removing incompatible package $_\n";
-      system("$pkgrm $root_path $pkgforce $pkgtrace $_");
+      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$_");
     }
   }
 
@@ -1611,7 +1615,7 @@ sub parse_cl {
   # Cleanup supports yes/auto so it needs to have $admin set
   cleanup() if $opt_cleanup;
 
-  my $status = system("/bin/mkdir -p $pkgdir");
+  my $status = system("/bin/mkdir","-p","$pkgdir");
   myexit("Could not create $pkgdir","$!",1) if $status;
 
   # Get mirrors together
@@ -1888,7 +1892,7 @@ sub remove {
         myexit("Option -n selected, stopping here.","",0) if $nomod;
         print "\n=> Removing $p\n";
         run_hooks('preremove',($_));
-        system("$pkgrm $root_path $pkgforce $pkgtrace $p");
+        system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$p");
         run_hooks('postremove',($_));
       } else {
         print "$p not installed\n";
@@ -1933,7 +1937,7 @@ sub rem_pkgs {
       print "\n=> Removing $_\n";
       my $pkgver = check_pkg($_,0);
       run_hooks('preremove',("$_-$pkgver"));
-      system("$pkgrm $root_path $pkgforce $pkgtrace $_");
+      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$_");
       run_hooks('postremove',("$_-$pkgver"));
     }
 
@@ -2060,7 +2064,7 @@ sub stream {
   print STDERR "DEBUG:install order: " . join(' ',@install_order) . "\n" if $debug;
 
   foreach (@install_order) {		# Delete package directories
-    my $status = system("/bin/rm -rf $pkgdir/$_") if (-d "$pkgdir/$_");
+    my $status = system("/bin/rm","-rf","$pkgdir/$_") if (-d "$pkgdir/$_");
     myexit("Could not delete $pkgdir/$_","$!",1) if $status;
   }
 
@@ -2073,14 +2077,14 @@ sub stream {
 
   # pkgtrans all of them into one package stream
   print $fh "Transforming packages into stream ($transfile) ...\n";
-  my $status = system("/bin/touch $transfile");
+  my $status = system("/bin/touch","$transfile");
   myexit("Could not create stream file","$!",1) if $status;
   my $transpkgs = join(" ",@install_order);
   $status = system("/bin/pkgtrans -s $pkgdir $transfile $transpkgs 2> /dev/null");
   myexit("Could not transform packages into stream","$!",1) if $status;
 
   foreach (@install_order) {		# Delete package directories
-    my $status = system("/bin/rm -rf $pkgdir/$_");
+    my $status = system("/bin/rm","-rf","$pkgdir/$_");
     myexit("Could not delete $pkgdir/$_","$!",1) if $status;
   }
 
