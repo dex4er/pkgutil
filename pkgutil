@@ -1487,7 +1487,7 @@ sub parse_cl {
       $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
       $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
       $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
-      $opt_list,$opt_parse,$opt_cleanup,$opt_pkgdir);
+      $opt_list,$opt_parse,$opt_cleanup,$opt_pkgdir,$opt_rootpath);
 
   usage() unless scalar(@ARGV);
  
@@ -1533,12 +1533,15 @@ sub parse_cl {
              "p|param=s"	=> \@opt_param,
              "cleanup"		=> \$opt_cleanup,
              "P|pkgdir=s"	=> \$opt_pkgdir,
+             "R|rootpath=s"	=> \$opt_rootpath,
              "V|syscheck"	=> \$opt_syscheck) || usage();
 
   # Simple options
   usage() if $opt_help;
   pkgutilver(0) if $opt_version;
   find_file() if $opt_findfile;
+  $config{root_path} = $opt_rootpath if $opt_rootpath;
+  print STDERR "DEBUG:root_path: $config{root_path}\n" if $debug;
 
   # Installing local packages if all args are package files
   if (scalar(@ARGV) && ($opt_install || $opt_upgrade)) {
@@ -2112,6 +2115,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -x, --exclude=pattern Pattern to exclude
   -W, --workdir=path    Path to use for work directory
   -P, --pkgdir=path     Path to use for package downloads
+  -R, --rootpath=path   Path to use for root_path
       --config=file     Use this configuration file
   -y, --yes             Answer yes on all prompts
   -f, --force           Force updates (sync with mirror)
@@ -2330,6 +2334,10 @@ Path to use for work directory. This can be used to run pkgutil as non-root, e.g
 =item B<-P, --pkgdir=path>
 
 Path to use for package downloads. This can be used to run pkgutil as non-root, e.g. called from a web server. Default is <workdir>/package.
+
+=item B<-R, --rootpath=path>
+
+Path to use for root_path. This is used by Solaris pkg tools like pkgadd, pkgrm and so on. Setting this option overrides root_path in pkgutil.conf. Default is not set.
 
 =item B<--config=file>
 
