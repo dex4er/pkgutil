@@ -1103,10 +1103,22 @@ sub install {
 
   my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
 
-  # Only present incompatible packages when doing install/upgrade
+  # Only present updated and current packages when doing install/upgrade
   if ($mode == 0) {
-    if (scalar(@ideppkglist) > 0) {
-      print "Remove " . scalar(@ideppkglist) . " INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
+    if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
+      print scalar(@curpkglist) . " CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
+    }
+
+    if (scalar(@updpkglist) > 0) {
+      print "Install " . scalar(@updpkglist) . " UPDATED packages";
+      if ($pkgliststyle == 2) {
+        foreach (sort @updpkglist) {
+          print "$pkgsep$_ (" . get_dist($_) . ")";
+        }
+        print "\n";
+      } else {
+        print $fh ":$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
+      }
     }
   }
 
@@ -1127,22 +1139,10 @@ sub install {
     }
   }
 
-  # Only present updated and current packages when doing install/upgrade
+  # Only present incompatible packages when doing install/upgrade
   if ($mode == 0) {
-    if (scalar(@updpkglist) > 0) {
-      print "Install " . scalar(@updpkglist) . " UPDATED packages";
-      if ($pkgliststyle == 2) {
-        foreach (sort @updpkglist) {
-          print "$pkgsep$_ (" . get_dist($_) . ")";
-        }
-        print "\n";
-      } else {
-        print $fh ":$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
-      }
-    }
-
-    if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
-      print scalar(@curpkglist) . " CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
+    if (scalar(@ideppkglist) > 0) {
+      print "Remove " . scalar(@ideppkglist) . " INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
     }
   }
 
