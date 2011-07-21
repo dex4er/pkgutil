@@ -26,39 +26,49 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 eval { require Digest::MD5; };
-die "\nDigest::MD5 not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+die
+"\nDigest::MD5 not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n"
+  if ($@);
 
 eval { require File::Temp; };
-die "\nFile::Temp not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+die
+"\nFile::Temp not available! Install CSWperl and use that\nfor bldcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n"
+  if ($@);
 
-my $dir = "/var/tmp";
+my $dir    = "/var/tmp";
 my $pkgdir = ".";
-my ($deptmp,$status,$pkgname,$ideptmp);
-my ($name,$description,$common,$version,$package,$pkgfile,$hash,$size,
-    $deps,$category,$help,$fast,$ideps,$sizeCatalog,$quiet);
+my ( $deptmp, $status, $pkgname, $ideptmp );
+my (
+    $name,    $description, $common, $version,     $package,
+    $pkgfile, $hash,        $size,   $deps,        $category,
+    $help,    $fast,        $ideps,  $sizeCatalog, $quiet
+);
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
 my %olddescriptions;
 my $format = 9;
 
-GetOptions("h|help"		=> \$help,
-           "F|fast"		=> \$fast,
-           "W|workdir=s"	=> \$dir,
-           "q|quiet"		=> \$quiet,
-           "f|format=s"		=> \$format) || usage();
+GetOptions(
+    "h|help"      => \$help,
+    "F|fast"      => \$fast,
+    "W|workdir=s" => \$dir,
+    "q|quiet"     => \$quiet,
+    "f|format=s"  => \$format
+) || usage();
 
 usage() if $help;
-if (scalar(@ARGV) > 0) {
-  $pkgdir = $ARGV[0];
-  ($pkgdir) = ($pkgdir =~ /^(.+)\/$/) if ($pkgdir =~ /\/$/);
-} else {
-  usage();
+if ( scalar(@ARGV) > 0 ) {
+    $pkgdir = $ARGV[0];
+    ($pkgdir) = ( $pkgdir =~ /^(.+)\/$/ ) if ( $pkgdir =~ /\/$/ );
+}
+else {
+    usage();
 }
 
-$format = 9 if ($format != 8);
+$format = 9 if ( $format != 8 );
 
 sub usage {
-  print <<EOF;
+    print <<EOF;
 bldcat, build CSW catalogs.
 
 Usage: bldcat [-fFWqh] <package dir>
@@ -71,176 +81,196 @@ Usage: bldcat [-fFWqh] <package dir>
 
 Written and maintained by Peter Bonivart.
 EOF
-  exit 0;
+    exit 0;
 }
 
-if (open (CATALOG,"$pkgdir/catalog")) {
-  while (<CATALOG>) {
-    chomp;
-    my @line = split /\s+/;
-    if (scalar(@line) >= 8 && $_ =~ /^\w/) {
-      my $hash = $line[4];
-      $oldcatalog{$hash} = \@line;
-      my $pkgfile = $line[3];
-      $oldcatalog_bypkgfile{$pkgfile} = \@line;
-    }
-  }
-  close CATALOG;
-}
-
-if (open (DESCRIPTIONS,"$pkgdir/descriptions")) {
-  while (<DESCRIPTIONS>) {
-    chomp;
-    my @line = split /\s+/;
-    my $common = $line[0];
-    $olddescriptions{$common} = $_;
-  }
-  close DESCRIPTIONS;
-}
-
-open (CATALOG,">$pkgdir/catalog.new") || die "Could not write new catalog at $pkgdir/catalog.new: $!";
-open (DESCRIPTIONS,">$pkgdir/descriptions.new") || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
-
-foreach my $file (glob "$pkgdir/*") {
-  ($common,$version,$package,$pkgfile,$hash,$size,$deps,$category,$ideps) = ("","","","","","","","","");
-  next unless (-r $file);		# Must be a readable file
-  next unless ($file =~ /\.pkg(\.gz)?$/);	# Must end with .pkg or .pkg.gz
-
-  # Get size of file and from catalog
-  $size = (stat($file))[7];
-  $sizeCatalog = $oldcatalog_bypkgfile{(split(/\//,$file))[-1]}[5];
-
-  if ($fast && defined $sizeCatalog && $size == $sizeCatalog) {
-    # When using fastmode we reuse a checksum from the catalog if the filename matches
-    # If there was no entry in the catalog $hash will stay undefined
-    $hash = $oldcatalog_bypkgfile{(split(/\//,$file))[-1]}[4];
-  }
-
-  # Calculate hash before we do anything else to look up the cache
-  if (! $hash) {
-    open (FILE2,"<$file") || die "Could not open $file: $!\n";
-    binmode (FILE2);
-    $hash = Digest::MD5->new->addfile(*FILE2)->hexdigest;
-    close FILE2;
-  }
-
-  if (exists $oldcatalog{$hash} && exists $olddescriptions{$oldcatalog{$hash}[0]}) {
-    print "Reusing old information for $file" unless $quiet;
-    # Has the filename changed even though the hash is the same?
-    ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
-    my $filenameCatalog = $oldcatalog{$hash}[3];
-    if ($pkgfile eq $filenameCatalog) {
-      print "\n" unless $quiet;
-      print CATALOG join(' ', @{$oldcatalog{$hash}}), "\n";
-    } else {
-      print " (filename changed)\n" unless $quiet;
-      my @tmplist = @{$oldcatalog{$hash}};
-      $tmplist[3] = $pkgfile;
-      print CATALOG join(' ', @tmplist), "\n";
-    }
-    print DESCRIPTIONS $olddescriptions{$oldcatalog{$hash}[0]}, "\n";
-    next;
-  }
-
-  print "Inspecting $file\n" unless $quiet;
-
-  # Unpack package
-  my $tmpdir = File::Temp::tempdir( DIR => $dir, CLEANUP => 1 );
-  my $DECOMPRESS = ($file =~ /\.gz$/ ? "/bin/gzip -c -d $file" : "cat $file");
-  $status = system("$DECOMPRESS | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
-  die "Could not transform $file: $!" if $status;
-
-  foreach (glob "$tmpdir/*") {
-    ($pkgname) = (/([\w\+-\.]+)$/) if (-d);
-  }
-
-  open (FILE,"<$tmpdir/$pkgname/pkginfo") || die "Could not open $tmpdir/$pkgname/pkginfo: $!";
-
-  while (my $line = <FILE>) {
-    chomp $line;
-
-    # Field 1: common name
-    if ($line =~ /^NAME=/) {
-      $name = $';
-      ($description,$common) = ($line =~ /=((.+?)\s.*)/);
-      next;
-    }
-
-    # Field 2: version
-    if ($line =~ /^VERSION=/) {
-      ($version) = ($line =~ /=(.+)$/);
-      next;
-    }
-
-    # Field 3: package name
-    if ($line =~ /^PKG=/) {
-      ($package) = ($line =~ /=(.+)$/);
-      next;
-    }
-
-    # Field 4: filename
-    if (! $pkgfile) {
-      ($pkgfile) = ($file =~ /\//) ? ($file =~ /.*\/(.+)$/) : $file;
-    }
-
-    # Field 5: md5 hash
-    # Already computed
-
-    # Field 6: file size
-    # Already computed
-
-    # Field 8: categories
-    if ($line =~ /^CSW_CATEGORY=/) {
-      ($category) = ($line =~ /=(.+)$/);
-      $category = join('|',split(/,\s?/,$category));
-      next;
-    }
-  }
-  close FILE;
-
-  # Provide sane default values
-  $common = $name unless $common;
-  $description = "$common - no description" unless $description;
-
-  # Field 7 and 9: dependencies
-  $deps = $ideps = "";
-  if (-r "$tmpdir/$pkgname/install/depend") {
-    open (FILE,"<$tmpdir/$pkgname/install/depend");
-    while (<FILE>) {
-      chomp;
-      if (/^P\s+\S/) {
-        ($deptmp) = (/P\s+(\S+)/);
-        if ($deptmp ne $pkgname && $deptmp !~ /^SUNW/) { # Skip if circular or SUNW
-          $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+if ( open( my $CATALOG, '<', "$pkgdir/catalog" ) ) {
+    while (<$CATALOG>) {
+        chomp;
+        my @line = split /\s+/;
+        if ( scalar(@line) >= 8 && $_ =~ /^\w/ ) {
+            my $hash = $line[4];
+            $oldcatalog{$hash} = \@line;
+            my $pkgfile = $line[3];
+            $oldcatalog_bypkgfile{$pkgfile} = \@line;
         }
-      }
-      if (/^I\s+\S/) {
-        ($ideptmp) = (/I\s+(\S+)/);
-        if ($ideptmp ne $pkgname && $ideptmp !~ /^SUNW/) { # Skip if circular or SUNW
-          $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
-        }
-      }
     }
-    close FILE;
-  }
-
-  $deps = "none" unless $deps;
-  $category = "none" unless $category;
-  $ideps = "none" unless $ideps;
-  print CATALOG "$common $version $package $pkgfile $hash $size $deps $category";
-  print CATALOG ($format == 9) ? " $ideps\n" : "\n";
-  print DESCRIPTIONS "$description\n";
+    close $CATALOG;
 }
 
-close DESCRIPTIONS;
-close CATALOG;
+if ( open( my $DESCRIPTIONS, '<', "$pkgdir/descriptions" ) ) {
+    while (<$DESCRIPTIONS>) {
+        chomp;
+        my @line   = split /\s+/;
+        my $common = $line[0];
+        $olddescriptions{$common} = $_;
+    }
+    close $DESCRIPTIONS;
+}
 
-unlink "$pkgdir/descriptions";			# May or may not be there
-link "$pkgdir/descriptions.new", "$pkgdir/descriptions" or die "Cannot link $pkgdir/descriptions.new to $pkgdir/descriptions: $!";
-unlink "$pkgdir/descriptions.new" or die "Cannot unlink $pkgdir/descriptions.new: $!";
+open( my $CATALOG, '>', "$pkgdir/catalog.new" )
+  || die "Could not write new catalog at $pkgdir/catalog.new: $!";
+open( my $DESCRIPTIONS, '>', "$pkgdir/descriptions.new" )
+  || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
 
-unlink "$pkgdir/catalog";			# May or may not be there
-link "$pkgdir/catalog.new", "$pkgdir/catalog" or die "Cannot link $pkgdir/catalog.new to $pkgdir/catalog: $!";
+foreach my $file ( glob "$pkgdir/*" ) {
+    (
+        $common, $version, $package,  $pkgfile, $hash,
+        $size,   $deps,    $category, $ideps
+    ) = ( "", "", "", "", "", "", "", "", "" );
+    next unless ( -r $file );                    # Must be a readable file
+    next unless ( $file =~ /\.pkg(\.gz)?$/ );    # Must end with .pkg or .pkg.gz
+
+    # Get size of file and from catalog
+    $size = ( stat($file) )[7];
+    $sizeCatalog = $oldcatalog_bypkgfile{ ( split( /\//, $file ) )[-1] }[5];
+
+    if ( $fast && defined $sizeCatalog && $size == $sizeCatalog ) {
+
+        # When using fastmode we reuse a checksum from the catalog if the
+        # filename matches. If there was no entry in the catalog $hash will
+        # stay undefined
+        $hash = $oldcatalog_bypkgfile{ ( split( /\//, $file ) )[-1] }[4];
+    }
+
+    # Calculate hash before we do anything else to look up the cache
+    if ( !$hash ) {
+        open( my $FILE2, '<', "$file" ) || die "Could not open $file: $!\n";
+        binmode($FILE2);
+        $hash = Digest::MD5->new->addfile(*$FILE2)->hexdigest;
+        close $FILE2;
+    }
+
+    if (   exists $oldcatalog{$hash}
+        && exists $olddescriptions{ $oldcatalog{$hash}[0] } )
+    {
+        print "Reusing old information for $file" unless $quiet;
+
+        # Has the filename changed even though the hash is the same?
+        ($pkgfile) = ( $file =~ /\// ) ? ( $file =~ /.*\/(.+)$/ ) : $file;
+        my $filenameCatalog = $oldcatalog{$hash}[3];
+        if ( $pkgfile eq $filenameCatalog ) {
+            print "\n" unless $quiet;
+            print $CATALOG join( ' ', @{ $oldcatalog{$hash} } ), "\n";
+        }
+        else {
+            print " (filename changed)\n" unless $quiet;
+            my @tmplist = @{ $oldcatalog{$hash} };
+            $tmplist[3] = $pkgfile;
+            print $CATALOG join( ' ', @tmplist ), "\n";
+        }
+        print $DESCRIPTIONS $olddescriptions{ $oldcatalog{$hash}[0] }, "\n";
+        next;
+    }
+
+    print "Inspecting $file\n" unless $quiet;
+
+    # Unpack package
+    my $tmpdir = File::Temp::tempdir( DIR => $dir, CLEANUP => 1 );
+    my $DECOMPRESS =
+      ( $file =~ /\.gz$/ ? "/bin/gzip -c -d $file" : "cat $file" );
+    $status =
+      system("$DECOMPRESS | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
+    die "Could not transform $file: $!" if $status;
+
+    foreach ( glob "$tmpdir/*" ) {
+        ($pkgname) = (/([\w\+-\.]+)$/) if (-d);
+    }
+
+    open( my $FILE, '<', "$tmpdir/$pkgname/pkginfo" )
+      || die "Could not open $tmpdir/$pkgname/pkginfo: $!";
+
+    while ( my $line = <$FILE> ) {
+        chomp $line;
+
+        # Field 1: common name
+        if ( $line =~ /^NAME=/ ) {
+            $name = $';
+            ( $description, $common ) = ( $line =~ /=((.+?)\s.*)/ );
+            next;
+        }
+
+        # Field 2: version
+        if ( $line =~ /^VERSION=/ ) {
+            ($version) = ( $line =~ /=(.+)$/ );
+            next;
+        }
+
+        # Field 3: package name
+        if ( $line =~ /^PKG=/ ) {
+            ($package) = ( $line =~ /=(.+)$/ );
+            next;
+        }
+
+        # Field 4: filename
+        if ( !$pkgfile ) {
+            ($pkgfile) = ( $file =~ /\// ) ? ( $file =~ /.*\/(.+)$/ ) : $file;
+        }
+
+        # Field 5: md5 hash
+        # Already computed
+
+        # Field 6: file size
+        # Already computed
+
+        # Field 8: categories
+        if ( $line =~ /^CSW_CATEGORY=/ ) {
+            ($category) = ( $line =~ /=(.+)$/ );
+            $category = join( '|', split( /,\s?/, $category ) );
+            next;
+        }
+    }
+    close $FILE;
+
+    # Provide sane default values
+    $common = $name unless $common;
+    $description = "$common - no description" unless $description;
+
+    # Field 7 and 9: dependencies
+    $deps = $ideps = "";
+    if ( -r "$tmpdir/$pkgname/install/depend" ) {
+        open( my $FILE, '<', "$tmpdir/$pkgname/install/depend" );
+        while (<$FILE>) {
+            chomp;
+            if (/^P\s+\S/) {
+                ($deptmp) = (/P\s+(\S+)/);
+                if ( $deptmp ne $pkgname && $deptmp !~ /^SUNW/ )
+                {    # Skip if circular or SUNW
+                    $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+                }
+            }
+            if (/^I\s+\S/) {
+                ($ideptmp) = (/I\s+(\S+)/);
+                if ( $ideptmp ne $pkgname && $ideptmp !~ /^SUNW/ )
+                {    # Skip if circular or SUNW
+                    $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
+                }
+            }
+        }
+        close $FILE;
+    }
+
+    $deps     = "none" unless $deps;
+    $category = "none" unless $category;
+    $ideps    = "none" unless $ideps;
+    print $CATALOG
+      "$common $version $package $pkgfile $hash $size $deps $category";
+    print $CATALOG ( $format == 9 ) ? " $ideps\n" : "\n";
+    print $DESCRIPTIONS "$description\n";
+}
+
+close $DESCRIPTIONS;
+close $CATALOG;
+
+unlink "$pkgdir/descriptions";    # May or may not be there
+link "$pkgdir/descriptions.new", "$pkgdir/descriptions"
+  or die "Cannot link $pkgdir/descriptions.new to $pkgdir/descriptions: $!";
+unlink "$pkgdir/descriptions.new"
+  or die "Cannot unlink $pkgdir/descriptions.new: $!";
+
+unlink "$pkgdir/catalog";         # May or may not be there
+link "$pkgdir/catalog.new", "$pkgdir/catalog"
+  or die "Cannot link $pkgdir/catalog.new to $pkgdir/catalog: $!";
 unlink "$pkgdir/catalog.new" or die "Cannot unlink $pkgdir/catalog.new: $!";
 
 exit 0;
