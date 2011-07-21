@@ -26,28 +26,36 @@ use Getopt::Long;
 Getopt::Long::Configure qw(no_ignore_case bundling);
 
 eval { require Digest::MD5; };
-die "\nDigest::MD5 not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+die
+"\nDigest::MD5 not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n"
+  if ($@);
 
 eval { require File::Temp; };
-die "\nFile::Temp not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n" if ($@);
+die
+"\nFile::Temp not available! Install CSWperl and use that\nfor chkcat. Do that by having /opt/csw/bin before\n/usr/bin in your path.\n"
+  if ($@);
 
 my @pkglist;
-my ($verbose,$hash,$status,$deps,$deptmp,$cat,$help,$quiet,
-    $erroronly,$pkgver,$nocyclic);
-my (%pkg,%pkgdep,%config);
+my (
+    $verbose, $hash,  $status,    $deps,   $deptmp, $cat,
+    $help,    $quiet, $erroronly, $pkgver, $nocyclic
+);
+my ( %pkg, %pkgdep, %config );
 my $rc = 0;
 
-GetOptions("v|verbose"		=> \$verbose,
-	   "h|help"		=> \$help,
-	   "q|quiet"		=> \$quiet,
-	   "c|nocyclic"		=> \$nocyclic,
-	   "e|erroronly"	=> \$erroronly) || usage();
+GetOptions(
+    "v|verbose"   => \$verbose,
+    "h|help"      => \$help,
+    "q|quiet"     => \$quiet,
+    "c|nocyclic"  => \$nocyclic,
+    "e|erroronly" => \$erroronly
+) || usage();
 
 usage() if $help;
-usage() unless (scalar(@ARGV) > 0);
+usage() unless ( scalar(@ARGV) > 0 );
 
 sub usage {
-  print <<EOF;
+    print <<EOF;
 chkcat, check CSW catalogs for problems.
 
 Usage: chkcat [-veqch] <catalog file>...
@@ -62,339 +70,378 @@ Exit codes: 0 - OK, 1 - Warning, 2 - Error.
 
 Written and maintained by Peter Bonivart.
 EOF
-  exit 0;
+    exit 0;
 }
 
 sub init {
-  my $conf = "/etc/opt/csw/pkgutil.conf";
-  if (-r $conf) {
-    %config = ("maxpkglist" => "");
+    my $conf = "/etc/opt/csw/pkgutil.conf";
+    if ( -r $conf ) {
+        %config = ( "maxpkglist" => "" );
 
-    open (CONFIG,"<$conf") or die "Can't open $conf: $!\n";
-    while (<CONFIG>) {
-      chomp;  # Remove newline
-      s/#.*//;        # Remove comments
-      s/^\s+//;       # Remove leading white
-      s/\s+$//;       # Remove trailing white
-      next unless length;     # Next if nothing left
-      my ($var,$value) = split(/\s*=\s*/,$_,2);
-      my $r = ref($config{$var});
-      if (! $r) {
-       $config{$var} = $value;
-      } elsif ($r eq 'ARRAY') {
-        push(@{$config{$var}},$value);
-      }
+        open( my $CONFIG, '<', "$conf" ) or die "Can't open $conf: $!\n";
+        while (<$CONFIG>) {
+            chomp;       # Remove newline
+            s/#.*//;     # Remove comments
+            s/^\s+//;    # Remove leading white
+            s/\s+$//;    # Remove trailing white
+            next unless length;    # Next if nothing left
+            my ( $var, $value ) = split( /\s*=\s*/, $_, 2 );
+            my $r = ref( $config{$var} );
+            if ( !$r ) {
+                $config{$var} = $value;
+            }
+            elsif ( $r eq 'ARRAY' ) {
+                push( @{ $config{$var} }, $value );
+            }
+        }
+        close $CONFIG;
     }
-    close CONFIG;
-  }
 }
 
 sub retcode {
-  my ($rctmp) = @_;
+    my ($rctmp) = @_;
 
-  $rc = $rctmp if ($rctmp > $rc);
+    $rc = $rctmp if ( $rctmp > $rc );
 }
 
 # Read configuration file (/etc/opt/csw/pkgutil.conf)
 init();
 
 foreach (@ARGV) {
-  (-r $_) || die "Can't open $_";	# Must be a readable file
+    ( -r $_ ) || die "Can't open $_";    # Must be a readable file
 
-  my (@catalog) = `cat $_`;
+    my (@catalog) = `cat $_`;
 
-  my $prefix = ".";
-  ($prefix) = ($_ =~ /^(.+)\//) if ($verbose && $_ =~ /\//);
+    my $prefix = ".";
+    ($prefix) = ( $_ =~ /^(.+)\// ) if ( $verbose && $_ =~ /\// );
 
-  # Read up all packages in a hash plus all deps in another hash
-  while (scalar(@catalog) > 0) {
-    my $line = $catalog[0];
-    shift @catalog;
-    chomp $line;
-    if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
-      shift @catalog;
-      shift @catalog;
-      next;
+    # Read up all packages in a hash plus all deps in another hash
+    while ( scalar(@catalog) > 0 ) {
+        my $line = $catalog[0];
+        shift @catalog;
+        chomp $line;
+        if ( $line =~ /-BEGIN PGP SIGNED MESSAGE-/ ) {
+            shift @catalog;
+            shift @catalog;
+            next;
+        }
+        last if ( $line =~ /-BEGIN PGP SIGNATURE-/ );
+        next if ( $line =~ /^#/ );
+        my @line = split( /\s+/, $line );
+        next unless ( scalar(@line) == 8 || scalar(@line) == 9 );
+        $pkg{ $line[2] } = $prefix if ( $line[2] =~ /\w+/ );
+        $pkgdep{ $line[2] } = $line[6];
     }
-    last if ($line =~ /-BEGIN PGP SIGNATURE-/);
-    next if ($line =~ /^#/);
-    my @line = split(/\s+/,$line);
-    next unless (scalar(@line) == 8 || scalar(@line) == 9);
-    $pkg{$line[2]} = $prefix if ($line[2] =~ /\w+/);
-    $pkgdep{$line[2]} = $line[6];
-  }
 }
-
 
 my @tmp;
 foreach (@ARGV) {
-  (-r $_) || die "Can't open $_";	# Must be a readable file
-  push(@tmp,`cat $_`);
+    ( -r $_ ) || die "Can't open $_";    # Must be a readable file
+    push( @tmp, `cat $_` );
 }
 
-while (scalar(@tmp) > 0) {
-  my $line = $tmp[0];
-  shift @tmp;
-  chomp $line;
-  my (@field) = split(/ /,$line);
-
-  # If gpg signed catalog, skip a few lines in the beginning
-  if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/) {
-    print "Skipping signature at start of file.\n" unless ($erroronly || $quiet);
+while ( scalar(@tmp) > 0 ) {
+    my $line = $tmp[0];
     shift @tmp;
-    shift @tmp;
-    next;
-  }
+    chomp $line;
+    my (@field) = split( / /, $line );
 
-  # If gpg signature found at the end, exit
-  if ($line =~ /-BEGIN PGP SIGNATURE-/) {
-    print "\nSkipping signature at end of file.\n" unless ($erroronly || $quiet);
-    last;
-  }
-
-  # If line starts with a comment, skip
-  if ($line =~ /^#/) {
-    print "Skipping comment.\n" unless ($erroronly || $quiet);
-    next;
-  }
-
-  # Number of fields
-  if (scalar(@field) < 8 || scalar(@field) > 9) {
-    retcode(2);
-    if (! $quiet) {
-      print "\nERROR! ",scalar(@field)," fields instead of normal 8 or 9. [$line]\n";
+    # If gpg signed catalog, skip a few lines in the beginning
+    if ( $line =~ /-BEGIN PGP SIGNED MESSAGE-/ ) {
+        print "Skipping signature at start of file.\n"
+          unless ( $erroronly || $quiet );
+        shift @tmp;
+        shift @tmp;
+        next;
     }
-    next;
-  }
 
-  # Packages that are not compressed, normal for gzip and pkg-get
-  if ($field[3] !~ /\.gz$/) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! Package $field[2] is not compressed. [$line]\n";
-    }
-  }
-
-  # Packages that should not be compressed - common and gzip
-  if ($field[2] eq "CSWcommon" || $field[2] eq "CSWgzip") {
-    if ($field[3] =~ /\.gz$/) {
-      retcode(2);
-      if (! $quiet) {
-        print "\nERROR! Package $field[2] is compressed. [$line]\n";
-      }
-    }
-  }
-
-  # Check the naming standard - http://opencsw.org/standards/build#versioning
-  my ($name, $version, $uname, $arch, $footer, $rest) = split /-/, $field[3];
-  if (! $footer && $arch) {
-    # Assume arch is missing - it is optional after all
-    $footer = $arch;
-    $arch = '';
-  }
-
-  if ($arch && ($arch ne 'i386' && $arch ne 'sparc' && $arch ne 'all')) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! Package $field[2] has an unknown architecture. [$line]\n";
-    }
-  }
-
-  if ($rest) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! Package $field[2] does not meet the CSW naming standard - too many hyphens. [$line]\n";
-    }
-  }
-
-  if ($field[3] !~ /\.pkg(\.gz)?$/) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! Package $field[2] does not meet the CSW naming standard - should end in .pkg(.gz). [$line]\n";
-    }
-  }
-
-  if (! $version || $version !~ /[0-9\.]+,REV=(\d{4})\.(\d{2})\.(\d{2})/) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! Package $field[2] does not meet the CSW naming standard - REV section incorrect. [$line]\n";
-    }
-  }
-
-  # Check that dependency field begins and ends with a word char
-  if ($field[6] !~ /^\w/) {
-    retcode(2);
-    if (! $quiet) {
-      print "\nERROR! The dependency field of package $field[2] begins with a non-char. [$line]\n";
-    }
-  }
-  if ($field[6] =~ /\|$/) {	# Non-char is actually used, e.g. gcc2g++
-    retcode(2);
-    if (! $quiet) {
-      print "\nERROR! The dependency field of package $field[2] ends with a pipe char. [$line]\n";
-    }
-  }
-
-  # Check for SUNW dependencies
-  if ($field[6] =~ /SUNW/) {
-    retcode(1) unless $erroronly;
-    if (! $erroronly && ! $quiet) {
-      print "\nWARNING! The dependency field of package $field[2] contains SUNW packages. [$line]\n";
-    }
-  }
-
-  # Check that no dependencies are missing
-  if ($field[6] ne "none") {
-    foreach (split(/\|/,$field[6])) {
-      if (! $pkg{$_}) {
-        retcode(2);
-        print "\nERROR! Dependency $_ of package $field[2] is missing.\n" unless $quiet;
-      }
-    }
-  }
-
-  # Check for packages that depend on themselves
-  if ($field[6] ne "none") {
-    foreach (split(/\|/,$field[6])) {
-      if ($_ eq $field[2]) {
-        retcode(2);
-        print "\nERROR! Package $field[2] depends on itself.\n" unless $quiet;
-      }
-    }
-  }
-
-  # Check for cyclic dependencies
-  unless ($nocyclic) {
-    my @deplist = ();
-    my $deplen = 0;
-    push (@deplist,split (/\|/,$field[6])) unless $field[6] eq "none";
-    while (scalar(@deplist) > 0) {
-      my $tmppkg = $deplist[0];
-      shift @deplist;
-      if ($tmppkg eq $field[2]) {
-        retcode(2);
-        print "\nERROR! Cyclic dependency detected in package $field[2].\n" unless $quiet;
+    # If gpg signature found at the end, exit
+    if ( $line =~ /-BEGIN PGP SIGNATURE-/ ) {
+        print "\nSkipping signature at end of file.\n"
+          unless ( $erroronly || $quiet );
         last;
-      }
-      my $deplenmax = $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
-      if ($deplen++ > $deplenmax) {
+    }
+
+    # If line starts with a comment, skip
+    if ( $line =~ /^#/ ) {
+        print "Skipping comment.\n" unless ( $erroronly || $quiet );
+        next;
+    }
+
+    # Number of fields
+    if ( scalar(@field) < 8 || scalar(@field) > 9 ) {
+        retcode(2);
+        if ( !$quiet ) {
+            print "\nERROR! ", scalar(@field),
+              " fields instead of normal 8 or 9. [$line]\n";
+        }
+        next;
+    }
+
+    # Packages that are not compressed, normal for gzip and pkg-get
+    if ( $field[3] !~ /\.gz$/ ) {
         retcode(1) unless $erroronly;
-        print "\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n" unless ($erroronly || $quiet);
-        last;
-      }
-      if ($tmppkg ne "none" && $tmppkg ne "CSWcommon" && $pkgdep{$tmppkg}) {
-        my @newdeps = split (/\|/,$pkgdep{$tmppkg});
-        push (@deplist,@newdeps);
-      }
+        if ( !$erroronly && !$quiet ) {
+            print "\nWARNING! Package $field[2] is not compressed. [$line]\n";
+        }
     }
-  }
 
-  # Check that category field begins and ends with a word char
-  if ($field[7] !~ /^\w/) {
-    retcode(2);
-    if (! $quiet) {
-      print "\nERROR! The category field of package $field[2] begins with a non-char. [$line]\n";
-    }
-  }
-  if ($field[7] !~ /\w$/) {
-    retcode(2);
-    if (! $quiet) {
-      print "\nERROR! The category field of package $field[2] ends with a non-char. [$line]\n";
-    }
-  }
-
-  # If in verbose mode, check catalog entries against packages if found in
-  # same directory as catalog
-  if ($verbose) {
-    if (! -r "$pkg{$field[2]}/$field[3]") {	# Does the file exist?
-      retcode(2);
-      print "ERROR! File $field[3] not found.\n" unless $quiet;
-    } else {
-      if ($field[5] != (stat("$pkg{$field[2]}/$field[3]"))[7]) { # Correct size?
-        retcode(2);
-        print "ERROR! Size does not match for $field[2].\n" unless $quiet;
-      }
-      open (FILE,"<$pkg{$field[2]}/$field[3]");		# MD5 check
-      binmode (FILE);
-      $hash = Digest::MD5->new->addfile(*FILE)->hexdigest;
-      close FILE;
-      if ($hash ne $field[4]) {
-        retcode(2);
-        print "ERROR! MD5 hash does not match for $field[2].\n" unless $quiet;
-      }
-
-      # Unpack package if depends and/or categories are not "none"
-      my $tmpdir = File::Temp::tempdir( DIR => "/tmp", CLEANUP => 1 );
-      $status = system("/bin/gunzip -cf $pkg{$field[2]}/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
-      die "Could not transform $field[2]: $!" if $status;
-
-      # Check deps against depend file in package
-      if ($field[6] ne "none") {
-        $deps = "";
-        if (-r "$tmpdir/$field[2]/install/depend") {
-          open (FILE,"<$tmpdir/$field[2]/install/depend");
-          while (<FILE>) {
-            chomp;
-            if (/^P\s+\w/) {
-              ($deptmp) = (/P\s+([\w\+-]+)/);
-              $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+    # Packages that should not be compressed - common and gzip
+    if ( $field[2] eq "CSWcommon" || $field[2] eq "CSWgzip" ) {
+        if ( $field[3] =~ /\.gz$/ ) {
+            retcode(2);
+            if ( !$quiet ) {
+                print "\nERROR! Package $field[2] is compressed. [$line]\n";
             }
-          }
-        } else {
-          print "No depend file found in $field[2]\n" unless $quiet;
         }
-        if ($deps ne $field[6]) {
-          retcode(2);
-          print "ERROR! Dependencies does not match for $field[2].\n" unless $quiet;
-        }
-      }
-
-      # Check categories against pkginfo file in package
-      if ($field[7] ne "none") {
-        $pkgver = "";
-        $cat = "";
-        open (FILE,"<$tmpdir/$field[2]/pkginfo");
-        while (<FILE>) {
-          chomp;
-          if (/^CSW_CATEGORY=/) {
-            ($cat) = (/=(.+)$/) if (/^CSW_CATEGORY=/);
-            $cat = join('|',split(/,\s?/,$cat));
-          } elsif (/^VERSION=(\S+)/) {
-            $pkgver = $1;
-          }
-          last if $cat && $pkgver;
-        }
-      }
-
-      if ($field[7] ne "none") {
-        if ($cat ne $field[7]) {
-          retcode(2);
-          print "ERROR! Categories does not match for $field[2].\n" unless $quiet;
-        }
-      }
-
-      # Check version field matches filename
-      if ($pkgver && $version && $pkgver ne $version) {
-        retcode(2);
-        print "ERROR! version in filename doesn't match version in pkginfo for $field[2].\n" unless $quiet;
-      }
     }
-  }
 
-  # Add package to array for later duplicate check
-  push(@pkglist,$field[2]);
+    # Check the naming standard - http://opencsw.org/standards/build#versioning
+    my ( $name, $version, $uname, $arch, $footer, $rest ) = split /-/,
+      $field[3];
+    if ( !$footer && $arch ) {
+
+        # Assume arch is missing - it is optional after all
+        $footer = $arch;
+        $arch   = '';
+    }
+
+    if ( $arch && ( $arch ne 'i386' && $arch ne 'sparc' && $arch ne 'all' ) ) {
+        retcode(1) unless $erroronly;
+        if ( !$erroronly && !$quiet ) {
+            print
+"\nWARNING! Package $field[2] has an unknown architecture. [$line]\n";
+        }
+    }
+
+    if ($rest) {
+        retcode(1) unless $erroronly;
+        if ( !$erroronly && !$quiet ) {
+            print
+"\nWARNING! Package $field[2] does not meet the CSW naming standard - too many hyphens. [$line]\n";
+        }
+    }
+
+    if ( $field[3] !~ /\.pkg(\.gz)?$/ ) {
+        retcode(1) unless $erroronly;
+        if ( !$erroronly && !$quiet ) {
+            print
+"\nWARNING! Package $field[2] does not meet the CSW naming standard - should end in .pkg(.gz). [$line]\n";
+        }
+    }
+
+    if ( !$version || $version !~ /[0-9\.]+,REV=(\d{4})\.(\d{2})\.(\d{2})/ ) {
+        retcode(1) unless $erroronly;
+        if ( !$erroronly && !$quiet ) {
+            print
+"\nWARNING! Package $field[2] does not meet the CSW naming standard - REV section incorrect. [$line]\n";
+        }
+    }
+
+    # Check that dependency field begins and ends with a word char
+    if ( $field[6] !~ /^\w/ ) {
+        retcode(2);
+        if ( !$quiet ) {
+            print
+"\nERROR! The dependency field of package $field[2] begins with a non-char. [$line]\n";
+        }
+    }
+    if ( $field[6] =~ /\|$/ ) {    # Non-char is actually used, e.g. gcc2g++
+        retcode(2);
+        if ( !$quiet ) {
+            print
+"\nERROR! The dependency field of package $field[2] ends with a pipe char. [$line]\n";
+        }
+    }
+
+    # Check for SUNW dependencies
+    if ( $field[6] =~ /SUNW/ ) {
+        retcode(1) unless $erroronly;
+        if ( !$erroronly && !$quiet ) {
+            print
+"\nWARNING! The dependency field of package $field[2] contains SUNW packages. [$line]\n";
+        }
+    }
+
+    # Check that no dependencies are missing
+    if ( $field[6] ne "none" ) {
+        foreach ( split( /\|/, $field[6] ) ) {
+            if ( !$pkg{$_} ) {
+                retcode(2);
+                print
+                  "\nERROR! Dependency $_ of package $field[2] is missing.\n"
+                  unless $quiet;
+            }
+        }
+    }
+
+    # Check for packages that depend on themselves
+    if ( $field[6] ne "none" ) {
+        foreach ( split( /\|/, $field[6] ) ) {
+            if ( $_ eq $field[2] ) {
+                retcode(2);
+                print "\nERROR! Package $field[2] depends on itself.\n"
+                  unless $quiet;
+            }
+        }
+    }
+
+    # Check for cyclic dependencies
+    unless ($nocyclic) {
+        my @deplist = ();
+        my $deplen  = 0;
+        push( @deplist, split( /\|/, $field[6] ) ) unless $field[6] eq "none";
+        while ( scalar(@deplist) > 0 ) {
+            my $tmppkg = $deplist[0];
+            shift @deplist;
+            if ( $tmppkg eq $field[2] ) {
+                retcode(2);
+                print
+                  "\nERROR! Cyclic dependency detected in package $field[2].\n"
+                  unless $quiet;
+                last;
+            }
+            my $deplenmax =
+              $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
+            if ( $deplen++ > $deplenmax ) {
+                retcode(1) unless $erroronly;
+                print
+"\nWARNING! Probable cyclic dependency detected in package $field[2]. Loop detection aborts iteration.\n"
+                  unless ( $erroronly || $quiet );
+                last;
+            }
+            if (   $tmppkg ne "none"
+                && $tmppkg ne "CSWcommon"
+                && $pkgdep{$tmppkg} )
+            {
+                my @newdeps = split( /\|/, $pkgdep{$tmppkg} );
+                push( @deplist, @newdeps );
+            }
+        }
+    }
+
+    # Check that category field begins and ends with a word char
+    if ( $field[7] !~ /^\w/ ) {
+        retcode(2);
+        if ( !$quiet ) {
+            print
+"\nERROR! The category field of package $field[2] begins with a non-char. [$line]\n";
+        }
+    }
+    if ( $field[7] !~ /\w$/ ) {
+        retcode(2);
+        if ( !$quiet ) {
+            print
+"\nERROR! The category field of package $field[2] ends with a non-char. [$line]\n";
+        }
+    }
+
+    # If in verbose mode, check catalog entries against packages if found in
+    # same directory as catalog
+    if ($verbose) {
+        if ( !-r "$pkg{$field[2]}/$field[3]" ) {    # Does the file exist?
+            retcode(2);
+            print "ERROR! File $field[3] not found.\n" unless $quiet;
+        }
+        else {
+            if ( $field[5] != ( stat("$pkg{$field[2]}/$field[3]") )[7] )
+            {                                       # Correct size?
+                retcode(2);
+                print "ERROR! Size does not match for $field[2].\n"
+                  unless $quiet;
+            }
+            open( my $FILE, '<', "$pkg{$field[2]}/$field[3]" );    # MD5 check
+            binmode($FILE);
+            $hash = Digest::MD5->new->addfile($FILE)->hexdigest;
+            close $FILE;
+            if ( $hash ne $field[4] ) {
+                retcode(2);
+                print "ERROR! MD5 hash does not match for $field[2].\n"
+                  unless $quiet;
+            }
+
+            # Unpack package if depends and/or categories are not "none"
+            my $tmpdir = File::Temp::tempdir( DIR => "/tmp", CLEANUP => 1 );
+            $status = system(
+"/bin/gunzip -cf $pkg{$field[2]}/$field[3] | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null"
+            );
+            die "Could not transform $field[2]: $!" if $status;
+
+            # Check deps against depend file in package
+            if ( $field[6] ne "none" ) {
+                $deps = "";
+                if ( -r "$tmpdir/$field[2]/install/depend" ) {
+                    open( my $FILE, '<', "$tmpdir/$field[2]/install/depend" );
+                    while (<$FILE>) {
+                        chomp;
+                        if (/^P\s+\w/) {
+                            ($deptmp) = (/P\s+([\w\+-]+)/);
+                            $deps = ($deps) ? "$deps|$deptmp" : $deptmp;
+                        }
+                    }
+                    close $FILE;
+                }
+                else {
+                    print "No depend file found in $field[2]\n" unless $quiet;
+                }
+                if ( $deps ne $field[6] ) {
+                    retcode(2);
+                    print "ERROR! Dependencies does not match for $field[2].\n"
+                      unless $quiet;
+                }
+            }
+
+            # Check categories against pkginfo file in package
+            if ( $field[7] ne "none" ) {
+                $pkgver = "";
+                $cat    = "";
+                open( my $FILE, '<', "$tmpdir/$field[2]/pkginfo" );
+                while (<$FILE>) {
+                    chomp;
+                    if (/^CSW_CATEGORY=/) {
+                        ($cat) = (/=(.+)$/) if (/^CSW_CATEGORY=/);
+                        $cat = join( '|', split( /,\s?/, $cat ) );
+                    }
+                    elsif (/^VERSION=(\S+)/) {
+                        $pkgver = $1;
+                    }
+                    last if $cat && $pkgver;
+                }
+                close $FILE;
+            }
+
+            if ( $field[7] ne "none" ) {
+                if ( $cat ne $field[7] ) {
+                    retcode(2);
+                    print "ERROR! Categories does not match for $field[2].\n"
+                      unless $quiet;
+                }
+            }
+
+            # Check version field matches filename
+            if ( $pkgver && $version && $pkgver ne $version ) {
+                retcode(2);
+                print
+"ERROR! version in filename doesn't match version in pkginfo for $field[2].\n"
+                  unless $quiet;
+            }
+        }
+    }
+
+    # Add package to array for later duplicate check
+    push( @pkglist, $field[2] );
 }
 
 my @tmplist = sort(@pkglist);
-my $dup = "";
-while (scalar(@tmplist) > 1) {	# No need to check for dups if only one entry
-  my $tmp = $tmplist[0];
-  shift @tmplist;
-  if ($tmp eq $tmplist[0] && $dup ne $tmp) {
-    retcode(2);
-    print "ERROR! $tmp exists more than once.\n" unless $quiet;
-    $dup = $tmp;
-  }
+my $dup     = "";
+while ( scalar(@tmplist) > 1 ) {   # No need to check for dups if only one entry
+    my $tmp = $tmplist[0];
+    shift @tmplist;
+    if ( $tmp eq $tmplist[0] && $dup ne $tmp ) {
+        retcode(2);
+        print "ERROR! $tmp exists more than once.\n" unless $quiet;
+        $dup = $tmp;
+    }
 }
 
 exit $rc;
