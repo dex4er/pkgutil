@@ -1,5 +1,5 @@
 #!/bin/sh
-#! -*- perl -*- 
+#! -*- perl -*-
 eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}'
   if 0;
 
@@ -37,179 +37,221 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 # Untainting
-delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};	# Make %ENV safer
+delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
 $ENV{'PATH'} = '/bin:/usr/bin';
 
 # Ensure we always work from a directory that won't
 # be yanked out from under pkgadd/pkgrm.
 chdir('/');
 
-my $debug = 0;
-my $pkgutilver = "2.5b1";
-my $use_md5 = 0;
-my $use_gpg = 0;
-my $noncsw = 0;
+my $debug        = 0;
+my $pkgutilver   = "2.5b1";
+my $use_md5      = 0;
+my $use_gpg      = 0;
+my $noncsw       = 0;
 my $pkgliststyle = 2;
-my $maxpkglist = 100000;
+my $maxpkglist   = 100000;
 my @mirror;
 my $defaultmirror = ("http://mirror.opencsw.org/opencsw/unstable");
-my $workdir = "/var/opt/csw/pkgutil";
+my $workdir       = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
-my ($line,$tmp,$wget,$yes,$force,$nomod,$gzip,$name,$ver,$pkgname,$filename);
-my ($size,$deps,$cat,$tmppkg,$tmppkg2,$trace,$hash);
-my (@exclude,%config,%pkg,%commonpkg,%pkgmirror);
+my (
+    $line, $tmp,  $wget, $yes,     $force, $nomod,
+    $gzip, $name, $ver,  $pkgname, $filename
+);
+my ( $size, $deps, $cat, $tmppkg, $tmppkg2, $trace, $hash );
+my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror );
 
 # Show available packages in catalog (-a/A)
 #   mode  - 0 = display available packages (-a)
 #           1 = compare available packages to those installed (-A)
 #   parse - 0 = normal output, 1 = machine parsable output
 sub available {
-  my ($mode,$parse) = @_;
-  my $tmp;
-  my $local_ver;
+    my ( $mode, $parse ) = @_;
+    my $tmp;
+    my $local_ver;
 
-  unless ($parse) {	# No header when --parse is being used
-    if ($mode == 0) {
-      print "common               package              catalog                        size\n";
-    } else {
-      print "package\t\t\t  catalog\t\t    installed\n";
+    unless ($parse) {    # No header when --parse is being used
+        if ( $mode == 0 ) {
+            print
+"common               package              catalog                        size\n";
+        }
+        else {
+            print "package\t\t\t  catalog\t\t    installed\n";
+        }
     }
-  }
 
-  my $hit = 0;
-  foreach my $common (sort keys %commonpkg) {
-    my $pkgname = $commonpkg{$common};
-    foreach my $remote_ver (sort keys %{$pkg{$pkgname}}) {
-      my($size) = (split /\s+/, $pkg{$pkgname}{$remote_ver})[5];
+    my $hit = 0;
+    foreach my $common ( sort keys %commonpkg ) {
+        my $pkgname = $commonpkg{$common};
+        foreach my $remote_ver ( sort keys %{ $pkg{$pkgname} } ) {
+            my ($size) = ( split /\s+/, $pkg{$pkgname}{$remote_ver} )[5];
 
-      if ($mode == 0) {
-        if ($parse) {
-          $tmp = "$common\t$pkgname\t$remote_ver\t$size\n";
-        } else {
-          $tmp = sprintf ("%-20s %-20s %-25s %9s\n",$common,$pkgname,$remote_ver,format_byte($size));
-        }
-      } else {
-        $local_ver = check_pkg($pkgname,0);
-        $local_ver = "SAME" if ($local_ver eq $remote_ver);
-        $local_ver = "not installed" if ($local_ver eq "notinst");
-        if ($parse) {
-          $tmp = "$pkgname\t$remote_ver\t$local_ver\n";
-        } else {
-          $tmp = sprintf ("%-25s %-25s %-25s\n",$pkgname,$remote_ver,$local_ver);
-        }
-      }
+            if ( $mode == 0 ) {
+                if ($parse) {
+                    $tmp = "$common\t$pkgname\t$remote_ver\t$size\n";
+                }
+                else {
+                    $tmp = sprintf( "%-20s %-20s %-25s %9s\n",
+                        $common, $pkgname, $remote_ver, format_byte($size) );
+                }
+            }
+            else {
+                $local_ver = check_pkg( $pkgname, 0 );
+                $local_ver = "SAME"          if ( $local_ver eq $remote_ver );
+                $local_ver = "not installed" if ( $local_ver eq "notinst" );
+                if ($parse) {
+                    $tmp = "$pkgname\t$remote_ver\t$local_ver\n";
+                }
+                else {
+                    $tmp = sprintf( "%-25s %-25s %-25s\n",
+                        $pkgname, $remote_ver, $local_ver );
+                }
+            }
 
-      if (scalar(@ARGV) > 0) {
-        foreach (@ARGV) {
-          if ("$pkgname-$remote_ver" =~ /$_/ || "$common-$remote_ver" =~ /$_/) {
-            print $tmp;
-            $hit = 1;
-          }
+            if ( scalar(@ARGV) > 0 ) {
+                foreach (@ARGV) {
+                    if (   "$pkgname-$remote_ver" =~ /$_/
+                        || "$common-$remote_ver" =~ /$_/ )
+                    {
+                        print $tmp;
+                        $hit = 1;
+                    }
+                }
+            }
+            else {
+                print $tmp;
+                $hit = 1;
+            }
         }
-      } else {
-        print $tmp;
-        $hit = 1;
-      }
     }
-  }
 
-  # Do fuzzy matching if nothing found
-  unless ($hit || $parse || $mode) {
-    print "\nNo exact matches found, doing fuzzy matching for first argument ($ARGV[0]) ...\n";
-    eval { require String::Approx; };	# Check for String::Approx
-    if ($@) {
-      myexit("String::Approx required for fuzzy matching not found, install with pkgutil -i CSWpmstringapprox to enable.","",0);
-    } else {
-      my @match = String::Approx::amatch($ARGV[0],%commonpkg);
-      if (scalar(@match)) {
-        print "Suggestions: ";
-        foreach (@match) {
-          print "$_ ";
+    # Do fuzzy matching if nothing found
+    unless ( $hit || $parse || $mode ) {
+        print
+"\nNo exact matches found, doing fuzzy matching for first argument ($ARGV[0]) ...\n";
+        eval { require String::Approx; };    # Check for String::Approx
+        if ($@) {
+            myexit(
+"String::Approx required for fuzzy matching not found, install with pkgutil -i CSWpmstringapprox to enable.",
+                "", 0
+            );
         }
-        print "\n";
-      }
+        else {
+            my @match = String::Approx::amatch( $ARGV[0], %commonpkg );
+            if ( scalar(@match) ) {
+                print "Suggestions: ";
+                foreach (@match) {
+                    print "$_ ";
+                }
+                print "\n";
+            }
+        }
     }
-  }
 
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # check binary to avoid trying to use broken wget for example
 #   bin - binary to check
 sub check_binary {
-  my ($bin) = @_;
+    my ($bin) = @_;
 
-  print STDERR "DEBUG:Checking binary: $bin ... " if $debug;
-  my $status = system("/bin/sh -c '$bin --version' >/dev/null 2>/dev/null");
-  print "" . (($status) ? "fail" : "OK") . "\n" if $debug;
-  return 1 if $status;
+    print STDERR "DEBUG:Checking binary: $bin ... " if $debug;
+    my $status = system("/bin/sh -c '$bin --version' >/dev/null 2>/dev/null");
+    print "" . ( ($status) ? "fail" : "OK" ) . "\n" if $debug;
+    return 1 if $status;
 }
 
 # Check catalog
 #   always - always update catalog
 #   parse  - pass through to silence gpg checks
 sub check_catalog {
-  my ($always,$parse) = @_;
+    my ( $always, $parse ) = @_;
 
-  foreach my $url (@mirror) {
-    my $filename = mangle_url($url);
-    my $age = 0;
-    $age = -M $filename if (-r $filename);
-    print STDERR "DEBUG:Catalog $url age in days: $age\n" if $debug;
-    fetch_catalog($url,$filename) if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always);
-    gpg($filename,$parse) if $use_gpg;
-    my $entries = read_catalog($url,$filename); # Once per file
-    print "==> $entries package" . ($entries > 1 ? "s" : "") . " loaded from $filename\n" if (($age > $config{catalog_update} && $config{catalog_update} != -1) || ! -e $filename || $always || $debug);
-  }
+    foreach my $url (@mirror) {
+        my $filename = mangle_url($url);
+        my $age      = 0;
+        $age = -M $filename if ( -r $filename );
+        print STDERR "DEBUG:Catalog $url age in days: $age\n" if $debug;
+        fetch_catalog( $url, $filename )
+          if (
+            ( $age > $config{catalog_update} && $config{catalog_update} != -1 )
+            || !-e $filename
+            || $always );
+        gpg( $filename, $parse ) if $use_gpg;
+        my $entries = read_catalog( $url, $filename );    # Once per file
+        print "==> $entries package"
+          . ( $entries > 1 ? "s" : "" )
+          . " loaded from $filename\n"
+          if (
+            ( $age > $config{catalog_update} && $config{catalog_update} != -1 )
+            || !-e $filename
+            || $always
+            || $debug );
+    }
 }
 
 # Check if package is already installed and if so, which version
 #   pkg  - package to check for
 #   mode - 0 = return full string, 1 = return only rev part
 sub check_pkg {
-  my ($pkg,$mode) = @_;
-  my ($tmp,$exit_code,$retvalue);
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
-  my $test_path = $config{root_path} ? $config{root_path} : "";
+    my ( $pkg, $mode ) = @_;
+    my ( $tmp, $exit_code, $retvalue );
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    my $test_path = $config{root_path} ? $config{root_path}      : "";
 
-  if (! -d "$test_path/var/sadm/pkg/$pkg") {
-    $retvalue = "notinst";
-    print STDERR "DEBUG:$pkg not installed\n" if $debug;
-  } else {
-    $tmp = `/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
-    chomp $tmp;
-    if ($mode == 0) {
-      $retvalue = $tmp;
-    } else {
-      ($retvalue) = ($tmp =~ /REV=(.+)$/);
+    if ( !-d "$test_path/var/sadm/pkg/$pkg" ) {
+        $retvalue = "notinst";
+        print STDERR "DEBUG:$pkg not installed\n" if $debug;
     }
-    print STDERR "DEBUG:$pkg installed, version $retvalue\n" if $debug;
-  }
-  return $retvalue;
+    else {
+        $tmp = `/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
+        chomp $tmp;
+        if ( $mode == 0 ) {
+            $retvalue = $tmp;
+        }
+        else {
+            ($retvalue) = ( $tmp =~ /REV=(.+)$/ );
+        }
+        print STDERR "DEBUG:$pkg installed, version $retvalue\n" if $debug;
+    }
+    return $retvalue;
 }
 
 # Clean up obsolete packages (--cleanup)
 sub cleanup {
-  my @legacy = list_obsolete();
-  print STDERR "DEBUG:" . scalar(@legacy) . " legacy: " . join(" ",@legacy) . "\n" if $debug;
+    my @legacy = list_obsolete();
+    print STDERR "DEBUG:"
+      . scalar(@legacy)
+      . " legacy: "
+      . join( " ", @legacy ) . "\n"
+      if $debug;
 
-  my @deps = list_deps();
-  print STDERR "DEBUG:" . scalar(@deps) . " deps: " . join(" ",@deps) . "\n" if $debug;
+    my @deps = list_deps();
+    print STDERR "DEBUG:"
+      . scalar(@deps)
+      . " deps: "
+      . join( " ", @deps ) . "\n"
+      if $debug;
 
-  my @obsolete;
-  foreach my $pkg (@legacy) {
-    push(@obsolete,$pkg) unless (grep { /^$pkg$/ } @deps);
-  }
-  my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
-  print scalar(@obsolete) . " OBSOLETE package" . (scalar(@obsolete) > 1 ? "s" : "");
-  if (scalar(@obsolete)) {
-    print ":$pkgsep" . join("$pkgsep",@obsolete) . "\n";
-    rem_pkgs(@obsolete);
-  } else {
-    print "s.\n\n";
-  }
-  myexit("","",0);
+    my @obsolete;
+    foreach my $pkg (@legacy) {
+        push( @obsolete, $pkg ) unless ( grep { /^$pkg$/ } @deps );
+    }
+    my $pkgsep = ( $pkgliststyle ? "\n\t" : " " );
+    print scalar(@obsolete)
+      . " OBSOLETE package"
+      . ( scalar(@obsolete) > 1 ? "s" : "" );
+    if ( scalar(@obsolete) ) {
+        print ":$pkgsep" . join( "$pkgsep", @obsolete ) . "\n";
+        rem_pkgs(@obsolete);
+    }
+    else {
+        print "s.\n\n";
+    }
+    myexit( "", "", 0 );
 }
 
 # Compare current to available packages (-c/C)
@@ -218,298 +260,351 @@ sub cleanup {
 #           4 = compare a single package (much faster, used with Puppet)
 #   parse - 0 = normal output, 1 = machine parsable output
 sub compare {
-  my ($mode,$parse) = @_;
-  my (@cswpkgs,@retlist);
-  my ($pkg,$local_ver,$remote_ver,$tmp);
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    my ( $mode, $parse ) = @_;
+    my ( @cswpkgs, @retlist );
+    my ( $pkg, $local_ver, $remote_ver, $tmp );
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  unless ($parse) {	# No header when --parse is being used
-    print "package\t\t\t  installed\t\t    catalog\n" if ($mode == 0 || $mode == 3);
-  }
-  if ($mode == 4) {
-    $cswpkgs[0] = "a " . parse_catalog($ARGV[0],2) . " a";
-    myexit("Not in catalog","",0) if ($cswpkgs[0] eq "a not in catalog a");
-  } else {
-    if ($noncsw) {
-      @cswpkgs = `/bin/pkginfo $root_path`;
-    } else {
-      @cswpkgs = `/bin/pkginfo $root_path | grep CSW`;
+    unless ($parse) {    # No header when --parse is being used
+        print "package\t\t\t  installed\t\t    catalog\n"
+          if ( $mode == 0 || $mode == 3 );
     }
-  }
-  foreach $pkg (@cswpkgs) {
-    ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
-    $local_ver = check_pkg($pkg,0);
-    $remote_ver = parse_catalog($pkg,1);
-    $remote_ver = "SAME" if ($local_ver eq $remote_ver);
-    if ($mode == 1) {
-      push(@retlist,$pkg) if ($remote_ver ne "SAME" && $remote_ver ne "not in catalog");
-    } else {
-      if ($parse) {
-        $tmp = "$pkg\t$local_ver\t$remote_ver\n";
-      } else {
-        $tmp = sprintf ("%-25s %-25s %-25s\n",$pkg,$local_ver,$remote_ver);
-      }
-      if ($mode == 2) {
-        push(@retlist,$tmp) if ($remote_ver ne "SAME" && $remote_ver ne "not in catalog");
-      } else {
-        if (scalar(@ARGV) > 0 && $mode != 4) {
-          foreach (@ARGV) {
-            if ($pkg =~ /$_/) {
-              print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
-            }
-          }
-        } else {
-          print $tmp unless ($mode == 3 && $remote_ver eq "SAME");
+    if ( $mode == 4 ) {
+        $cswpkgs[0] = "a " . parse_catalog( $ARGV[0], 2 ) . " a";
+        myexit( "Not in catalog", "", 0 )
+          if ( $cswpkgs[0] eq "a not in catalog a" );
+    }
+    else {
+        if ($noncsw) {
+            @cswpkgs = `/bin/pkginfo $root_path`;
         }
-      }
+        else {
+            @cswpkgs = `/bin/pkginfo $root_path | grep CSW`;
+        }
     }
-  } 
-  if ($mode == 1 || $mode == 2) {
-    return @retlist;
-  } else {
-    myexit("","",0);
-  }
+    foreach $pkg (@cswpkgs) {
+        ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
+        $local_ver = check_pkg( $pkg, 0 );
+        $remote_ver = parse_catalog( $pkg, 1 );
+        $remote_ver = "SAME" if ( $local_ver eq $remote_ver );
+        if ( $mode == 1 ) {
+            push( @retlist, $pkg )
+              if ( $remote_ver ne "SAME" && $remote_ver ne "not in catalog" );
+        }
+        else {
+            if ($parse) {
+                $tmp = "$pkg\t$local_ver\t$remote_ver\n";
+            }
+            else {
+                $tmp = sprintf( "%-25s %-25s %-25s\n",
+                    $pkg, $local_ver, $remote_ver );
+            }
+            if ( $mode == 2 ) {
+                push( @retlist, $tmp )
+                  if ( $remote_ver ne "SAME"
+                    && $remote_ver ne "not in catalog" );
+            }
+            else {
+                if ( scalar(@ARGV) > 0 && $mode != 4 ) {
+                    foreach (@ARGV) {
+                        if ( $pkg =~ /$_/ ) {
+                            print $tmp
+                              unless ( $mode == 3 && $remote_ver eq "SAME" );
+                        }
+                    }
+                }
+                else {
+                    print $tmp unless ( $mode == 3 && $remote_ver eq "SAME" );
+                }
+            }
+        }
+    }
+    if ( $mode == 1 || $mode == 2 ) {
+        return @retlist;
+    }
+    else {
+        myexit( "", "", 0 );
+    }
 }
 
 # Deduplicate a list
 #   list - list to deduplicate
 sub dedup {
-  my @list = @_;
-  my %deduped;
-  my @tmplist;
+    my @list = @_;
+    my %deduped;
+    my @tmplist;
 
-  for my $pkg (@list) {
-    unless (exists $deduped{$pkg}) {
-      push(@tmplist,$pkg);
-      $deduped{$pkg} = 1;
+    for my $pkg (@list) {
+        unless ( exists $deduped{$pkg} ) {
+            push( @tmplist, $pkg );
+            $deduped{$pkg} = 1;
+        }
     }
-  }
-  return @tmplist;
+    return @tmplist;
 }
 
 # Display package dependencies as a tree (--deptree)
 #   depth - number of levels to show
 sub deptree {
-  my ($depth) = @_;
-  my (@pkgarray,@rest,@j);
-  my $level = 0;
-  my $true;
+    my ($depth) = @_;
+    my ( @pkgarray, @rest, @j );
+    my $level = 0;
+    my $true;
 
-  foreach (@ARGV) {
-    undef @pkgarray;
-    $pkgarray[0] = $_;
+    foreach (@ARGV) {
+        undef @pkgarray;
+        $pkgarray[0] = $_;
 
-    foreach (@pkgarray) {
-      my $pkg = parse_catalog($_,2);	# Get package name
-      my $deps = parse_catalog($_,6);	# Get dependencies
+        foreach (@pkgarray) {
+            my $pkg  = parse_catalog( $_, 2 );    # Get package name
+            my $deps = parse_catalog( $_, 6 );    # Get dependencies
 
-      unless ($pkg eq "CSWcommon" && $config{deptree_filter_common} eq "true" || $level > $depth) {
-        for(my $i = 0; $i < $level; $i++) {
-          print "- ";
+            unless ( $pkg eq "CSWcommon"
+                && $config{deptree_filter_common} eq "true"
+                || $level > $depth )
+            {
+                for ( my $i = 0 ; $i < $level ; $i++ ) {
+                    print "- ";
+                }
+                print "$pkg\n";
+            }
+
+            if ( $deps ne "none" ) {
+                my @tmplist = split( /\|/, $deps );
+                unshift( @rest, @tmplist );    # Add deps to rest list
+                $level++;                      # Increment level
+                $j[$level] = scalar(@tmplist); # Nr of deps on this level
+            }
+
+            push( @pkgarray, shift(@rest) ) if ( scalar(@rest) > 0 );
+
+            $true = 1;
+            while ( $true && $level > 0 )
+            {    # How many levels do we need to back up?
+                if ( $deps eq "none" && $j[$level] == 0 ) {
+                    $level--;
+                }
+                else {
+                    $true = 0;
+                }
+            }
+
+            $j[$level]--;    # Lower nr of remaining deps on this level
         }
-        print "$pkg\n";
-      }
-
-      if ($deps ne "none") {
-        my @tmplist = split(/\|/,$deps);
-        unshift(@rest,@tmplist);		# Add deps to rest list
-        $level++;				# Increment level
-        $j[$level] = scalar(@tmplist);	# Nr of deps on this level
-      }
-
-      push(@pkgarray,shift(@rest)) if (scalar(@rest) > 0);
-
-      $true = 1;
-      while ($true && $level > 0) {	# How many levels do we need to back up?
-        if ($deps eq "none" && $j[$level] == 0) {
-          $level--;
-        } else {
-          $true = 0;
-        }
-      }
-
-      $j[$level]--;	# Lower nr of remaining deps on this level
     }
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Describe available packages (--describe)
 #   parse - 0 = normal output, 1 = machine parsable output
 sub describe {
-  my ($parse) = @_;
-  my $desc_file = mangle_url($mirror[0]);
-  $desc_file =~ s|/catalog\.|/descriptions\.|;
+    my ($parse) = @_;
+    my $desc_file = mangle_url( $mirror[0] );
+    $desc_file =~ s|/catalog\.|/descriptions\.|;
 
-  myexit("No descriptions file available. Try pkgutil -U.","",1) unless (-r $desc_file && -s _);
-  open(DESC,"<$desc_file");
-  while (my $line = <DESC>) {
-    chomp $line;
-    $line =~ s/ - /\t/ if $parse;
-    if (scalar(@ARGV) > 0) {
-      foreach (@ARGV) {
-        print "$line\n" if ($line =~ /$_/);
-      }
-    } else {
-      print "$line\n";
+    myexit( "No descriptions file available. Try pkgutil -U.", "", 1 )
+      unless ( -r $desc_file && -s _ );
+    open( DESC, "<$desc_file" );
+    while ( my $line = <DESC> ) {
+        chomp $line;
+        $line =~ s/ - /\t/ if $parse;
+        if ( scalar(@ARGV) > 0 ) {
+            foreach (@ARGV) {
+                print "$line\n" if ( $line =~ /$_/ );
+            }
+        }
+        else {
+            print "$line\n";
+        }
     }
-  }
-  close DESC;
-  myexit("","",0);
+    close DESC;
+    myexit( "", "", 0 );
 }
 
 # Email notifications when updates are available (-e)
 #   email - address to send notications to
 sub email {
-  my ($email) = @_;
-  my ($fh,$file);
+    my ($email) = @_;
+    my ( $fh, $file );
 
-  eval { require File::Temp; };	# Check for File::Temp
-  $file = "/tmp/pkgutil.$$.$^T" if ($@);	# Use less safe method if File::Temp not available
+    eval { require File::Temp; };    # Check for File::Temp
+    $file = "/tmp/pkgutil.$$.$^T"
+      if ($@);    # Use less safe method if File::Temp not available
 
-  myexit("Mailx not found on system!","",1) unless (-x "/bin/mailx");
-  my @update_list = compare(2);
-  if (scalar(@update_list) > 0) {
-    if (defined $file) {
-      open ($fh,">$file") or myexit("Can't open $file","$!",1);
-    } else {
-      ($fh,$file) = File::Temp::tempfile( DIR => "/tmp" );
+    myexit( "Mailx not found on system!", "", 1 ) unless ( -x "/bin/mailx" );
+    my @update_list = compare(2);
+    if ( scalar(@update_list) > 0 ) {
+        if ( defined $file ) {
+            open( $fh, ">$file" ) or myexit( "Can't open $file", "$!", 1 );
+        }
+        else {
+            ( $fh, $file ) = File::Temp::tempfile( DIR => "/tmp" );
+        }
+        foreach (@update_list) {
+            print $fh $_;
+        }
+        chomp( my $host = `uname -n` );
+        my $subject = "$host: CSW updates available";
+        my @args    = ("/bin/mailx -s \"$subject\" $email < $file");
+        system(@args);
+        unlink $file;
     }
-    foreach (@update_list) {
-      print $fh $_;
-    }
-    chomp(my $host = `uname -n`);
-    my $subject = "$host: CSW updates available";
-    my @args = ("/bin/mailx -s \"$subject\" $email < $file");
-    system (@args);
-    unlink $file;
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Extract downloaded packages (--extract)
 #   pkglist - list of packages to extract (from install sub)
 sub extract_pkg {
-  my (@pkglist) = @_;
+    my (@pkglist) = @_;
 
-  foreach (@pkglist) {		# pkgtrans them one by one
-    my $file = parse_catalog($_,3);
-    print "Extracting $_ to $pkgdir/" . parse_catalog($_,2) . " ...\n";
-    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    myexit("Could not extract $file (directory may already exist)","",1) if $status;
-  }
+    foreach (@pkglist) {    # pkgtrans them one by one
+        my $file = parse_catalog( $_, 3 );
+        print "Extracting $_ to $pkgdir/" . parse_catalog( $_, 2 ) . " ...\n";
+        my $status = system(
+"$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null"
+        );
+        myexit( "Could not extract $file (directory may already exist)", "", 1 )
+          if $status;
+    }
 }
 
 # Fetch catalog
 #   url - url to download from
 #   filename - filename to use for local catalog
 sub fetch_catalog {
-  my($url,$filename) = @_;
-  my $wgetopts = "";
-  my $status;
+    my ( $url, $filename ) = @_;
+    my $wgetopts = "";
+    my $status;
 
-  $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
-  $wgetopts .= " --execute cache=off" if ($config{catalog_not_cached} eq "true");
-  print "=> Fetching new catalog and descriptions ($url) if available ...\n";
-  myexit("Option -n selected, stopping here.","",0) if $nomod;
+    $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
+    $wgetopts .= " --execute cache=off"
+      if ( $config{catalog_not_cached} eq "true" );
+    print "=> Fetching new catalog and descriptions ($url) if available ...\n";
+    myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
 
-  my $desc_file = $filename;
-  $desc_file =~ s|/catalog\.?|/descriptions\.|;
-  unlink "${filename}.tmp","${desc_file}.tmp";
-  if ($url =~ /^file:/) {	# file method used, use cp
-    my ($tmpcatsrc) = ($url =~ /^file:\/(.+)$/);
-    $status = system("/bin/cp","$tmpcatsrc/catalog","${filename}.tmp");
-    if ($status) {
-      myexit("\nFetching of catalog failed.","",1);
-    } else {
-      rename "${filename}.tmp",$filename;
+    my $desc_file = $filename;
+    $desc_file =~ s|/catalog\.?|/descriptions\.|;
+    unlink "${filename}.tmp", "${desc_file}.tmp";
+    if ( $url =~ /^file:/ ) {    # file method used, use cp
+        my ($tmpcatsrc) = ( $url =~ /^file:\/(.+)$/ );
+        $status = system( "/bin/cp", "$tmpcatsrc/catalog", "${filename}.tmp" );
+        if ($status) {
+            myexit( "\nFetching of catalog failed.", "", 1 );
+        }
+        else {
+            rename "${filename}.tmp", $filename;
+        }
+        $status =
+          system( "/bin/cp", "$tmpcatsrc/descriptions", "${desc_file}.tmp" );
+        if ($status) {
+            print
+"Warning: the descriptions file could not be fetched. The --describe option will not be available.\n"
+              if $status;
+        }
+        else {
+            rename "${desc_file}.tmp", $desc_file;
+        }
     }
-    $status = system("/bin/cp","$tmpcatsrc/descriptions","${desc_file}.tmp");
-    if ($status) {
-      print "Warning: the descriptions file could not be fetched. The --describe option will not be available.\n" if $status;
-    } else {
-      rename "${desc_file}.tmp",$desc_file;
+    else {    # http/ftp used, use wget
+        locate_wget() unless ( -x $wget );    # If wget disappeared locate alt.
+        $status = system( "$wget", split( ' ', $wgetopts ),
+            "-O", "${filename}.tmp", "$url/catalog" );
+        if ($status) {
+            myexit( "\nFetching of catalog failed.", "", 1 );
+        }
+        else {
+            rename "${filename}.tmp", $filename;
+        }
+        $status = system( "$wget", split( ' ', $wgetopts ),
+            "-O", "${desc_file}.tmp", "$url/descriptions" );
+        if ($status) {
+            print
+"Warning: the descriptions file could not be fetched. The --describe option will not be available"
+              if $status;
+        }
+        else {
+            rename "${desc_file}.tmp", $desc_file;
+        }
     }
-  } else {	# http/ftp used, use wget
-    locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
-    $status = system("$wget",split(' ',$wgetopts),"-O","${filename}.tmp","$url/catalog");
-    if ($status) {
-      myexit("\nFetching of catalog failed.","",1);
-    } else {
-      rename "${filename}.tmp",$filename;
-    }
-    $status = system("$wget",split(' ',$wgetopts),"-O","${desc_file}.tmp","$url/descriptions");
-    if ($status) {
-      print "Warning: the descriptions file could not be fetched. The --describe option will not be available" if $status;
-    } else {
-      rename "${desc_file}.tmp",$desc_file;
-    }
-  }
-  system("/bin/touch",$filename) if (-w $filename);
+    system( "/bin/touch", $filename ) if ( -w $filename );
 }
 
 # Get wanted package and its dependencies
 #   pkglist - packages to fetch
 #   mode - 4 = stream silent
 sub fetch_pkgs {
-  my ($mode,@pkglist) = @_;
-  my $wgetopts = "";
-  my ($file,$status);
-  my $fh = ($mode == 4 ? *STDERR : *STDOUT);
+    my ( $mode, @pkglist ) = @_;
+    my $wgetopts = "";
+    my ( $file, $status );
+    my $fh = ( $mode == 4 ? *STDERR : *STDOUT );
 
-  if (scalar(@pkglist) > 1 && ! $yes) {
-    print scalar(@pkglist)," packages to fetch. Do you want to continue? ([y],n,auto) ";
-    chomp (my $prompt = <STDIN>);
-    if ($prompt =~ /^[nN]/) {
-      myexit("","",0);
-    } elsif ($prompt =~ /^a(uto)*/i) {
-      print "Turning on automatic mode as if --yes was passed.\n";
-      $yes = 1;
-    }
-  }
-  $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
-  my $i = 1;
-  foreach my $pkg (@pkglist) {
-    $file = parse_catalog($pkg,3);
-    if (-r "$pkgdir/$file" && -s _ != parse_catalog($pkg,5)) {	# Broken/empty files may be present
-      print $fh "Removing non-matching local file for $pkg.\n";
-      unlink "$pkgdir/$file";
-    }
-    if (-r "$pkgdir/$file") {
-      $i++;
-      print $fh "A local copy of $pkg exists and is of matching size.\n";
-    } else {
-      print $fh "=> Fetching $pkg (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
-      locate_wget() unless (-x $wget);	# If wget disappeared locate alt.
-      my $tried;
-      foreach (@{$pkgmirror{$file}}) {
-        $tried = 1;
-        unlink "$pkgdir/${file}.tmp";
-        if ($_ =~ /^file:/) {
-          my ($tmpcatsrc) = ($_ =~ /^file:\/(.+)$/);
-          run_hooks("prefetch", "$tmpcatsrc/$file", $pkg);
-          $status = system("/bin/cp","$tmpcatsrc/$file","$pkgdir/${file}.tmp");
-        } else {
-          run_hooks("prefetch", "$_/$file", $pkg);
-
-          ## Testing curl as download method
-          ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
-
-          $status = system("$wget",split(' ',$wgetopts),"-O","$pkgdir/${file}.tmp","$_/$file");
+    if ( scalar(@pkglist) > 1 && !$yes ) {
+        print scalar(@pkglist),
+          " packages to fetch. Do you want to continue? ([y],n,auto) ";
+        chomp( my $prompt = <STDIN> );
+        if ( $prompt =~ /^[nN]/ ) {
+            myexit( "", "", 0 );
         }
-        unless ($status) {
-          run_hooks("postfetch", "$_/$file", $pkg);
-          last;
+        elsif ( $prompt =~ /^a(uto)*/i ) {
+            print "Turning on automatic mode as if --yes was passed.\n";
+            $yes = 1;
         }
-      }
-      if ($status || ! $tried) {
-        myexit("\nFetching of $pkg failed. Try updating your catalog with pkgutil -U.","",1);
-      } else {
-        rename "$pkgdir/${file}.tmp","$pkgdir/$file";
-      }
     }
-    md5($pkg,"$pkgdir/$file",$mode) if $use_md5;
-  }
+    $wgetopts .= " $config{wgetopts}" if $config{wgetopts};
+    my $i = 1;
+    foreach my $pkg (@pkglist) {
+        $file = parse_catalog( $pkg, 3 );
+        if ( -r "$pkgdir/$file" && -s _ != parse_catalog( $pkg, 5 ) )
+        {    # Broken/empty files may be present
+            print $fh "Removing non-matching local file for $pkg.\n";
+            unlink "$pkgdir/$file";
+        }
+        if ( -r "$pkgdir/$file" ) {
+            $i++;
+            print $fh "A local copy of $pkg exists and is of matching size.\n";
+        }
+        else {
+            print $fh "=> Fetching $pkg ("
+              . $i++ . "/"
+              . scalar(@pkglist)
+              . ") ...\n";
+            locate_wget() unless ( -x $wget ); # If wget disappeared locate alt.
+            my $tried;
+            foreach ( @{ $pkgmirror{$file} } ) {
+                $tried = 1;
+                unlink "$pkgdir/${file}.tmp";
+                if ( $_ =~ /^file:/ ) {
+                    my ($tmpcatsrc) = ( $_ =~ /^file:\/(.+)$/ );
+                    run_hooks( "prefetch", "$tmpcatsrc/$file", $pkg );
+                    $status = system( "/bin/cp", "$tmpcatsrc/$file",
+                        "$pkgdir/${file}.tmp" );
+                }
+                else {
+                    run_hooks( "prefetch", "$_/$file", $pkg );
+
+                    ## Testing curl as download method
+                    ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
+
+                    $status = system( "$wget", split( ' ', $wgetopts ),
+                        "-O", "$pkgdir/${file}.tmp", "$_/$file" );
+                }
+                unless ($status) {
+                    run_hooks( "postfetch", "$_/$file", $pkg );
+                    last;
+                }
+            }
+            if ( $status || !$tried ) {
+                myexit(
+"\nFetching of $pkg failed. Try updating your catalog with pkgutil -U.",
+                    "", 1
+                );
+            }
+            else {
+                rename "$pkgdir/${file}.tmp", "$pkgdir/$file";
+            }
+        }
+        md5( $pkg, "$pkgdir/$file", $mode ) if $use_md5;
+    }
 }
 
 ## Global vars
@@ -564,97 +659,114 @@ sub fetch_pkgs {
 
 # Find files in package (-F)
 sub find_file {
-  my $contents = "/var/sadm/install/contents";
+    my $contents = "/var/sadm/install/contents";
 
-  foreach (@ARGV) {
-    open (FILE,"<$contents") or myexit("Can't open $contents","$!",1);
-    while(my $line = <FILE>) {
-      chomp $line;
-      my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
-      ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-      print "$file\t$pkg\n" if ($file =~ /\Q$_\E/);
+    foreach (@ARGV) {
+        open( FILE, "<$contents" ) or myexit( "Can't open $contents", "$!", 1 );
+        while ( my $line = <FILE> ) {
+            chomp $line;
+            my ( $file, $pkg ) = ( $line =~ /^(.+?)\s.+\s(.+)$/ );
+            ($file) = ( $file =~ /^(.+)=/ ) if ( $file =~ /=/ );
+            print "$file\t$pkg\n" if ( $file =~ /\Q$_\E/ );
+        }
+        close FILE;
     }
-    close FILE;
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Format size in bytes to more human friendly format with suffixes
 #   size - size in bytes
 sub format_byte {
-  my ($size) = @_;
-  my $suffix = "B";
+    my ($size) = @_;
+    my $suffix = "B";
 
-  if ($size > 1024) {
-    $size /= 1024;
-    $suffix = "KB";
-  }
-  if ($size > 1024) {
-    $size /= 1024;
-    $suffix = "MB";
-  }
-  if ($size > 1024) {
-    $size /= 1024;
-    $suffix = "GB";
-  }
-  return sprintf ("%1.1f %s",$size,$suffix);
+    if ( $size > 1024 ) {
+        $size /= 1024;
+        $suffix = "KB";
+    }
+    if ( $size > 1024 ) {
+        $size /= 1024;
+        $suffix = "MB";
+    }
+    if ( $size > 1024 ) {
+        $size /= 1024;
+        $suffix = "GB";
+    }
+    return sprintf( "%1.1f %s", $size, $suffix );
 }
 
 # Get which distribution a package is in
 #   package - package to check
 sub get_dist {
-  my ($package) = @_;
+    my ($package) = @_;
 
-  my $file = parse_catalog($_,3);
-  my @catalog = (@{$pkgmirror{$file}});
-  #my ($dist) = ($catalog[0] =~ /^.*\/(\S+)\/[i386|sparc]/); # show last part
-  my ($dist) = ($catalog[0] =~ /^.*\/(\S+\/\S+)\/[i386|sparc]/); # show two last parts
-  print STDERR "DEBUG:dist:$dist\n" if $debug;
+    my $file = parse_catalog( $_, 3 );
+    my @catalog = ( @{ $pkgmirror{$file} } );
 
-  return $dist;
+    #my ($dist) = ($catalog[0] =~ /^.*\/(\S+)\/[i386|sparc]/); # show last part
+    my ($dist) =
+      ( $catalog[0] =~ /^.*\/(\S+\/\S+)\/[i386|sparc]/ );  # show two last parts
+    print STDERR "DEBUG:dist:$dist\n" if $debug;
+
+    return $dist;
 }
 
 # Check signature on catalog
 #   catalog - filename of catalog to gpg check
 #   parse   - silence output if set
 sub gpg {
-  my ($catalog,$parse) = @_;
-  my $line;
-  my $gpg_signed_catalog = 0;
+    my ( $catalog, $parse ) = @_;
+    my $line;
+    my $gpg_signed_catalog = 0;
 
-  if (! -x "/opt/csw/bin/gpg") {
-    myexit("GPG not found! Install CSWgnupg (pkgutil -i CSWgnupg) or disable use_gpg in pkgutil.conf.","",1);
-  }
-  open (CATALOG,"<$catalog") or myexit("Can't open $catalog","$!",1);
-  while ($line = <CATALOG>) {
-    $gpg_signed_catalog = 1 if ($line =~ /-BEGIN PGP SIGNED MESSAGE-/);
-    last;
-  }
-  close CATALOG;
-  print STDERR "DEBUG:GPG catalog: $gpg_signed_catalog\n" if $debug;
-  if ($gpg_signed_catalog) {
-    print "Checking integrity of $catalog with gpg.\n" unless $parse;
-    my $gpghomedir = "";
-    if ($config{gpg_homedir}) {
-      $gpghomedir = "--homedir $config{gpg_homedir}";
-    } else {
-      if (check_pkg("CSWcswpki",0) eq "notinst") {
-        $gpghomedir = "";
-      } else {
-        $gpghomedir = "--homedir /var/opt/csw/pki";
-      }
+    if ( !-x "/opt/csw/bin/gpg" ) {
+        myexit(
+"GPG not found! Install CSWgnupg (pkgutil -i CSWgnupg) or disable use_gpg in pkgutil.conf.",
+            "", 1
+        );
     }
-    my $status = system("/opt/csw/bin/gpg",split(' ',$gpghomedir),"--verify","$catalog");
-    print STDERR "DEBUG:GPG signature: " . (($status) ? "Bad" : "Good") . "\n" if $debug;
-    myexit("Bad signature detected in catalog!","",1) if $status;
-    rename($catalog, $catalog . ".asc") or myexit("Could not rename catalog!","",1);
-    $status = system("/opt/csw/bin/gpg",split(' ',$gpghomedir),"$catalog.asc","2>","/dev/null");
-    myexit("Catalog signature is not correct!","",1) if $status;
-    rename($catalog . ".asc", $catalog) or myexit("Could not rename catalog!","",1);
-    print STDERR "DEBUG:Status GPG: $status\n" if $debug;
-  } else {
-    myexit("Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.","",1);
-  }
+    open( CATALOG, "<$catalog" ) or myexit( "Can't open $catalog", "$!", 1 );
+    while ( $line = <CATALOG> ) {
+        $gpg_signed_catalog = 1 if ( $line =~ /-BEGIN PGP SIGNED MESSAGE-/ );
+        last;
+    }
+    close CATALOG;
+    print STDERR "DEBUG:GPG catalog: $gpg_signed_catalog\n" if $debug;
+    if ($gpg_signed_catalog) {
+        print "Checking integrity of $catalog with gpg.\n" unless $parse;
+        my $gpghomedir = "";
+        if ( $config{gpg_homedir} ) {
+            $gpghomedir = "--homedir $config{gpg_homedir}";
+        }
+        else {
+            if ( check_pkg( "CSWcswpki", 0 ) eq "notinst" ) {
+                $gpghomedir = "";
+            }
+            else {
+                $gpghomedir = "--homedir /var/opt/csw/pki";
+            }
+        }
+        my $status = system( "/opt/csw/bin/gpg", split( ' ', $gpghomedir ),
+            "--verify", "$catalog" );
+        print STDERR "DEBUG:GPG signature: "
+          . ( ($status) ? "Bad" : "Good" ) . "\n"
+          if $debug;
+        myexit( "Bad signature detected in catalog!", "", 1 ) if $status;
+        rename( $catalog, $catalog . ".asc" )
+          or myexit( "Could not rename catalog!", "", 1 );
+        $status = system( "/opt/csw/bin/gpg", split( ' ', $gpghomedir ),
+            "$catalog.asc", "2>", "/dev/null" );
+        myexit( "Catalog signature is not correct!", "", 1 ) if $status;
+        rename( $catalog . ".asc", $catalog )
+          or myexit( "Could not rename catalog!", "", 1 );
+        print STDERR "DEBUG:Status GPG: $status\n" if $debug;
+    }
+    else {
+        myexit(
+"Catalog $catalog is not signed! Check your mirror settings or disable use_gpg in pkgutil.conf.",
+            "", 1
+        );
+    }
 }
 
 # Initialize (note that this section is before options are parsed so
@@ -662,157 +774,186 @@ sub gpg {
 #   conf - custom configuration
 #   param - configuration overrides
 sub init {
-  my ($conf,@param) = @_;
-  my @conf_file;
-  if ($conf) {
-    @conf_file = ($conf);
-  } else {
-    @conf_file = ("/opt/csw/etc/pkgutil.conf","/etc/opt/csw/pkgutil.conf");
-  }
-  %config = ("mirror"			=> [],
-             "pkgaddopts"		=> "",
-             "wgetopts"			=> "",
-             "use_gpg"			=> "",
-             "use_md5"			=> "",
-             "pkgliststyle"		=> "2",
-             "maxpkglist"		=> "",
-             "noncsw"			=> "",
-             "stop_on_hook_soft_error"	=> "",
-             "exclude_pattern"		=> "",
-             "gpg_homedir"		=> "",
-             "root_path"		=> "",
-             "deptree_filter_common"	=> "",
-             "show_current"		=> "true",
-             "catalog_not_cached"	=> "true",
-             "catalog_update"		=> "14");
+    my ( $conf, @param ) = @_;
+    my @conf_file;
+    if ($conf) {
+        @conf_file = ($conf);
+    }
+    else {
+        @conf_file =
+          ( "/opt/csw/etc/pkgutil.conf", "/etc/opt/csw/pkgutil.conf" );
+    }
+    %config = (
+        "mirror"                  => [],
+        "pkgaddopts"              => "",
+        "wgetopts"                => "",
+        "use_gpg"                 => "",
+        "use_md5"                 => "",
+        "pkgliststyle"            => "2",
+        "maxpkglist"              => "",
+        "noncsw"                  => "",
+        "stop_on_hook_soft_error" => "",
+        "exclude_pattern"         => "",
+        "gpg_homedir"             => "",
+        "root_path"               => "",
+        "deptree_filter_common"   => "",
+        "show_current"            => "true",
+        "catalog_not_cached"      => "true",
+        "catalog_update"          => "14"
+    );
 
-  foreach my $file (@conf_file) {
-    if (-r $file) {	# If conf file found, parse it
-      print STDERR "DEBUG:Conf file: $file\n" if $debug; 
-      open (CONFIG,"<$file") or myexit("Can't open $file","$!",1);
-      while (<CONFIG>) {
-        chomp;	# Remove newline
-        s/#.*//;	# Remove comments
-        s/^\s+//;	# Remove leading white
-        s/\s+$//;	# Remove trailing white
-        next unless length;	# Next if nothing left
-        my ($var,$value) = split(/\s*=\s*/,$_,2);
-	unless (exists $config{$var}) {
-	  print "Unrecognized option (in $file): $var\n";
-	  next;
+    foreach my $file (@conf_file) {
+        if ( -r $file ) {    # If conf file found, parse it
+            print STDERR "DEBUG:Conf file: $file\n" if $debug;
+            open( CONFIG, "<$file" ) or myexit( "Can't open $file", "$!", 1 );
+            while (<CONFIG>) {
+                chomp;       # Remove newline
+                s/#.*//;     # Remove comments
+                s/^\s+//;    # Remove leading white
+                s/\s+$//;    # Remove trailing white
+                next unless length;    # Next if nothing left
+                my ( $var, $value ) = split( /\s*=\s*/, $_, 2 );
+                unless ( exists $config{$var} ) {
+                    print "Unrecognized option (in $file): $var\n";
+                    next;
+                }
+                print STDERR "DEBUG:Found $var = $value\n" if $debug;
+                my $r = ref( $config{$var} );
+                if ( !$r ) {
+                    $config{$var} = $value;
+                }
+                elsif ( $r eq 'ARRAY' ) {
+                    if ( grep { /^$value$/ } @{ $config{$var} } ) {
+                        print STDERR
+                          "Duplicate mirror definition skipped ($value).\n";
+                    }
+                    else {
+                        push( @{ $config{$var} }, $value );
+                    }
+                }
+            }
+            close CONFIG;
         }
-        print STDERR "DEBUG:Found $var = $value\n" if $debug;
-        my $r = ref($config{$var});
-        if (! $r) {
-          $config{$var} = $value;
-        } elsif ($r eq 'ARRAY') {
-          if (grep { /^$value$/ } @{$config{$var}}) {
-            print STDERR "Duplicate mirror definition skipped ($value).\n";
-          } else {
-            push(@{$config{$var}},$value);
-          }
+    }
+
+    # Configuration overrides using -p
+    foreach (@param) {
+        if (/mirror/) {
+            print STDERR "Do not use -p for mirror, use -t instead!\n";
+            next;
         }
-      }
-      close CONFIG;
+        my ( $var, $value ) = split(/:/);
+        unless ( exists $config{$var} ) {
+            print "Unrecognized option (using --param): $var\n";
+            next;
+        }
+        my $r = ref( $config{$var} );
+        if ( !$r ) {
+            $config{$var} = $value;
+        }
+        elsif ( $r eq 'ARRAY' ) {
+            push( @{ $config{$var} }, $value );
+        }
     }
-  }
 
-  # Configuration overrides using -p
-  foreach (@param) {
-    if (/mirror/) {
-      print STDERR "Do not use -p for mirror, use -t instead!\n";
-      next;
+    if ($debug) {
+        foreach ( sort keys %config ) {
+            print STDERR "DEBUG:$_: "
+              . (
+                ( $_ eq "mirror" )
+                ? join( " ", @{ $config{$_} } )
+                : $config{$_}
+              ) . "\n";
+        }
     }
-    my ($var,$value) = split(/:/);
-    unless (exists $config{$var}) {
-      print "Unrecognized option (using --param): $var\n";
-      next;
-    }
-    my $r = ref($config{$var});
-    if (! $r) {
-      $config{$var} = $value;
-    } elsif ($r eq 'ARRAY') {
-      push(@{$config{$var}},$value);
-    }
-  }
 
-  if ($debug) {
-    foreach (sort keys %config) {
-      print STDERR "DEBUG:$_: " . (($_ eq "mirror") ? join(" ", @{$config{$_}}) : $config{$_}) . "\n";
-    }
-  }
-
-  $pkgliststyle = $config{pkgliststyle} if defined $config{pkgliststyle};
-  $maxpkglist = $config{maxpkglist} if $config{maxpkglist};
-  $use_md5 = $use_gpg = $noncsw = 0;
-  $use_md5 = 1 if ($config{use_md5} eq "true");
-  $use_gpg = 1 if ($config{use_gpg} eq "true");
-  $noncsw = 1 if ($config{noncsw} eq "true" || $config{noncsw} eq "yes");
+    $pkgliststyle = $config{pkgliststyle} if defined $config{pkgliststyle};
+    $maxpkglist   = $config{maxpkglist}   if $config{maxpkglist};
+    $use_md5 = $use_gpg = $noncsw = 0;
+    $use_md5 = 1 if ( $config{use_md5} eq "true" );
+    $use_gpg = 1 if ( $config{use_gpg} eq "true" );
+    $noncsw  = 1 if ( $config{noncsw}  eq "true" || $config{noncsw} eq "yes" );
 }
 
 # Install local packages
 #   pkglist - packages to install
 sub inst_loc_pkgs {
-  my @pkglist = @_;
-  my $pkgadd = "/usr/sbin/pkgadd";
-  my $pkgaddopts = "";
-  my $pkgrm = "/usr/sbin/pkgrm";
-  my $pkginfo = "/bin/pkginfo";
-  my $file;
-  my $pkgtrace = "";
+    my @pkglist    = @_;
+    my $pkgadd     = "/usr/sbin/pkgadd";
+    my $pkgaddopts = "";
+    my $pkgrm      = "/usr/sbin/pkgrm";
+    my $pkginfo    = "/bin/pkginfo";
+    my $file;
+    my $pkgtrace = "";
 
-  $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
-  $pkgtrace = "-v" if $trace;
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgtrace = "-v" if $trace;
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  foreach (@pkglist) {
-    my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
-    
-    print "\n=> Installing $_\n";
-    $file = $_;
-    if ($_ =~ /\.gz$/) {	# Not all packages are compressed
-      my $status = locate_gzip();
-      ($file) = ($file =~ /(.+)\.gz$/);
-      if (! $status) {
-        if ($yes) {
-          `$gzip -c -f -d $_ > $file`;
-        } else {
-          `$gzip -c -d $_ > $file`;
+    foreach (@pkglist) {
+        my $pkgforce = "";
+        $pkgforce = "-a $admin -n" if ( $yes && -r $admin );
+
+        print "\n=> Installing $_\n";
+        $file = $_;
+        if ( $_ =~ /\.gz$/ ) {    # Not all packages are compressed
+            my $status = locate_gzip();
+            ($file) = ( $file =~ /(.+)\.gz$/ );
+            if ( !$status ) {
+                if ($yes) {
+                    `$gzip -c -f -d $_ > $file`;
+                }
+                else {
+                    `$gzip -c -d $_ > $file`;
+                }
+            }
+            else {
+                myexit( "\nGzip not found, please install CSWgzip.", "", 1 );
+            }
         }
-      } else {
-        myexit("\nGzip not found, please install CSWgzip.","",1);
-      }
+
+        # Remove first if the package is already installed
+        my $pkgname = `$pkginfo $root_path -d $file`;
+        ($pkgname) = ( $pkgname =~ /\s(.+?)\s/ );
+        my $tmp = check_pkg( $pkgname, 0 );
+        if ( $tmp ne "notinst" ) {
+            print "\n=> Removing currently installed $pkgname\n";
+            system(
+                "$pkgrm",
+                split( ' ', $root_path ),
+                split( ' ', $pkgforce ),
+                split( ' ', $pkgtrace ), "$pkgname"
+            );
+        }
+
+        # Install
+        system(
+            "$pkgadd",
+            split( ' ', $root_path ),
+            split( ' ', $pkgforce ),
+            split( ' ', $pkgtrace ),
+            split( ' ', $pkgaddopts ),
+            "-d", "$file"
+        );
+
+        # Check if pkgadd operation exited successfully
+        if ( $? != 0 ) {
+
+            # If failed pkgadd op and --yes used, exit immediately
+            myexit( "Exiting pkgutil due to pkgadd error", $? >> 8, 1 ) if $yes;
+
+            printf "\npkgadd failed with exit code: %d\n", $? >> 8;
+            print
+"Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
+            chomp( my $prompt = <STDIN> );
+            myexit( "Exiting pkgutil", "", 1 ) if ( $prompt !~ /^[nN]/ );
+        }
+
+        if ( $_ =~ /\.gz$/ ) {    # Not all packages are compressed
+            unlink "$file" or myexit( "Can't delete $file", "$!", 1 );
+        }
     }
-
-    # Remove first if the package is already installed
-    my $pkgname = `$pkginfo $root_path -d $file`;
-    ($pkgname) = ($pkgname =~ /\s(.+?)\s/);
-    my $tmp = check_pkg($pkgname,0);
-    if ($tmp ne "notinst") {
-      print "\n=> Removing currently installed $pkgname\n";
-      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$pkgname");
-    }
-
-    # Install
-    system("$pkgadd",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),split(' ',$pkgaddopts),"-d","$file");
-
-    # Check if pkgadd operation exited successfully
-    if ($? != 0) {
-      # If failed pkgadd op and --yes used, exit immediately
-      myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
-
-      printf "\npkgadd failed with exit code: %d\n",$? >> 8;
-      print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
-      chomp(my $prompt = <STDIN>);
-      myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
-    }  
-
-    if ($_ =~ /\.gz$/) {		# Not all packages are compressed
-      unlink "$file" or myexit("Can't delete $file","$!",1);
-    }
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Install packages
@@ -821,106 +962,139 @@ sub inst_loc_pkgs {
 #   updlistlen - number of packages to update
 #   pkglist    - packages to install
 sub inst_pkgs {
-  my $batchmode = shift;
-  my $updlistlen = shift;
-  my @pkglist = @_;
-  my %upg_pkglist;
-  my $tmp = "";
-  my $pkgadd = "/usr/sbin/pkgadd";
-  my $pkgaddopts = "";
-  my $pkgrm = "/usr/sbin/pkgrm";
-  my ($file,$name);
-  my $pkgtrace = "";
-  my $pkgask = "";
+    my $batchmode  = shift;
+    my $updlistlen = shift;
+    my @pkglist    = @_;
+    my %upg_pkglist;
+    my $tmp        = "";
+    my $pkgadd     = "/usr/sbin/pkgadd";
+    my $pkgaddopts = "";
+    my $pkgrm      = "/usr/sbin/pkgrm";
+    my ( $file, $name );
+    my $pkgtrace = "";
+    my $pkgask   = "";
 
-  $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
-  $pkgtrace = "-v" if $trace;
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgtrace = "-v" if $trace;
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  run_hooks("prebatch$batchmode", @pkglist);
+    run_hooks( "prebatch$batchmode", @pkglist );
 
-  # Handle pkgutil as a special case, always complete pkgutil upgrade
-  # before proceeding with rest of list
-  if (scalar(@pkglist) > 1) {
-    if (my @tmplist = grep { /^CSWpkgutil-/ } @pkglist) {
-      print "\n=> Updating pkgutil first ...\n";
-      @pkglist = grep { !/^CSWpkgutil-/ } @pkglist;
-      $updlistlen--;
-      inst_pkgs('upgrade',1,$tmplist[0]);
-    }
-  }
-
-  # Removing old version of all packages being upgraded
-  my $i = 1;
-  foreach (reverse @pkglist) {
-    my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
-    my ($pkgname) = ($_ =~ /^(.+)-/);
-    $tmp = check_pkg($pkgname,0);
-    if ($tmp ne "notinst") {
-      # A small sanity check
-      myexit("Batch hook 'install' was run, but we've found a package being upgraded. Bailing out.","",1) if ($batchmode eq 'install');
-
-      $upg_pkglist{$_} = 1;
-      run_hooks("preupgrade", $_);
-      print "\n=> Removing old version of $pkgname (" . $i++ . "/" . $updlistlen . ") ...\n";
-      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$pkgname");
-    }
-  }
-
-  # Install all packages being upgraded/installed
-  $i = 1;
-  foreach (@pkglist) {
-    my $pkgforce = "";
-    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
-    $file = parse_catalog($_,3);
-    $name = parse_catalog($_,2);
-    print "\n=> Installing $_ (" . $i++ . "/" . scalar(@pkglist) . ") ...\n";
-    if ($file =~ /\.gz$/) {		# Not all packages are compressed
-      my $status = locate_gzip();
-      if (! $status) {
-        if ($yes) {
-          `$gzip -f -d $pkgdir/$file`;
-        } else {
-          `$gzip -d $pkgdir/$file`;
+    # Handle pkgutil as a special case, always complete pkgutil upgrade
+    # before proceeding with rest of list
+    if ( scalar(@pkglist) > 1 ) {
+        if ( my @tmplist = grep { /^CSWpkgutil-/ } @pkglist ) {
+            print "\n=> Updating pkgutil first ...\n";
+            @pkglist = grep { !/^CSWpkgutil-/ } @pkglist;
+            $updlistlen--;
+            inst_pkgs( 'upgrade', 1, $tmplist[0] );
         }
-      } else {
-        myexit("\nGzip not found, please install CSWgzip.","",1);
-      }
-      ($file) = ($file =~ /(.+)\.gz$/);
     }
 
-    # We may have already run preupgrade above. Running upgrade _and_ install
-    # is invalid
-    run_hooks("preinstall", $_) unless (defined $upg_pkglist{$_} && $upg_pkglist{$_} == 1);
+    # Removing old version of all packages being upgraded
+    my $i = 1;
+    foreach ( reverse @pkglist ) {
+        my $pkgforce = "";
+        $pkgforce = "-a $admin -n" if ( $yes && -r $admin );
+        my ($pkgname) = ( $_ =~ /^(.+)-/ );
+        $tmp = check_pkg( $pkgname, 0 );
+        if ( $tmp ne "notinst" ) {
 
-    # Support response (pkgask) files
-    $pkgask = (-r "$workdir/pkgask/$name") ? "-r $workdir/pkgask/$name" : "";
-    print STDERR "DEBUG:pkgask: $pkgask\n" if $debug;
-    
-    # Install
-    system("$pkgadd",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),split(' ',$pkgask),split(' ',$pkgaddopts),"-d","$pkgdir/$file","$name");
+            # A small sanity check
+            myexit(
+"Batch hook 'install' was run, but we've found a package being upgraded. Bailing out.",
+                "", 1
+            ) if ( $batchmode eq 'install' );
 
-    # Check if pkgadd operation exited successfully
-    if ($? != 0) {
-      # If failed pkgadd op and --yes used, exit immediately
-      myexit("Exiting pkgutil due to pkgadd error",$? >> 8,1) if $yes;
-
-      printf "\npkgadd failed with exit code: %d\n",$? >> 8;
-      print "Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
-      chomp(my $prompt = <STDIN>);
-      myexit("Exiting pkgutil","",1) if ($prompt !~ /^[nN]/);
-    }  
-
-    unlink "$pkgdir/$file" or myexit("Can't delete $pkgdir/$file","$!",1);
-
-    if (defined $upg_pkglist{$_} && $upg_pkglist{$_} == 1) {
-	run_hooks("postupgrade", $_);
-    } else {
-	run_hooks("postinstall", $_);
+            $upg_pkglist{$_} = 1;
+            run_hooks( "preupgrade", $_ );
+            print "\n=> Removing old version of $pkgname ("
+              . $i++ . "/"
+              . $updlistlen
+              . ") ...\n";
+            system(
+                "$pkgrm",
+                split( ' ', $root_path ),
+                split( ' ', $pkgforce ),
+                split( ' ', $pkgtrace ), "$pkgname"
+            );
+        }
     }
-  }
-  run_hooks("postbatch$batchmode", @pkglist);
+
+    # Install all packages being upgraded/installed
+    $i = 1;
+    foreach (@pkglist) {
+        my $pkgforce = "";
+        $pkgforce = "-a $admin -n" if ( $yes && -r $admin );
+        $file = parse_catalog( $_, 3 );
+        $name = parse_catalog( $_, 2 );
+        print "\n=> Installing $_ ("
+          . $i++ . "/"
+          . scalar(@pkglist)
+          . ") ...\n";
+        if ( $file =~ /\.gz$/ ) {    # Not all packages are compressed
+            my $status = locate_gzip();
+            if ( !$status ) {
+                if ($yes) {
+                    `$gzip -f -d $pkgdir/$file`;
+                }
+                else {
+                    `$gzip -d $pkgdir/$file`;
+                }
+            }
+            else {
+                myexit( "\nGzip not found, please install CSWgzip.", "", 1 );
+            }
+            ($file) = ( $file =~ /(.+)\.gz$/ );
+        }
+
+       # We may have already run preupgrade above. Running upgrade _and_ install
+       # is invalid
+        run_hooks( "preinstall", $_ )
+          unless ( defined $upg_pkglist{$_} && $upg_pkglist{$_} == 1 );
+
+        # Support response (pkgask) files
+        $pkgask =
+          ( -r "$workdir/pkgask/$name" ) ? "-r $workdir/pkgask/$name" : "";
+        print STDERR "DEBUG:pkgask: $pkgask\n" if $debug;
+
+        # Install
+        system(
+            "$pkgadd",
+            split( ' ', $root_path ),
+            split( ' ', $pkgforce ),
+            split( ' ', $pkgtrace ),
+            split( ' ', $pkgask ),
+            split( ' ', $pkgaddopts ),
+            "-d",
+            "$pkgdir/$file",
+            "$name"
+        );
+
+        # Check if pkgadd operation exited successfully
+        if ( $? != 0 ) {
+
+            # If failed pkgadd op and --yes used, exit immediately
+            myexit( "Exiting pkgutil due to pkgadd error", $? >> 8, 1 ) if $yes;
+
+            printf "\npkgadd failed with exit code: %d\n", $? >> 8;
+            print
+"Exit from pkgutil and fix this issue first (recommended)? ([y],n) ";
+            chomp( my $prompt = <STDIN> );
+            myexit( "Exiting pkgutil", "", 1 ) if ( $prompt !~ /^[nN]/ );
+        }
+
+        unlink "$pkgdir/$file"
+          or myexit( "Can't delete $pkgdir/$file", "$!", 1 );
+
+        if ( defined $upg_pkglist{$_} && $upg_pkglist{$_} == 1 ) {
+            run_hooks( "postupgrade", $_ );
+        }
+        else {
+            run_hooks( "postinstall", $_ );
+        }
+    }
+    run_hooks( "postbatch$batchmode", @pkglist );
 }
 
 # Install (-i) option
@@ -929,481 +1103,559 @@ sub inst_pkgs {
 #   deps  - option --nodeps set or not
 #   parse - option --parse set or not
 sub install {
-  my ($mode,$deps,$parse) = @_;
-  my $retvalue;
-  my (@tmppkglist,@revpkglist,@newpkglist,@instpkglist,@updpkglist,@curpkglist,@dlpkglist);
-  my $fh = ($mode == 4 ? *STDERR : *STDOUT);
-  my(%pkgvers,@pkglist,@excludelist); # @pkglist is specifically in the correct order
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    my ( $mode, $deps, $parse ) = @_;
+    my $retvalue;
+    my (
+        @tmppkglist, @revpkglist, @newpkglist, @instpkglist,
+        @updpkglist, @curpkglist, @dlpkglist
+    );
+    my $fh = ( $mode == 4 ? *STDERR : *STDOUT );
+    my ( %pkgvers, @pkglist, @excludelist )
+      ;    # @pkglist is specifically in the correct order
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print $fh "Solving needed dependencies ...\n" unless ($deps || $parse);
+    print $fh "Solving needed dependencies ...\n" unless ( $deps || $parse );
 
-  foreach my $tmppkg (@ARGV) {
-    my $tmp = parse_catalog($tmppkg,2);
-    my $vers = parse_catalog($tmppkg,1);
-    if ($tmp ne 'not in catalog' && ($tmp =~ /^CSW/ || $noncsw)) {
-      push(@pkglist,$tmp);
-      $pkgvers{$tmp} = $vers;
-    } else {
-      myexit("Package $tmppkg not in catalog. Exiting.","",1);
-    }
-  }
-
-  unless ($deps) {	# Skip adding dependencies? (option --nodeps)
-    my %finished;
-    foreach my $tmppkg2 (@pkglist) {
-      # N.B. This array grows and we keep looping until we've satisfied all
-      # of the dependencies
-      print STDERR "DEBUG:Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
-
-      my @tmpdeps;
-
-      # Next two lines from Joe Baro reduces iterations
-      next if $finished{$tmppkg2};
-      $finished{$tmppkg2} = 1;
-
-      if ($tmppkg2 ne "CSWcommon") {
-        $retvalue = parse_catalog($tmppkg2,6);
-        if ($retvalue eq "not in catalog") {
-          system("/bin/pkginfo",split(' ',$root_path),"-q","$tmppkg2");
-          if ($? == 0) {	# Already installed...forgive its absence from the catalog
-            print STDERR "Warning: $tmppkg2 not in catalog.\n";
-            next;
-          } else {
-            myexit("Package $tmppkg2 not in catalog. Exiting.","",1);
-          }
-        } else {
-          @tmpdeps = split(/\|/,$retvalue);
-          print STDERR "DEBUG:depmap: $tmppkg2 -> ", $retvalue, "\n" if $debug;
+    foreach my $tmppkg (@ARGV) {
+        my $tmp  = parse_catalog( $tmppkg, 2 );
+        my $vers = parse_catalog( $tmppkg, 1 );
+        if ( $tmp ne 'not in catalog' && ( $tmp =~ /^CSW/ || $noncsw ) ) {
+            push( @pkglist, $tmp );
+            $pkgvers{$tmp} = $vers;
         }
-      } else {
-        next;
-      }
-      if ($tmpdeps[0] ne "none" && $tmpdeps[0] ne "not in catalog") {
-        foreach my $dep (@tmpdeps) {
-          # There is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
-          if (! exists $pkgvers{$dep}) {
-            $pkgvers{$dep} = parse_catalog($dep,1);
-          }
-          push(@pkglist,$dep);	# Append to list, does not include deduplication
+        else {
+            myexit( "Package $tmppkg not in catalog. Exiting.", "", 1 );
         }
-      }
-      next;
     }
-  }
-  print STDERR "DEBUG:pkglist ", join(",", @pkglist), "\n" if $debug;
 
-  # Now reverse and deduplicate @pkglist. Need the last instance of each
-  # package if reading @pkglist forwards
-  my @tmprevpkglist = dedup(reverse @pkglist);
-  foreach (@tmprevpkglist) {
-    push(@revpkglist,$_) if $pkgvers{$_}; # Not if excluded
-  }
+    unless ($deps) {    # Skip adding dependencies? (option --nodeps)
+        my %finished;
+        foreach my $tmppkg2 (@pkglist) {
 
-  if ($mode == 2) {		# If -r used
-    if (scalar(@revpkglist) > 0) {
-      my @rmpkgs = ();
-      foreach my $p (@revpkglist) {
-	push(@rmpkgs, "$p-" . $pkgvers{$p});
-      }
-      remove(reverse @rmpkgs);
-    }
-  }
+           # N.B. This array grows and we keep looping until we've satisfied all
+           # of the dependencies
+            print STDERR "DEBUG:Loop #", scalar(@pkglist),
+              " (limit $maxpkglist)\n"
+              if $debug;
 
-  print STDERR "DEBUG:revpkglist: " . scalar(@revpkglist) . "\n", join(",", @revpkglist), "\n" if $debug;
-  print STDERR "DEBUG:Loop #",scalar(@pkglist)," (limit $maxpkglist)\n" if $debug;
+            my @tmpdeps;
 
-  unless ($deps) {
-    print $fh "Solving dependency order ...\n" unless $parse;
-    my @revpkglist2 = @revpkglist;
-    my @revpkglist3;
-    foreach (@revpkglist2) {
-      if (scalar(@revpkglist2) > $maxpkglist) {
-        print "Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.\n";
-        print "Do you want to continue anyway? ([y],n) ";
-        chomp (my $prompt = <STDIN>);
-        myexit("","",0) if ($prompt =~ /^[nN]/);
-        @revpkglist3 = dedup(@revpkglist2);
-        last;
-      }
-      my $dep = parse_catalog($_,6);
-      if ($dep eq "none" || $dep eq "not in catalog") {
-        push(@revpkglist3,$_);
-      } else {
-        my $allhit = 1;
-        foreach my $i (split(/\|/,$dep)) {
-          my $hit = 0;
-          foreach my $j (@revpkglist3) {
-            if ($i eq $j) {
-              $hit = 1;
-              last;
+            # Next two lines from Joe Baro reduces iterations
+            next if $finished{$tmppkg2};
+            $finished{$tmppkg2} = 1;
+
+            if ( $tmppkg2 ne "CSWcommon" ) {
+                $retvalue = parse_catalog( $tmppkg2, 6 );
+                if ( $retvalue eq "not in catalog" ) {
+                    system( "/bin/pkginfo", split( ' ', $root_path ),
+                        "-q", "$tmppkg2" );
+                    if ( $? == 0 )
+                    { # Already installed...forgive its absence from the catalog
+                        print STDERR "Warning: $tmppkg2 not in catalog.\n";
+                        next;
+                    }
+                    else {
+                        myexit( "Package $tmppkg2 not in catalog. Exiting.",
+                            "", 1 );
+                    }
+                }
+                else {
+                    @tmpdeps = split( /\|/, $retvalue );
+                    print STDERR "DEBUG:depmap: $tmppkg2 -> ", $retvalue, "\n"
+                      if $debug;
+                }
             }
-          }
-          if (! $hit) {   # no hit, add last for re-processing
-            push(@revpkglist2,$_);
-            $allhit = 0;
-            last;
-          }
+            else {
+                next;
+            }
+            if ( $tmpdeps[0] ne "none" && $tmpdeps[0] ne "not in catalog" ) {
+                foreach my $dep (@tmpdeps) {
+
+# There is no support for dependencies against a particular version, e.g. CSWzope-3.3.1, just CSWzope
+                    if ( !exists $pkgvers{$dep} ) {
+                        $pkgvers{$dep} = parse_catalog( $dep, 1 );
+                    }
+                    push( @pkglist, $dep )
+                      ;    # Append to list, does not include deduplication
+                }
+            }
+            next;
         }
-        if ($allhit) {    # all deps ok, add to final list
-          push(@revpkglist3,$_);
-        }
-      }
     }
-    print STDERR "DEBUG:revpkglist3: " . scalar(@revpkglist3) . "\n", join(",", @revpkglist3), "\n" if $debug;
-    @revpkglist = @revpkglist3;
-  }
+    print STDERR "DEBUG:pkglist ", join( ",", @pkglist ), "\n" if $debug;
 
-  # Clean list from command line exclude patterns
-  foreach my $pattern (@exclude) {
-    my @tmppkglist = grep { !/$pattern/ } @revpkglist;
-    push(@excludelist,grep { /$pattern/ } @revpkglist);
-    @revpkglist = @tmppkglist;
-  }
+    # Now reverse and deduplicate @pkglist. Need the last instance of each
+    # package if reading @pkglist forwards
+    my @tmprevpkglist = dedup( reverse @pkglist );
+    foreach (@tmprevpkglist) {
+        push( @revpkglist, $_ ) if $pkgvers{$_};    # Not if excluded
+    }
 
-  # Clean list from exclude patterns in pkgutil.conf
-  foreach my $pattern (split(/\s+?/,$config{exclude_pattern})) {
-    my @tmppkglist = grep { !/$pattern/ } @revpkglist;
-    push(@excludelist,grep { /$pattern/ } @revpkglist);
-    @revpkglist = @tmppkglist;
-  }
+    if ( $mode == 2 ) {                             # If -r used
+        if ( scalar(@revpkglist) > 0 ) {
+            my @rmpkgs = ();
+            foreach my $p (@revpkglist) {
+                push( @rmpkgs, "$p-" . $pkgvers{$p} );
+            }
+            remove( reverse @rmpkgs );
+        }
+    }
 
-  # Incompatible packages (I-dependencies)
-  my @ideppkglist;
-  foreach (@revpkglist) {
-    my $retvalue = parse_catalog($_,8);
-    push(@ideppkglist,split(/\|/,$retvalue)) if ($retvalue ne "none");
-  }
-  # Clean the list from packages not installed
-  my @ideppkglist2;
-  foreach (@ideppkglist) {
-    # Check if pkg is present first
-    push(@ideppkglist2,$_) if (check_pkg($_,0) ne "notinst");
-  }
-  @ideppkglist = @ideppkglist2;
-  undef @ideppkglist2;
+    print STDERR "DEBUG:revpkglist: " . scalar(@revpkglist) . "\n",
+      join( ",", @revpkglist ), "\n"
+      if $debug;
+    print STDERR "DEBUG:Loop #", scalar(@pkglist), " (limit $maxpkglist)\n"
+      if $debug;
 
-  # Which packages do we really need to download?
-  if ($mode == 0 || $mode == 2) {
+    unless ($deps) {
+        print $fh "Solving dependency order ...\n" unless $parse;
+        my @revpkglist2 = @revpkglist;
+        my @revpkglist3;
+        foreach (@revpkglist2) {
+            if ( scalar(@revpkglist2) > $maxpkglist ) {
+                print
+"Loop protection limit ($maxpkglist iterations) hit. There's probably a\ncyclic dependency in the catalog.\n";
+                print "Do you want to continue anyway? ([y],n) ";
+                chomp( my $prompt = <STDIN> );
+                myexit( "", "", 0 ) if ( $prompt =~ /^[nN]/ );
+                @revpkglist3 = dedup(@revpkglist2);
+                last;
+            }
+            my $dep = parse_catalog( $_, 6 );
+            if ( $dep eq "none" || $dep eq "not in catalog" ) {
+                push( @revpkglist3, $_ );
+            }
+            else {
+                my $allhit = 1;
+                foreach my $i ( split( /\|/, $dep ) ) {
+                    my $hit = 0;
+                    foreach my $j (@revpkglist3) {
+                        if ( $i eq $j ) {
+                            $hit = 1;
+                            last;
+                        }
+                    }
+                    if ( !$hit ) {    # no hit, add last for re-processing
+                        push( @revpkglist2, $_ );
+                        $allhit = 0;
+                        last;
+                    }
+                }
+                if ($allhit) {        # all deps ok, add to final list
+                    push( @revpkglist3, $_ );
+                }
+            }
+        }
+        print STDERR "DEBUG:revpkglist3: " . scalar(@revpkglist3) . "\n",
+          join( ",", @revpkglist3 ), "\n"
+          if $debug;
+        @revpkglist = @revpkglist3;
+    }
+
+    # Clean list from command line exclude patterns
+    foreach my $pattern (@exclude) {
+        my @tmppkglist = grep { !/$pattern/ } @revpkglist;
+        push( @excludelist, grep { /$pattern/ } @revpkglist );
+        @revpkglist = @tmppkglist;
+    }
+
+    # Clean list from exclude patterns in pkgutil.conf
+    foreach my $pattern ( split( /\s+?/, $config{exclude_pattern} ) ) {
+        my @tmppkglist = grep { !/$pattern/ } @revpkglist;
+        push( @excludelist, grep { /$pattern/ } @revpkglist );
+        @revpkglist = @tmppkglist;
+    }
+
+    # Incompatible packages (I-dependencies)
+    my @ideppkglist;
     foreach (@revpkglist) {
-      my $old = check_pkg($_,0);
-      my $new = $pkgvers{$_};
-      if ($old eq "notinst") {	# New package needed
-        push(@newpkglist,"$_-$new");
-      } else {			# Package already installed
-        my $cmpval = verscmp($new,$old);
-        if ($cmpval == 1 || ($cmpval != 0 && $force)) {	# Older or --force
-          push(@updpkglist,"$_-$new");	# Updated package needed
-        } else {
-          push(@curpkglist,"$_-$old");	# Package is current
-        }
-      }
-    }
-  } else {	# If -s or --extract then just copy revpkglist to newpkglist
-    foreach (@revpkglist) {
-      push(@newpkglist,"$_-$pkgvers{$_}");
-    }
-  }
-
-  my $pkgsep = ($pkgliststyle ? "\n\t" : " ");
-
-  # Only present updated and current packages when doing install/upgrade
-  if ($mode == 0) {
-    if (scalar(@curpkglist) > 0 && $config{show_current} eq "true") {
-      print scalar(@curpkglist) . " CURRENT packages:$pkgsep", join("$pkgsep", sort @curpkglist), "\n";
+        my $retvalue = parse_catalog( $_, 8 );
+        push( @ideppkglist, split( /\|/, $retvalue ) )
+          if ( $retvalue ne "none" );
     }
 
-    if (scalar(@updpkglist) > 0) {
-      print "Install " . scalar(@updpkglist) . " UPDATED packages";
-      if ($pkgliststyle == 2) {
-        foreach (sort @updpkglist) {
-          print "$pkgsep$_ (" . get_dist($_) . ")";
-        }
-        print "\n";
-      } else {
-        print $fh ":$pkgsep", join("$pkgsep", sort @updpkglist), "\n";
-      }
-    }
-  }
-
-  # Different text for install/upgrade vs. the rest
-  if (scalar(@newpkglist) > 0) {
-    print $fh ($mode == 0) ? "Install " . scalar(@newpkglist) . " NEW packages:" : "Package list:" unless $parse;
-    if ($pkgliststyle == 2 || $parse) {
-      foreach (sort @newpkglist) {
-        if ($parse) {	# parse mode to display catalog name, catalog and md5
-          print parse_catalog($_,0) . "\t" . get_dist($_) . "\t" . parse_catalog($_,4) . "\n";
-        } else {
-          print "$pkgsep$_ (" . get_dist($_) . ")";
-        }
-      }
-      print "\n" unless $parse;
-    } else {
-      print $fh "$pkgsep", join("$pkgsep", sort @newpkglist), "\n";
-    }
-  }
-
-  # Only present incompatible packages when doing install/upgrade
-  if ($mode == 0) {
-    if (scalar(@ideppkglist) > 0) {
-      print "Remove " . scalar(@ideppkglist) . " INCOMPATIBLE packages:$pkgsep", join("$pkgsep", sort @ideppkglist), "\n";
-    }
-  }
-
-  # Show excluded packages
-  if (scalar(@excludelist) > 0) {
-    print $fh scalar(@excludelist) . " EXCLUDED packages:$pkgsep", join("$pkgsep", sort @excludelist), "\n";
-  }
-
-  # What packages do we need to fetch?
-  # Make sure they are in correct order
-  foreach my $i (@revpkglist) {
-    my $hit = 0;
-    foreach (@curpkglist) {
-      my ($j) = ($_ =~ /^(.+)-/);
-      if ($i eq $j) {
-        $hit = 1;
-        print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
-        last;
-      }
-      print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
-    }
-    my $tmp = "$i-$pkgvers{$i}";
-    push(@dlpkglist,$tmp) unless $hit;
-  }
-  print STDERR "DEBUG:dlpkglist: " . scalar(@dlpkglist) . "\n", join(",", @dlpkglist), "\n" if $debug;
-
-  # Print info before exiting if there's nothing to do
-  myexit("\nNothing to do.","",0) if (scalar(@dlpkglist) == 0);
-
-  # Print size of download
-  if (scalar(@dlpkglist) > 0 && $parse == 0) {
-    foreach (@dlpkglist) {
-      $size += parse_catalog($_,5);
-    }
-    print $fh "Total size: " . format_byte($size) . "\n";
-  }
-
-  myexit("","",0) if $parse;
-  myexit("Option -n selected, stopping here.","",0) if $nomod;
-
-  if (scalar(@dlpkglist) > 0) {
-    fetch_pkgs($mode,@dlpkglist);
-  }
-
-  # display a list of files when downloading
-  if ($mode == 1) {
-    print "\nPackages downloaded to $pkgdir:\n";
-    foreach (@dlpkglist) {
-      my $file = parse_catalog($_,3);
-      print "$file";
-      $file = "$pkgdir/$file";
-      print " (OK)\n" if (-s $file);
-      print " (empty)\n" if (-z $file);
-      print " (missing)\n" if (! -e $file);
-    }
-  }
-
-  extract_pkg(@dlpkglist) if ($mode == 5);	# --extract
-
-  return @revpkglist if ($mode == 3 || $mode == 4);	# If -s used
-
-  # Remove incompatible packages
-  if (scalar(@ideppkglist) > 0 && $mode == 0) {
-    my $pkgrm = "/usr/sbin/pkgrm";
-    my $pkgtrace = "";
-    my $pkgforce = "";
-
-    if (! $yes) {
-      print scalar(@ideppkglist)," incompatible package" . (scalar(@ideppkglist) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
-      chomp (my $prompt = <STDIN>);
-      if ($prompt =~ /^[nN]/) {
-        myexit("","",0);
-      } elsif ($prompt =~ /^a(uto)*/i) {
-        print "Turning on automatic mode as if --yes was passed.\n";
-        $yes = 1
-      }
-    }
-    $pkgforce = "-a $admin -n" if ($yes && -r $admin);
-
+    # Clean the list from packages not installed
+    my @ideppkglist2;
     foreach (@ideppkglist) {
-      print "\n=> Removing incompatible package $_\n";
-      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$_");
-    }
-  }
 
-  if ($mode == 0) {		# If -d not used, install
-    if (scalar(@dlpkglist) > 0) {
-      inst_pkgs(scalar(@updpkglist) ? 'upgrade' : 'install', scalar(@updpkglist), @dlpkglist);
+        # Check if pkg is present first
+        push( @ideppkglist2, $_ ) if ( check_pkg( $_, 0 ) ne "notinst" );
     }
-  }
-  myexit("","",0);
+    @ideppkglist = @ideppkglist2;
+    undef @ideppkglist2;
+
+    # Which packages do we really need to download?
+    if ( $mode == 0 || $mode == 2 ) {
+        foreach (@revpkglist) {
+            my $old = check_pkg( $_, 0 );
+            my $new = $pkgvers{$_};
+            if ( $old eq "notinst" ) {    # New package needed
+                push( @newpkglist, "$_-$new" );
+            }
+            else {                        # Package already installed
+                my $cmpval = verscmp( $new, $old );
+                if ( $cmpval == 1 || ( $cmpval != 0 && $force ) )
+                {                         # Older or --force
+                    push( @updpkglist, "$_-$new" );    # Updated package needed
+                }
+                else {
+                    push( @curpkglist, "$_-$old" );    # Package is current
+                }
+            }
+        }
+    }
+    else {    # If -s or --extract then just copy revpkglist to newpkglist
+        foreach (@revpkglist) {
+            push( @newpkglist, "$_-$pkgvers{$_}" );
+        }
+    }
+
+    my $pkgsep = ( $pkgliststyle ? "\n\t" : " " );
+
+    # Only present updated and current packages when doing install/upgrade
+    if ( $mode == 0 ) {
+        if ( scalar(@curpkglist) > 0 && $config{show_current} eq "true" ) {
+            print scalar(@curpkglist) . " CURRENT packages:$pkgsep",
+              join( "$pkgsep", sort @curpkglist ), "\n";
+        }
+
+        if ( scalar(@updpkglist) > 0 ) {
+            print "Install " . scalar(@updpkglist) . " UPDATED packages";
+            if ( $pkgliststyle == 2 ) {
+                foreach ( sort @updpkglist ) {
+                    print "$pkgsep$_ (" . get_dist($_) . ")";
+                }
+                print "\n";
+            }
+            else {
+                print $fh ":$pkgsep", join( "$pkgsep", sort @updpkglist ), "\n";
+            }
+        }
+    }
+
+    # Different text for install/upgrade vs. the rest
+    if ( scalar(@newpkglist) > 0 ) {
+        print $fh ( $mode == 0 )
+          ? "Install " . scalar(@newpkglist) . " NEW packages:"
+          : "Package list:"
+          unless $parse;
+        if ( $pkgliststyle == 2 || $parse ) {
+            foreach ( sort @newpkglist ) {
+                if ($parse)
+                {    # parse mode to display catalog name, catalog and md5
+                    print parse_catalog( $_, 0 ) . "\t"
+                      . get_dist($_) . "\t"
+                      . parse_catalog( $_, 4 ) . "\n";
+                }
+                else {
+                    print "$pkgsep$_ (" . get_dist($_) . ")";
+                }
+            }
+            print "\n" unless $parse;
+        }
+        else {
+            print $fh "$pkgsep", join( "$pkgsep", sort @newpkglist ), "\n";
+        }
+    }
+
+    # Only present incompatible packages when doing install/upgrade
+    if ( $mode == 0 ) {
+        if ( scalar(@ideppkglist) > 0 ) {
+            print "Remove "
+              . scalar(@ideppkglist)
+              . " INCOMPATIBLE packages:$pkgsep",
+              join( "$pkgsep", sort @ideppkglist ), "\n";
+        }
+    }
+
+    # Show excluded packages
+    if ( scalar(@excludelist) > 0 ) {
+        print $fh scalar(@excludelist) . " EXCLUDED packages:$pkgsep",
+          join( "$pkgsep", sort @excludelist ), "\n";
+    }
+
+    # What packages do we need to fetch?
+    # Make sure they are in correct order
+    foreach my $i (@revpkglist) {
+        my $hit = 0;
+        foreach (@curpkglist) {
+            my ($j) = ( $_ =~ /^(.+)-/ );
+            if ( $i eq $j ) {
+                $hit = 1;
+                print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
+                last;
+            }
+            print STDERR "DEBUG:i: $i j: $j hit: $hit\n" if $debug;
+        }
+        my $tmp = "$i-$pkgvers{$i}";
+        push( @dlpkglist, $tmp ) unless $hit;
+    }
+    print STDERR "DEBUG:dlpkglist: " . scalar(@dlpkglist) . "\n",
+      join( ",", @dlpkglist ), "\n"
+      if $debug;
+
+    # Print info before exiting if there's nothing to do
+    myexit( "\nNothing to do.", "", 0 ) if ( scalar(@dlpkglist) == 0 );
+
+    # Print size of download
+    if ( scalar(@dlpkglist) > 0 && $parse == 0 ) {
+        foreach (@dlpkglist) {
+            $size += parse_catalog( $_, 5 );
+        }
+        print $fh "Total size: " . format_byte($size) . "\n";
+    }
+
+    myexit( "",                                   "", 0 ) if $parse;
+    myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
+
+    if ( scalar(@dlpkglist) > 0 ) {
+        fetch_pkgs( $mode, @dlpkglist );
+    }
+
+    # display a list of files when downloading
+    if ( $mode == 1 ) {
+        print "\nPackages downloaded to $pkgdir:\n";
+        foreach (@dlpkglist) {
+            my $file = parse_catalog( $_, 3 );
+            print "$file";
+            $file = "$pkgdir/$file";
+            print " (OK)\n"      if ( -s $file );
+            print " (empty)\n"   if ( -z $file );
+            print " (missing)\n" if ( !-e $file );
+        }
+    }
+
+    extract_pkg(@dlpkglist) if ( $mode == 5 );    # --extract
+
+    return @revpkglist if ( $mode == 3 || $mode == 4 );    # If -s used
+
+    # Remove incompatible packages
+    if ( scalar(@ideppkglist) > 0 && $mode == 0 ) {
+        my $pkgrm    = "/usr/sbin/pkgrm";
+        my $pkgtrace = "";
+        my $pkgforce = "";
+
+        if ( !$yes ) {
+            print scalar(@ideppkglist),
+                " incompatible package"
+              . ( scalar(@ideppkglist) > 1 ? "s" : "" )
+              . " to remove. Do you want to continue? ([y],n,auto) ";
+            chomp( my $prompt = <STDIN> );
+            if ( $prompt =~ /^[nN]/ ) {
+                myexit( "", "", 0 );
+            }
+            elsif ( $prompt =~ /^a(uto)*/i ) {
+                print "Turning on automatic mode as if --yes was passed.\n";
+                $yes = 1;
+            }
+        }
+        $pkgforce = "-a $admin -n" if ( $yes && -r $admin );
+
+        foreach (@ideppkglist) {
+            print "\n=> Removing incompatible package $_\n";
+            system(
+                "$pkgrm",
+                split( ' ', $root_path ),
+                split( ' ', $pkgforce ),
+                split( ' ', $pkgtrace ), "$_"
+            );
+        }
+    }
+
+    if ( $mode == 0 ) {    # If -d not used, install
+        if ( scalar(@dlpkglist) > 0 ) {
+            inst_pkgs( scalar(@updpkglist) ? 'upgrade' : 'install',
+                scalar(@updpkglist), @dlpkglist );
+        }
+    }
+    myexit( "", "", 0 );
 }
 
 # List dependencies (part of --cleanup)
 sub list_deps {
-  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
-  my %deps;
+    my $pkgdir =
+      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+    my %deps;
 
-  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
-  foreach (glob("CSW*")) {
-    if (-r "$_/install/depend") {
-      open (FILE,"<$_/install/depend");
-      while (<FILE>) {
-        chomp;
-        if (/^P\s+\S/) {
-          my ($deptmp) = (/P\s+(\S+)/);
-          $deps{$deptmp} = 1 if ($deptmp ne $_ && $deptmp !~ /^SUNW/); # Skip if circular or SUNW
+    chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
+    foreach ( glob("CSW*") ) {
+        if ( -r "$_/install/depend" ) {
+            open( FILE, "<$_/install/depend" );
+            while (<FILE>) {
+                chomp;
+                if (/^P\s+\S/) {
+                    my ($deptmp) = (/P\s+(\S+)/);
+                    $deps{$deptmp} = 1
+                      if ( $deptmp ne $_ && $deptmp !~ /^SUNW/ )
+                      ;    # Skip if circular or SUNW
+                }
+            }
         }
-      }
     }
-  }
-  return sort keys %deps;
+    return sort keys %deps;
 }
 
 # List files in package (-L)
 sub list_file {
-  my $contents = $config{root_path} ? "$config{root_path}/var/sadm/install/contents" : "/var/sadm/install/contents";
+    my $contents =
+      $config{root_path}
+      ? "$config{root_path}/var/sadm/install/contents"
+      : "/var/sadm/install/contents";
 
-  foreach (@ARGV) {
-    if (-r $_ && -f _) {	# Argument is a package file
-      if ($_ =~ /\.pkg$/) {
-        my (@tmp) = `/usr/sbin/pkgchk -l -d $_ all`;
-        foreach (@tmp) {
-          next unless ($_ =~ /^Pathname:\s\//);
-          my ($file) = ($_ =~ /^Pathname:\s(.+?)\s/);
-          ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-          print "$file\n";
+    foreach (@ARGV) {
+        if ( -r $_ && -f _ ) {    # Argument is a package file
+            if ( $_ =~ /\.pkg$/ ) {
+                my (@tmp) = `/usr/sbin/pkgchk -l -d $_ all`;
+                foreach (@tmp) {
+                    next unless ( $_ =~ /^Pathname:\s\// );
+                    my ($file) = ( $_ =~ /^Pathname:\s(.+?)\s/ );
+                    ($file) = ( $file =~ /^(.+)=/ ) if ( $file =~ /=/ );
+                    print "$file\n";
+                }
+            }
+            else {
+                print "Package file name ($_) must end in .pkg\n";
+                next;
+            }
         }
-      } else {
-        print "Package file name ($_) must end in .pkg\n";
-        next;
-      }
-    } else {	# Argument is a package name
-      my $tmp;
-      if ($_ =~ /^[A-Z]/) {
-        $tmp = $_;
-      } else {
-        $tmp = parse_catalog($_,2);
-      }
-      open (FILE,"<$contents") or myexit("Can't open $contents","$!",1);
-      while(my $line = <FILE>) {
-        chomp $line;
-        my ($file,$pkg) = ($line =~ /^(.+?)\s.+\s(.+)$/);
-        ($file) = ($file =~ /^(.+)=/) if ($file =~ /=/);
-        print "$file\n" if ($pkg eq $tmp);
-      }
-      close FILE;
+        else {    # Argument is a package name
+            my $tmp;
+            if ( $_ =~ /^[A-Z]/ ) {
+                $tmp = $_;
+            }
+            else {
+                $tmp = parse_catalog( $_, 2 );
+            }
+            open( FILE, "<$contents" )
+              or myexit( "Can't open $contents", "$!", 1 );
+            while ( my $line = <FILE> ) {
+                chomp $line;
+                my ( $file, $pkg ) = ( $line =~ /^(.+?)\s.+\s(.+)$/ );
+                ($file) = ( $file =~ /^(.+)=/ ) if ( $file =~ /=/ );
+                print "$file\n" if ( $pkg eq $tmp );
+            }
+            close FILE;
+        }
     }
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # List obsolete files (part of --cleanup)
 sub list_obsolete {
-  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
-  my @legacy;
+    my $pkgdir =
+      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+    my @legacy;
 
-  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
-  foreach (glob("CSW*")) {
-    push(@legacy,$_) if (-e "$_/install/obsolete");
-  }
-  return @legacy;
+    chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
+    foreach ( glob("CSW*") ) {
+        push( @legacy, $_ ) if ( -e "$_/install/obsolete" );
+    }
+    return @legacy;
 }
 
 # List installed packages (-l)
 sub list_pkgs {
-  my $pkgdir = $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+    my $pkgdir =
+      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
 
-  chdir($pkgdir) or myexit("Could not cd to $pkgdir","",1);
-  foreach ($noncsw ? glob("*") : glob("CSW*")) {
-    if (scalar(@ARGV) > 0) {
-      foreach my $arg (@ARGV) {
-        print "$_\n" if ($_ =~ /$arg/);
-      }
-    } else {
-      print "$_\n";
+    chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
+    foreach ( $noncsw ? glob("*") : glob("CSW*") ) {
+        if ( scalar(@ARGV) > 0 ) {
+            foreach my $arg (@ARGV) {
+                print "$_\n" if ( $_ =~ /$arg/ );
+            }
+        }
+        else {
+            print "$_\n";
+        }
     }
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Find gzip
 sub locate_gzip {
-  my @locations = ("/opt/csw/bin","/bin","/usr/local/bin");
+    my @locations = ( "/opt/csw/bin", "/bin", "/usr/local/bin" );
 
-  foreach (@locations) {
-    if (-x "$_/gzip") {
-      next if check_binary("$_/gzip");
-      $gzip = "$_/gzip";
-      last;
+    foreach (@locations) {
+        if ( -x "$_/gzip" ) {
+            next if check_binary("$_/gzip");
+            $gzip = "$_/gzip";
+            last;
+        }
     }
-  } 
-  print STDERR "DEBUG:gzip: $gzip\n" if $debug;
-  return 1 if (! $gzip);
+    print STDERR "DEBUG:gzip: $gzip\n" if $debug;
+    return 1 if ( !$gzip );
 }
 
 # Find wget
 sub locate_wget {
-  my @locations = ("/opt/csw/bin","/usr/sfw/bin","/usr/local/bin");
-  my $libexec = "/opt/csw/libexec/pkgutil";
+    my @locations = ( "/opt/csw/bin", "/usr/sfw/bin", "/usr/local/bin" );
+    my $libexec = "/opt/csw/libexec/pkgutil";
 
-  foreach (@locations) {
-    if (-x "$_/wget") {
-      next if check_binary("$_/wget");
-      $wget = "$_/wget";
-      last;
+    foreach (@locations) {
+        if ( -x "$_/wget" ) {
+            next if check_binary("$_/wget");
+            $wget = "$_/wget";
+            last;
+        }
     }
-  } 
-  # Check for wget binary included in pkgutil package
-  if (! $wget) {
-    chomp(my $loc_arch = `uname -p`);	# Arch type sparc|i386
-    $wget = "$libexec/wget-$loc_arch" if (-x "$libexec/wget-$loc_arch");
-  }
-  if (! $wget) {
-    $wget = "$libexec/wget" if (-x "$libexec/wget");
-  }
-  print STDERR "DEBUG:wget: " . ($wget ? $wget : "-") . "\n" if $debug;
-  return 1 if (! $wget);
+
+    # Check for wget binary included in pkgutil package
+    if ( !$wget ) {
+        chomp( my $loc_arch = `uname -p` );    # Arch type sparc|i386
+        $wget = "$libexec/wget-$loc_arch" if ( -x "$libexec/wget-$loc_arch" );
+    }
+    if ( !$wget ) {
+        $wget = "$libexec/wget" if ( -x "$libexec/wget" );
+    }
+    print STDERR "DEBUG:wget: " . ( $wget ? $wget : "-" ) . "\n" if $debug;
+    return 1 if ( !$wget );
 }
 
 # Make a filename from the URL - /es to _es
 #   url - url to mangle
 sub mangle_url {
-  my ($url) = @_;
+    my ($url) = @_;
 
-  (my $mangled = $url) =~ s?\w+://??;
-  $mangled =~ s?/?_?g;
-  my $filename = "$workdir/catalog.$mangled";
-  return $filename;
+    ( my $mangled = $url ) =~ s?\w+://??;
+    $mangled =~ s?/?_?g;
+    my $filename = "$workdir/catalog.$mangled";
+    return $filename;
 }
 
 # Check md5 on downloaded files
 #   mode - 4 = stream silent
 sub md5 {
-  my ($pkg,$file,$mode) = @_;
-  my $md5;
-  my $fh = ($mode == 4 ? *STDERR : *STDOUT);
+    my ( $pkg, $file, $mode ) = @_;
+    my $md5;
+    my $fh = ( $mode == 4 ? *STDERR : *STDOUT );
 
-  eval { require Digest::MD5; };
-  if ($@) {
-    if (-x "/opt/csw/bin/gmd5sum") {
-      myexit("Can't open $file","$!",1) unless (-r $file);
-      $md5 = `/opt/csw/bin/gmd5sum $file`;
-      ($md5) = ($md5 =~ /^(.*\w) /);
-    } else {
-      myexit("\nMD5 support not available! Install CSWcoreutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.","",1);
+    eval { require Digest::MD5; };
+    if ($@) {
+        if ( -x "/opt/csw/bin/gmd5sum" ) {
+            myexit( "Can't open $file", "$!", 1 ) unless ( -r $file );
+            $md5 = `/opt/csw/bin/gmd5sum $file`;
+            ($md5) = ( $md5 =~ /^(.*\w) / );
+        }
+        else {
+            myexit(
+"\nMD5 support not available! Install CSWcoreutils to get MD5\nsupport. Another alternative is to install CSWperl and use\nthat for pkgutil. Do that by having /opt/csw/bin before\n/usr/bin in your path.",
+                "", 1
+            );
+        }
     }
-  } else {
-    open (FILE,"<$file") or myexit("Can't open $file","$!",1);
-    binmode (FILE);
-    $md5 = Digest::MD5->new->addfile(*FILE)->hexdigest;
-    close FILE;
-  }
-  my $md5cat = parse_catalog($pkg,4);
-  print STDERR "DEBUG:$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n" if $debug;
-  myexit("MD5 for $pkg doesn't match catalog!","",1) if ($md5 ne $md5cat);
-  print $fh "MD5 for $pkg matched.\n";
+    else {
+        open( FILE, "<$file" ) or myexit( "Can't open $file", "$!", 1 );
+        binmode(FILE);
+        $md5 = Digest::MD5->new->addfile(*FILE)->hexdigest;
+        close FILE;
+    }
+    my $md5cat = parse_catalog( $pkg, 4 );
+    print STDERR "DEBUG:$pkg md5 file: $md5\n$pkg md5 cat:  $md5cat\n"
+      if $debug;
+    myexit( "MD5 for $pkg doesn't match catalog!", "", 1 )
+      if ( $md5 ne $md5cat );
+    print $fh "MD5 for $pkg matched.\n";
 }
 
 # Do cleanup and exit with return code
@@ -1411,616 +1663,745 @@ sub md5 {
 #   err - error ($!)
 #   rc - return code when exiting
 sub myexit {
-  my ($msg,$err,$rc) = @_;
+    my ( $msg, $err, $rc ) = @_;
 
-  my $text = ($msg && $err) ? "$msg: $err" : "$msg";
-  $rc = 0 unless $rc;
-  unlink $admin if ($admin && -r $admin && $admin =~ /admin\.run$/);
-  print STDERR "$text\n" if $text;
-  exit $rc;
+    my $text = ( $msg && $err ) ? "$msg: $err" : "$msg";
+    $rc = 0 unless $rc;
+    unlink $admin if ( $admin && -r $admin && $admin =~ /admin\.run$/ );
+    print STDERR "$text\n" if $text;
+    exit $rc;
 }
 
 # Parse catalog
 #   pkg  - package to look for, can be both common name and true name
 #   mode - what we want to return, field number from catalog
 sub parse_catalog {
-  my ($pkg,$mode) = @_;
-  my ($retvalue,$name);
+    my ( $pkg, $mode ) = @_;
+    my ( $retvalue, $name );
 
-  print STDERR "DEBUG:Parsing catalog ... looking for: $pkg (mode $mode)\n" if $debug;
+    print STDERR "DEBUG:Parsing catalog ... looking for: $pkg (mode $mode)\n"
+      if $debug;
 
-  # Do we have an embedded version?
-  my @p = split /-/, $pkg;
-  my $vers = pop @p;
-  my $tryname = join('-', @p);
+    # Do we have an embedded version?
+    my @p       = split /-/, $pkg;
+    my $vers    = pop @p;
+    my $tryname = join( '-', @p );
 
-  # First check the whole name without stripping off a "version"
-  # e.g. CSWdovecot-devel
-  if ($pkg{$pkg}) {
-    # SysV, no version (e.g. CSWdovecot-devel)
-    $name = $pkg;
-    undef $vers;
-  } elsif ($commonpkg{$pkg} && $pkg{$commonpkg{$pkg}}) {
-    # Common (e.g. dovecot_devel)
-    $name = $commonpkg{$pkg};
-    undef $vers;
-  } elsif ($pkg{$tryname}) {
-    # SysV, version (e.g. CSWdovecot-devel-1.0.13,REV=2008.03.16)
-    $name = $tryname;
-  } elsif ($commonpkg{$tryname} && $pkg{$commonpkg{$tryname}}) {
-    # Common (e.g. dovecot_devel-1.0.13,REV=2008.03.16)
-    $name = $commonpkg{$tryname};
-  }
+    # First check the whole name without stripping off a "version"
+    # e.g. CSWdovecot-devel
+    if ( $pkg{$pkg} ) {
 
-  if ($name) {
-    # Have we a version match?
-    if ($vers && exists $pkg{$name}{$vers}) {
-      my @tmpcatline = split(/ /,$pkg{$name}{$vers});
-      my $fieldsincatalog = scalar(@tmpcatline);
-      if ($mode == 8 && $fieldsincatalog < 9) {
-        $retvalue = "none";
-      } else {
-        $retvalue = (split(/ /,$pkg{$name}{$vers}))[$mode];
-      }
-    } elsif (! $vers) {
-      # We may have multiple versions in the catalog, take the highest
-      # Note this won't work unless at least one has a REV in it
-      my $highest = (sort { verscmp($b, $a) } keys %{$pkg{$name}})[0];
-      my @tmpcatline = split(/ /,$pkg{$name}{$highest});
-      my $fieldsincatalog = scalar(@tmpcatline);
-      if ($mode == 8 && $fieldsincatalog < 9) {
-        $retvalue = "none";
-      } else {
-        $retvalue = (split(/ /,$pkg{$name}{$highest}))[$mode];
-      }
-    } else {
-      $retvalue = "not in catalog" if (! $retvalue);
+        # SysV, no version (e.g. CSWdovecot-devel)
+        $name = $pkg;
+        undef $vers;
     }
-  } else {
-    $retvalue = "not in catalog" if (! $retvalue);
-  }
-  print STDERR "DEBUG:Return value: $retvalue\n" if $debug;
-  return $retvalue;
+    elsif ( $commonpkg{$pkg} && $pkg{ $commonpkg{$pkg} } ) {
+
+        # Common (e.g. dovecot_devel)
+        $name = $commonpkg{$pkg};
+        undef $vers;
+    }
+    elsif ( $pkg{$tryname} ) {
+
+        # SysV, version (e.g. CSWdovecot-devel-1.0.13,REV=2008.03.16)
+        $name = $tryname;
+    }
+    elsif ( $commonpkg{$tryname} && $pkg{ $commonpkg{$tryname} } ) {
+
+        # Common (e.g. dovecot_devel-1.0.13,REV=2008.03.16)
+        $name = $commonpkg{$tryname};
+    }
+
+    if ($name) {
+
+        # Have we a version match?
+        if ( $vers && exists $pkg{$name}{$vers} ) {
+            my @tmpcatline = split( / /, $pkg{$name}{$vers} );
+            my $fieldsincatalog = scalar(@tmpcatline);
+            if ( $mode == 8 && $fieldsincatalog < 9 ) {
+                $retvalue = "none";
+            }
+            else {
+                $retvalue = ( split( / /, $pkg{$name}{$vers} ) )[$mode];
+            }
+        }
+        elsif ( !$vers ) {
+
+            # We may have multiple versions in the catalog, take the highest
+            # Note this won't work unless at least one has a REV in it
+            my $highest =
+              ( sort { verscmp( $b, $a ) } keys %{ $pkg{$name} } )[0];
+            my @tmpcatline = split( / /, $pkg{$name}{$highest} );
+            my $fieldsincatalog = scalar(@tmpcatline);
+            if ( $mode == 8 && $fieldsincatalog < 9 ) {
+                $retvalue = "none";
+            }
+            else {
+                $retvalue = ( split( / /, $pkg{$name}{$highest} ) )[$mode];
+            }
+        }
+        else {
+            $retvalue = "not in catalog" if ( !$retvalue );
+        }
+    }
+    else {
+        $retvalue = "not in catalog" if ( !$retvalue );
+    }
+    print STDERR "DEBUG:Return value: $retvalue\n" if $debug;
+    return $retvalue;
 }
 
 # Parse command line
 sub parse_cl {
-  my ($opt_install,$opt_upgrade,$opt_remove,$opt_download,$opt_avail,
-      $opt_compare,$opt_compare_available,$opt_upd_cat,$opt_deptree,
-      $opt_email,@opt_temp,$opt_help,$opt_version,
-      $opt_syscheck,$opt_stream,$opt_target,$opt_output,$opt_workdir,
-      $opt_config,$opt_compare_diffonly,$opt_listfile,$opt_findfile,
-      $opt_describe,$opt_extract,$opt_nodeps,$opt_single,@opt_param,
-      $opt_list,$opt_parse,$opt_cleanup,$opt_pkgdir,$opt_rootpath);
+    my (
+        $opt_install,           $opt_upgrade,          $opt_remove,
+        $opt_download,          $opt_avail,            $opt_compare,
+        $opt_compare_available, $opt_upd_cat,          $opt_deptree,
+        $opt_email,             @opt_temp,             $opt_help,
+        $opt_version,           $opt_syscheck,         $opt_stream,
+        $opt_target,            $opt_output,           $opt_workdir,
+        $opt_config,            $opt_compare_diffonly, $opt_listfile,
+        $opt_findfile,          $opt_describe,         $opt_extract,
+        $opt_nodeps,            $opt_single,           @opt_param,
+        $opt_list,              $opt_parse,            $opt_cleanup,
+        $opt_pkgdir,            $opt_rootpath
+    );
 
-  usage() unless scalar(@ARGV);
- 
-  # This call gives hooks a chance to look at the unaltered argument list
-  print STDERR "DEBUG:preargproc: " . join(' ',@ARGV) . "\n" if $debug;
-  run_hooks("preargproc", @ARGV);
+    usage() unless scalar(@ARGV);
 
-  $opt_parse = 0;
+    # This call gives hooks a chance to look at the unaltered argument list
+    print STDERR "DEBUG:preargproc: " . join( ' ', @ARGV ) . "\n" if $debug;
+    run_hooks( "preargproc", @ARGV );
 
-  GetOptions("i|install"	=> \$opt_install,
-             "u|upgrade"	=> \$opt_upgrade,
-             "r|remove"		=> \$opt_remove,
-             "d|download"	=> \$opt_download,
-             "a|available"	=> \$opt_avail,
-             "A|compare-avail"	=> \$opt_compare_available,
-             "describe"		=> \$opt_describe,
-             "c|compare"	=> \$opt_compare,
-             "C|compare-diff"	=> \$opt_compare_diffonly,
-             "config=s"		=> \$opt_config,
-             "U|catalog"	=> \$opt_upd_cat,
-             "e|email=s"	=> \$opt_email,
-             "t|temp=s"		=> \@opt_temp,
-             "y|yes"		=> \$yes,
-             "f|force"		=> \$force,
-             "s|stream"		=> \$opt_stream,
-             "T|target=s"	=> \$opt_target,
-             "o|output=s"	=> \$opt_output,
-             "x|exclude=s"	=> \@exclude,
-             "W|workdir=s"	=> \$opt_workdir,
-             "n|nomod"		=> \$nomod,
-             "D|debug"		=> \$debug,
-             "trace"		=> \$trace,
-             "h|help"		=> \$opt_help,
-             "v|version"	=> \$opt_version,
-             "l|list"		=> \$opt_list,
-             "L|listfile"	=> \$opt_listfile,
-             "F|findfile"	=> \$opt_findfile,
-             "extract"		=> \$opt_extract,
-             "single"		=> \$opt_single,
-             "deptree=i"	=> \$opt_deptree,
-             "N|nodeps"		=> \$opt_nodeps,
-             "parse"		=> \$opt_parse,
-             "p|param=s"	=> \@opt_param,
-             "cleanup"		=> \$opt_cleanup,
-             "P|pkgdir=s"	=> \$opt_pkgdir,
-             "R|rootpath=s"	=> \$opt_rootpath,
-             "V|syscheck"	=> \$opt_syscheck) || usage();
+    $opt_parse = 0;
 
-  # Simple options
-  usage() if $opt_help;
-  pkgutilver(0) if $opt_version;
-  find_file() if $opt_findfile;
-  $config{root_path} = $opt_rootpath if $opt_rootpath;
-  print STDERR "DEBUG:root_path: $config{root_path}\n" if $debug;
+    GetOptions(
+        "i|install"       => \$opt_install,
+        "u|upgrade"       => \$opt_upgrade,
+        "r|remove"        => \$opt_remove,
+        "d|download"      => \$opt_download,
+        "a|available"     => \$opt_avail,
+        "A|compare-avail" => \$opt_compare_available,
+        "describe"        => \$opt_describe,
+        "c|compare"       => \$opt_compare,
+        "C|compare-diff"  => \$opt_compare_diffonly,
+        "config=s"        => \$opt_config,
+        "U|catalog"       => \$opt_upd_cat,
+        "e|email=s"       => \$opt_email,
+        "t|temp=s"        => \@opt_temp,
+        "y|yes"           => \$yes,
+        "f|force"         => \$force,
+        "s|stream"        => \$opt_stream,
+        "T|target=s"      => \$opt_target,
+        "o|output=s"      => \$opt_output,
+        "x|exclude=s"     => \@exclude,
+        "W|workdir=s"     => \$opt_workdir,
+        "n|nomod"         => \$nomod,
+        "D|debug"         => \$debug,
+        "trace"           => \$trace,
+        "h|help"          => \$opt_help,
+        "v|version"       => \$opt_version,
+        "l|list"          => \$opt_list,
+        "L|listfile"      => \$opt_listfile,
+        "F|findfile"      => \$opt_findfile,
+        "extract"         => \$opt_extract,
+        "single"          => \$opt_single,
+        "deptree=i"       => \$opt_deptree,
+        "N|nodeps"        => \$opt_nodeps,
+        "parse"           => \$opt_parse,
+        "p|param=s"       => \@opt_param,
+        "cleanup"         => \$opt_cleanup,
+        "P|pkgdir=s"      => \$opt_pkgdir,
+        "R|rootpath=s"    => \$opt_rootpath,
+        "V|syscheck"      => \$opt_syscheck
+    ) || usage();
 
-  # Installing local packages if all args are package files
-  if (scalar(@ARGV) && ($opt_install || $opt_upgrade)) {
-    my $notalocpkg = 0;
+    # Simple options
+    usage()       if $opt_help;
+    pkgutilver(0) if $opt_version;
+    find_file()   if $opt_findfile;
+    $config{root_path} = $opt_rootpath if $opt_rootpath;
+    print STDERR "DEBUG:root_path: $config{root_path}\n" if $debug;
+
+    # Installing local packages if all args are package files
+    if ( scalar(@ARGV) && ( $opt_install || $opt_upgrade ) ) {
+        my $notalocpkg = 0;
+        foreach (@ARGV) {
+            $notalocpkg = 1 unless ( -r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/ );
+            print STDERR "DEBUG:$_ : $notalocpkg\n" if $debug;
+        }
+        unless ($notalocpkg) {
+            print "Installing your local packages ...\n";
+            inst_loc_pkgs(@ARGV);
+        }
+    }
+
+    init( $opt_config, @opt_param ) if ( $opt_config || scalar(@opt_param) );
+    list_pkgs()   if $opt_list;
+    pkgutilver(1) if $opt_syscheck;
+    locate_wget();
+    locate_gzip();
+
+    if ($opt_workdir) {    # Set/create optional working dir
+        $workdir = $opt_workdir;
+    }
+    elsif ($>) {           # If -W not used and non-root, use home dir
+        $workdir = $ENV{HOME} . "/.pkgutil";
+        if ( !-d $workdir ) {    # Create if non-existing
+            my $status = mkdir $workdir, 0777;
+            myexit( "Could not create $workdir", "$!", 1 ) unless $status;
+        }
+        print STDERR "DEBUG:username: " . getpwuid($>) . "\n" if $debug;
+        print STDERR "You're not root and didn't set -W, using home dir.\n";
+    }
+    print STDERR "DEBUG:workdir: $workdir\n" if $debug;
+
+    if ($opt_pkgdir) {           # Set/create optional package dir
+        $pkgdir = $opt_pkgdir;
+    }
+    else {
+        $pkgdir = "$workdir/packages";
+    }
+    print STDERR "DEBUG:pkgdir: $pkgdir\n" if $debug;
+
+    # Create runtime copy of admin to make sure we have one
+    # available even during upgrade of pkgutil itself
+    $admin = "$workdir/admin";
+    $admin = "/var/opt/csw/pkgutil/admin" unless ( -r $admin );
+    open( ADMSRC, "<$admin" ) or myexit( "Can't open $admin", "$!", 1 );
+    if ( -r "$workdir/admin.run" ) {
+        my @pslist      = `/bin/ps -ef`;
+        my $pkgutilinst = 0;
+        foreach (@pslist) {
+            $pkgutilinst++ if (/\bperl\s.*pkgutil\b/);
+        }
+        if ( $pkgutilinst > 1 ) {
+            myexit( "Another instance of pkgutil is already running!", "", 1 );
+        }
+        else {
+            unlink "$workdir/admin.run" if ( -r "$workdir/admin.run" );
+            print STDERR "Stale lock file ($workdir/admin.run) removed\n";
+        }
+    }
+    open( ADMCPY, ">$workdir/admin.run" )
+      or myexit( "Can't open $workdir/admin.run", "$!", 1 );
+    while (<ADMSRC>) {
+        print ADMCPY;
+    }
+    close ADMSRC;
+    close ADMCPY;
+    $admin = "$workdir/admin.run";
+
+    # Cleanup supports yes/auto so it needs to have $admin set
+    cleanup() if $opt_cleanup;
+
+    my $status = system( "/bin/mkdir", "-p", "$pkgdir" );
+    myexit( "Could not create $pkgdir", "$!", 1 ) if $status;
+
+    # Get mirrors together
+    @mirror = @{ $config{mirror} };
+    $mirror[0] = $defaultmirror unless @mirror;    # If no mirrors configured
+          # Prepend temp mirrors so they are selected first
+    unshift( @mirror, @opt_temp ) if @opt_temp;
+
+    my @supp_arch = qw(sparc i386);
+    my @supp_rel  = qw(5.8 5.9 5.10 5.11);
+    my ( $ok_arch, $ok_rel ) = ( 0, 0 );
+    my ( $loc_arch, $loc_rel );
+
+    if ( $opt_target && $opt_download ) {
+        if ( $opt_target =~ /.:./ ) {
+            ( $loc_arch, $loc_rel ) = split( /:/, $opt_target );
+        }
+        else {
+            myexit( "$opt_target is not a correct arch:rel combo.", "", 1 );
+        }
+    }
+    else {
+        chomp( $loc_arch = `uname -p` );    # Arch type sparc|i386
+        chomp( $loc_rel  = `uname -r` );    # OS version, e.g. 5.10
+    }
+    print STDERR "DEBUG:arch: $loc_arch\nDEBUG:os rel: $loc_rel\n" if $debug;
+
+    foreach (@supp_arch) {
+        if ( $loc_arch eq $_ ) {
+            $ok_arch = 1;
+            last;
+        }
+    }
+    foreach (@supp_rel) {
+        if ( $loc_rel eq $_ ) {
+            $ok_rel = 1;
+            last;
+        }
+    }
+    print "Architecture $loc_arch not supported.\n" unless $ok_arch;
+    print "OS release $loc_rel not supported.\n"    unless $ok_rel;
+    myexit( "", "", 1 ) if ( ( $ok_arch + $ok_rel ) < 2 );
+
+    foreach ( my $i = 0 ; $i < scalar(@mirror) ; $i++ ) {
+        ( $mirror[$i] ) = ( $mirror[$i] =~ q!^(.+\w)! );
+        $mirror[$i] .= "/" . $loc_arch . "/" . $loc_rel;
+    }
+
+    print STDERR "DEBUG:primary mirror: $mirror[0]\n" if $debug;
+    if ( $opt_upd_cat || @opt_temp ) {
+        check_catalog( 1, $opt_parse );    # Reread everything
+    }
+    else {
+        check_catalog( 0, $opt_parse );
+    }
+
+    # Running the hook now should pass only things that remain in ARGV,
+    # which should be a list of package names
+    my @norm_argv;
     foreach (@ARGV) {
-      $notalocpkg = 1 unless (-r $_ && -s _ && $_ =~ /\.pkg(\.gz)?$/);
-      print STDERR "DEBUG:$_ : $notalocpkg\n" if $debug;
+        push( @norm_argv, parse_catalog( $_, 2 ) );
     }
-    unless ($notalocpkg) {
-      print "Installing your local packages ...\n";
-      inst_loc_pkgs(@ARGV);
+    print STDERR "DEBUG:postargproc: " . join( ' ', @norm_argv ) . "\n"
+      if $debug;
+    run_hooks( "postargproc", @norm_argv );
+
+    # Complex options
+    list_file() if $opt_listfile;
+
+    # Download and stream if both -d and -s selected
+    stream( $loc_arch, $loc_rel, $opt_output )
+      if ( $opt_stream && $opt_download );
+    email($opt_email) if $opt_email;
+    available( 0, $opt_parse ) if $opt_avail;
+    available( 1, $opt_parse ) if $opt_compare_available;
+    deptree($opt_deptree) if $opt_deptree;
+    describe($opt_parse)  if $opt_describe;
+    compare( 3, $opt_parse ) if $opt_compare_diffonly;
+    compare( 4, $opt_parse ) if ( $opt_compare && $opt_single );
+    compare( 0, $opt_parse ) if $opt_compare;
+
+    # Download and extract if both -d and --extract selected
+    install( 5, $opt_nodeps, $opt_parse ) if ( $opt_extract && $opt_download );
+    install( 0, $opt_nodeps, $opt_parse ) if $opt_install;
+    install( 2, $opt_nodeps, $opt_parse )
+      if $opt_remove;    # Remove instead of install
+    install( 1, $opt_nodeps, $opt_parse ) if $opt_download;    # Download only
+
+    # Upgrade is a special case of install
+    if ($opt_upgrade) {
+        if ( scalar(@ARGV) == 0 || $ARGV[0] =~ /all/i ) {
+
+            # Need to manipulate ARGV to match installed CSW packages
+            # that need upgrading (use -c mode 1)
+            print "Looking for packages that can be upgraded ...\n";
+            my @cswpkgs = compare( 1, 0 );
+            my $i = 0;
+            foreach (@cswpkgs) {
+                $ARGV[ $i++ ] = $_;
+            }
+        }
+        install( 0, $opt_nodeps, $opt_parse );
     }
-  }
 
-  init($opt_config,@opt_param) if ($opt_config || scalar(@opt_param));
-  list_pkgs() if $opt_list;
-  pkgutilver(1) if $opt_syscheck;
-  locate_wget();
-  locate_gzip();
-
-  if ($opt_workdir) {	# Set/create optional working dir
-    $workdir = $opt_workdir;
-  } elsif ($>) {	# If -W not used and non-root, use home dir
-    $workdir = $ENV{HOME} . "/.pkgutil";
-    if (! -d $workdir) {	# Create if non-existing
-      my $status = mkdir $workdir,0777;
-      myexit("Could not create $workdir","$!",1) unless $status;
-    }
-    print STDERR "DEBUG:username: " . getpwuid($>) . "\n" if $debug;
-    print STDERR "You're not root and didn't set -W, using home dir.\n";
-  }
-  print STDERR "DEBUG:workdir: $workdir\n" if $debug;
-
-  if ($opt_pkgdir) {	# Set/create optional package dir
-    $pkgdir = $opt_pkgdir;
-  } else {
-    $pkgdir = "$workdir/packages";
-  }
-  print STDERR "DEBUG:pkgdir: $pkgdir\n" if $debug;
-
-  # Create runtime copy of admin to make sure we have one
-  # available even during upgrade of pkgutil itself
-  $admin = "$workdir/admin";
-  $admin = "/var/opt/csw/pkgutil/admin" unless (-r $admin);
-  open (ADMSRC,"<$admin") or myexit("Can't open $admin","$!",1);
-  if (-r "$workdir/admin.run") {
-    my @pslist = `/bin/ps -ef`;
-    my $pkgutilinst = 0;
-    foreach (@pslist) {
-      $pkgutilinst++ if (/\bperl\s.*pkgutil\b/);
-    }
-    if ($pkgutilinst > 1) {
-      myexit("Another instance of pkgutil is already running!","",1);
-    } else {
-      unlink "$workdir/admin.run" if (-r "$workdir/admin.run");
-      print STDERR "Stale lock file ($workdir/admin.run) removed\n";
-    } 
-  }
-  open (ADMCPY,">$workdir/admin.run") or myexit("Can't open $workdir/admin.run","$!",1);
-  while (<ADMSRC>) {
-    print ADMCPY;
-  }
-  close ADMSRC;
-  close ADMCPY;
-  $admin = "$workdir/admin.run";
-
-  # Cleanup supports yes/auto so it needs to have $admin set
-  cleanup() if $opt_cleanup;
-
-  my $status = system("/bin/mkdir","-p","$pkgdir");
-  myexit("Could not create $pkgdir","$!",1) if $status;
-
-  # Get mirrors together
-  @mirror = @{$config{mirror}};
-  $mirror[0] = $defaultmirror unless @mirror; # If no mirrors configured
-  # Prepend temp mirrors so they are selected first
-  unshift(@mirror,@opt_temp) if @opt_temp;
-
-  my @supp_arch = qw(sparc i386);
-  my @supp_rel = qw(5.8 5.9 5.10 5.11);
-  my ($ok_arch,$ok_rel) = (0,0);
-  my ($loc_arch,$loc_rel);
-
-  if ($opt_target && $opt_download) {
-    if ($opt_target =~ /.:./) {
-      ($loc_arch,$loc_rel) = split(/:/,$opt_target);
-    } else {
-      myexit("$opt_target is not a correct arch:rel combo.","",1);
-    }
-  } else {
-    chomp($loc_arch = `uname -p`);	# Arch type sparc|i386
-    chomp($loc_rel = `uname -r`);	# OS version, e.g. 5.10
-  }
-  print STDERR "DEBUG:arch: $loc_arch\nDEBUG:os rel: $loc_rel\n" if $debug;
-
-  foreach (@supp_arch) {
-    if ($loc_arch eq $_) {
-      $ok_arch = 1;
-      last;
-    }
-  }
-  foreach (@supp_rel) {
-    if ($loc_rel eq $_) {
-      $ok_rel = 1;
-      last;
-    }
-  }
-  print "Architecture $loc_arch not supported.\n" unless $ok_arch;
-  print "OS release $loc_rel not supported.\n" unless $ok_rel;
-  myexit("","",1) if (($ok_arch + $ok_rel) < 2);
-
-  foreach (my $i=0; $i < scalar(@mirror); $i++) {
-    ($mirror[$i]) = ($mirror[$i] =~ q!^(.+\w)!);
-    $mirror[$i] .= "/" . $loc_arch . "/" . $loc_rel;
-  }
-
-  print STDERR "DEBUG:primary mirror: $mirror[0]\n" if $debug;
-  if ($opt_upd_cat || @opt_temp) {
-    check_catalog(1,$opt_parse);	# Reread everything
-  } else {
-    check_catalog(0,$opt_parse);
-  }
-
-  # Running the hook now should pass only things that remain in ARGV,
-  # which should be a list of package names
-  my @norm_argv;
-  foreach (@ARGV) {
-    push(@norm_argv,parse_catalog($_,2));
-  }
-  print STDERR "DEBUG:postargproc: " . join(' ',@norm_argv) . "\n" if $debug;
-  run_hooks("postargproc", @norm_argv);
-
-  # Complex options
-  list_file() if $opt_listfile;
-  # Download and stream if both -d and -s selected
-  stream($loc_arch,$loc_rel,$opt_output) if ($opt_stream && $opt_download);
-  email($opt_email) if $opt_email;
-  available(0,$opt_parse) if $opt_avail;
-  available(1,$opt_parse) if $opt_compare_available;
-  deptree($opt_deptree) if $opt_deptree;
-  describe($opt_parse) if $opt_describe;
-  compare(3,$opt_parse) if $opt_compare_diffonly;
-  compare(4,$opt_parse) if ($opt_compare && $opt_single);
-  compare(0,$opt_parse) if $opt_compare;
-  # Download and extract if both -d and --extract selected
-  install(5,$opt_nodeps,$opt_parse) if ($opt_extract && $opt_download);
-  install(0,$opt_nodeps,$opt_parse) if $opt_install;
-  install(2,$opt_nodeps,$opt_parse) if $opt_remove; # Remove instead of install
-  install(1,$opt_nodeps,$opt_parse) if $opt_download; # Download only
-
-  # Upgrade is a special case of install
-  if ($opt_upgrade) {
-    if (scalar(@ARGV) == 0 || $ARGV[0] =~ /all/i) {
-      # Need to manipulate ARGV to match installed CSW packages
-      # that need upgrading (use -c mode 1)
-      print "Looking for packages that can be upgraded ...\n";
-      my @cswpkgs = compare(1,0);
-      my $i = 0;
-      foreach (@cswpkgs) {
-        $ARGV[$i++] = $_;
-      }
-    }
-    install(0,$opt_nodeps,$opt_parse);
-  }
-
-  # Arguments but no options
-  print "You need to select a valid option!\n" if (! $opt_upd_cat);
+    # Arguments but no options
+    print "You need to select a valid option!\n" if ( !$opt_upd_cat );
 }
 
 # Show version info (-v/V)
 #   mode - 0 = print only version, 1 = system check
 sub pkgutilver {
-  my ($mode) = @_;
-  my $flag = 0;
-  chomp(my $solver = `uname -r`);
-  chomp(my $solarch = `uname -p`);
-  my ($pkgpatch,$pkgpatchinst);
+    my ($mode) = @_;
+    my $flag = 0;
+    chomp( my $solver  = `uname -r` );
+    chomp( my $solarch = `uname -p` );
+    my ( $pkgpatch, $pkgpatchinst );
 
-  if ($mode) {
-    print "- System -\n";
-    print "Pkgutil\t\t$pkgutilver\n";
-    print "Arch\t\t$solarch\n";
-    print "Solaris\t\t$solver\n";
-    $pkgpatch = ($solarch eq "sparc") ? "110934" : "110935" if ("$solver" eq "5.8");
-    $pkgpatch = ($solarch eq "sparc") ? "113713" : "114568" if ("$solver" eq "5.9");
-    $pkgpatch = ($solarch eq "sparc") ? "119317" : "119318" if ("$solver" eq "5.10");
-    if ($solver ne "5.11") {
-      chomp($pkgpatchinst = `showrev -p | grep $pkgpatch | cut -d' ' -f2 | grep $pkgpatch | sort | tail -1`);
-      $pkgpatchinst = ($pkgpatchinst) ? "$pkgpatchinst installed" : "not found";
-    } else {
-      $pkgpatch = $pkgpatchinst = "na";
+    if ($mode) {
+        print "- System -\n";
+        print "Pkgutil\t\t$pkgutilver\n";
+        print "Arch\t\t$solarch\n";
+        print "Solaris\t\t$solver\n";
+        $pkgpatch = ( $solarch eq "sparc" ) ? "110934" : "110935"
+          if ( "$solver" eq "5.8" );
+        $pkgpatch = ( $solarch eq "sparc" ) ? "113713" : "114568"
+          if ( "$solver" eq "5.9" );
+        $pkgpatch = ( $solarch eq "sparc" ) ? "119317" : "119318"
+          if ( "$solver" eq "5.10" );
+        if ( $solver ne "5.11" ) {
+            chomp( $pkgpatchinst =
+`showrev -p | grep $pkgpatch | cut -d' ' -f2 | grep $pkgpatch | sort | tail -1`
+            );
+            $pkgpatchinst =
+              ($pkgpatchinst) ? "$pkgpatchinst installed" : "not found";
+        }
+        else {
+            $pkgpatch = $pkgpatchinst = "na";
+        }
+        print "Pkg patch\t$pkgpatch ($pkgpatchinst)\n";
+        if ( -x "/opt/csw/bin/gpg" ) {
+            print "GPG binary\t/opt/csw/bin/gpg\n";
+        }
+        else {
+            print "GPG binary\tnot found (suggestion: install CSWgnupg)\n";
+        }
+        my $status = locate_gzip();
+        print "Gzip binary\t"
+          . ( ($status) ? "not found (suggestion: install CSWgzip)" : $gzip )
+          . "\n";
+        if ( -x "/bin/mailx" ) {
+            print "Mailx binary\t/bin/mailx\n";
+        }
+        else {
+            print "Mailx binary\tnot found (option --email not available)\n";
+        }
+        if ( -x "/opt/csw/bin/gmd5sum" ) {
+            print "MD5 binary\t/opt/csw/bin/gmd5sum\n";
+        }
+        else {
+            print "MD5 binary\tnot found";
+            print " (suggestion: install CSWcoreutils)" unless $flag;
+            print "\n";
+            $flag = 0;
+        }
+        eval { require Digest::MD5; };
+        if ($@) {
+            print "MD5 module\tnot found\n";
+        }
+        else {
+            print "MD5 module\t", Digest::MD5->VERSION,
+              " (primary choice for MD5)\n";
+            $flag = 1;
+        }
+        print "Perl\t\t$]\n";
+        print "Perl binary\t" . `which perl`;
+        $status = locate_wget();
+        print "Wget binary\t"
+          . ( ($status) ? "not found (suggestion: install CSWwget)" : $wget )
+          . "\n";
+        print "PATH\t\t$ENV{PATH}\n";
+        print "\n- Configuration -\n";
+        print
+          "catalog_not_cached\t$config{catalog_not_cached} (default: true)\n";
+        print "catalog_update\t\t"
+          . (
+            ( $config{catalog_update} ) ? $config{catalog_update} : "not set" )
+          . " (default: 14)\n";
+        print "deptree_filter_common\t"
+          . ( ( $config{deptree_filter_common} eq "true" ) ? "true" : "false" )
+          . " (default: false)\n";
+        print "exclude_pattern\t\t"
+          . (
+            ( $config{exclude_pattern} )
+            ? $config{exclude_pattern}
+            : "not set"
+          ) . " (default: none)\n";
+        print "gpg_homedir\t\t"
+          . ( ( $config{gpg_homedir} ) ? $config{gpg_homedir} : "not set" )
+          . " (default: none)\n";
+        print "maxpkglist\t\t$maxpkglist (default: 10000)\n";
+        print "mirror\t\t\t"
+          . (
+            ( scalar( @{ $config{mirror} } ) )
+            ? join( "\n\t\t\t", @{ $config{mirror} } )
+            : "not set"
+          ) . "\n\t\t\t(default: $defaultmirror)\n";
+        print "noncsw\t\t\t"
+          . ( ($noncsw) ? $noncsw : "false" )
+          . " (default: false)\n";
+        print "pkgaddopts\t\t"
+          . ( ( $config{pkgaddopts} ) ? $config{pkgaddopts} : "not set" )
+          . " (default: none)\n";
+        print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
+        print "root_path\t\t"
+          . ( ( $config{root_path} ) ? $config{root_path} : "not set" )
+          . " (default: /)\n";
+        print "show_current\t\t$config{show_current} (default: true)\n";
+        print "stop_on_hook_soft_error\t"
+          . (
+            ( $config{stop_on_hook_soft_error} )
+            ? $config{stop_on_hook_soft_error}
+            : "not set"
+          ) . " (default: false)\n";
+        print "use_gpg\t\t\t"
+          . ( ($use_gpg) ? "true" : "false" )
+          . " (default: false)\n";
+        print "use_md5\t\t\t"
+          . ( ($use_md5) ? "true" : "false" )
+          . " (default: false)\n";
+        print "wgetopts\t\t"
+          . ( ( $config{wgetopts} ) ? $config{wgetopts} : "not set" )
+          . " (default: none)\n";
     }
-    print "Pkg patch\t$pkgpatch ($pkgpatchinst)\n";
-    if (-x "/opt/csw/bin/gpg") {
-      print "GPG binary\t/opt/csw/bin/gpg\n";
-    } else {
-      print "GPG binary\tnot found (suggestion: install CSWgnupg)\n";
+    else {
+        print "$pkgutilver\n";
     }
-    my $status = locate_gzip(); 
-    print "Gzip binary\t" . (($status) ? "not found (suggestion: install CSWgzip)" : $gzip) . "\n";
-    if (-x "/bin/mailx") {
-      print "Mailx binary\t/bin/mailx\n";
-    } else {
-      print "Mailx binary\tnot found (option --email not available)\n";
-    }
-    if (-x "/opt/csw/bin/gmd5sum") {
-      print "MD5 binary\t/opt/csw/bin/gmd5sum\n";
-    } else {
-      print "MD5 binary\tnot found";
-      print " (suggestion: install CSWcoreutils)" unless $flag;
-      print "\n";
-      $flag = 0;
-    }
-    eval { require Digest::MD5; };
-    if ($@) {
-      print "MD5 module\tnot found\n";
-    } else {
-      print "MD5 module\t",Digest::MD5->VERSION," (primary choice for MD5)\n";
-      $flag = 1;
-    }
-    print "Perl\t\t$]\n";
-    print "Perl binary\t" . `which perl`;
-    $status = locate_wget(); 
-    print "Wget binary\t" . (($status) ? "not found (suggestion: install CSWwget)" : $wget) . "\n";
-    print "PATH\t\t$ENV{PATH}\n";
-    print "\n- Configuration -\n";
-    print "catalog_not_cached\t$config{catalog_not_cached} (default: true)\n";
-    print "catalog_update\t\t" . (($config{catalog_update}) ? $config{catalog_update} : "not set") . " (default: 14)\n";
-    print "deptree_filter_common\t" . (($config{deptree_filter_common} eq "true") ? "true" : "false") . " (default: false)\n";
-    print "exclude_pattern\t\t" . (($config{exclude_pattern}) ? $config{exclude_pattern} : "not set") . " (default: none)\n";
-    print "gpg_homedir\t\t" . (($config{gpg_homedir}) ? $config{gpg_homedir} : "not set") . " (default: none)\n";
-    print "maxpkglist\t\t$maxpkglist (default: 10000)\n";
-    print "mirror\t\t\t" . ((scalar(@{$config{mirror}})) ? join("\n\t\t\t", @{$config{mirror}}) : "not set") . "\n\t\t\t(default: $defaultmirror)\n";
-    print "noncsw\t\t\t" . (($noncsw) ? $noncsw : "false") . " (default: false)\n";
-    print "pkgaddopts\t\t" . (($config{pkgaddopts}) ? $config{pkgaddopts} : "not set") . " (default: none)\n";
-    print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
-    print "root_path\t\t" . (($config{root_path}) ? $config{root_path} : "not set") . " (default: /)\n";
-    print "show_current\t\t$config{show_current} (default: true)\n";
-    print "stop_on_hook_soft_error\t" . (($config{stop_on_hook_soft_error}) ? $config{stop_on_hook_soft_error} : "not set") . " (default: false)\n";
-    print "use_gpg\t\t\t" . (($use_gpg) ? "true" : "false") . " (default: false)\n";
-    print "use_md5\t\t\t" . (($use_md5) ? "true" : "false") . " (default: false)\n";
-    print "wgetopts\t\t" . (($config{wgetopts}) ? $config{wgetopts} : "not set") . " (default: none)\n";
-  } else {
-    print "$pkgutilver\n";
-  }
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Read catalog into hash
 #   catalog - catalog to read
 #   filename - filename to use
 sub read_catalog {
-  my ($catalog,$filename) = @_;
-  my @llst;
-  my $i = 0;
+    my ( $catalog, $filename ) = @_;
+    my @llst;
+    my $i = 0;
 
-  open (CATALOG,"<$filename") or myexit("Can't open $filename","$!",1);
-  while (my $line = <CATALOG>) {
-    chomp $line;
-    if ($line =~ /^\w/) {
-      @llst = split(/ /,$line);
-      if ($llst[0] && $llst[1] && $llst[2] && $llst[3] && $llst[4] && $llst[5] && $llst[6] && $llst[7]) {
-        $pkg{$llst[2]}{$llst[1]} = $line;
-        $commonpkg{$llst[0]} = $llst[2];
-        push(@{$pkgmirror{$llst[3]}},$catalog);
-        $i++;
-      }
+    open( CATALOG, "<$filename" ) or myexit( "Can't open $filename", "$!", 1 );
+    while ( my $line = <CATALOG> ) {
+        chomp $line;
+        if ( $line =~ /^\w/ ) {
+            @llst = split( / /, $line );
+            if (   $llst[0]
+                && $llst[1]
+                && $llst[2]
+                && $llst[3]
+                && $llst[4]
+                && $llst[5]
+                && $llst[6]
+                && $llst[7] )
+            {
+                $pkg{ $llst[2] }{ $llst[1] } = $line;
+                $commonpkg{ $llst[0] } = $llst[2];
+                push( @{ $pkgmirror{ $llst[3] } }, $catalog );
+                $i++;
+            }
+        }
     }
-  }
-  close CATALOG;
-  return $i;
+    close CATALOG;
+    return $i;
 }
 
 # Remove packages (-r)
 #   pkgs - packages to remove
 sub remove {
-  my @pkgs = @_;
-  my $retval = "";
-  my $pkgrm = "/usr/sbin/pkgrm";
-  my $pkgforce = "";
-  my $pkgtrace = "";
-  my ($pkg,$i,$j,$k,$l,$depinuse,$skip);
-  my (@cswpkgs,@deptmp,@rempkgs,@cswpkgstmp);
+    my @pkgs     = @_;
+    my $retval   = "";
+    my $pkgrm    = "/usr/sbin/pkgrm";
+    my $pkgforce = "";
+    my $pkgtrace = "";
+    my ( $pkg, $i, $j, $k, $l, $depinuse, $skip );
+    my ( @cswpkgs, @deptmp, @rempkgs, @cswpkgstmp );
 
-  $pkgtrace = "-v" if $trace;
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    $pkgtrace = "-v" if $trace;
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
-  print "Looking at installed packages ...\n";
-  if ($noncsw) {
-    @cswpkgstmp = `/bin/pkginfo $root_path`;
-  } else {
-    @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
-  }
-  foreach $pkg (@cswpkgstmp) {
-    ($pkg) = ($pkg =~ /\s+?(\S+?)\s/);
-    $skip = 0;
-    foreach (@pkgs) {
-      $skip = 1 if ($_ eq $pkg);
+    print "Looking at installed packages ...\n";
+    if ($noncsw) {
+        @cswpkgstmp = `/bin/pkginfo $root_path`;
     }
-    push(@cswpkgs,$pkg) unless $skip;
-  }
-  print "Examining dependencies for:\n";
-  foreach my $userpkg (@pkgs) {
-    ($i) = ($userpkg =~ /(\S+)-/);
-    print "  $i";
-    $depinuse = 0;
-    foreach $j (@cswpkgs) {
-      $retval = parse_catalog($j,6);
-      if ($retval ne "none" && $retval ne "not in catalog" && $i ne $j) { 
-        (@deptmp) = split(/\|/,$retval);
-        foreach $k (@deptmp) {
-          if ($k eq $i) {
-            print STDERR "DEBUG:\n$i is in use by $j\n" if $debug;
-            $depinuse = 1;
-            last;
-          }
+    else {
+        @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
+    }
+    foreach $pkg (@cswpkgstmp) {
+        ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
+        $skip = 0;
+        foreach (@pkgs) {
+            $skip = 1 if ( $_ eq $pkg );
         }
-      }
-      $depinuse ? last : next;
+        push( @cswpkgs, $pkg ) unless $skip;
     }
-    push(@rempkgs,$userpkg) unless $depinuse;
-    $depinuse ? print " (in use)\n" : print " (remove)\n";
-  }
-
-  if (scalar(@rempkgs) > 0 && ! $yes) {
-    print scalar(@rempkgs)," package" . (scalar(@rempkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
-    chomp (my $prompt = <STDIN>);
-    if ($prompt =~ /^[nN]/) {
-      myexit("","",0);
-    } elsif ($prompt =~ /^a(uto)*/i) {
-      print "Turning on automatic mode as if --yes was passed.\n";
-      $yes = 1
-    }
-  }
-  $pkgforce = "-a $admin -n" if $yes;
-
-  if (scalar(@rempkgs) > 0) {
-    run_hooks('prebatchremove',@rempkgs);
-
-    foreach (@rempkgs) {
-      my ($p,$v) = ($_ =~ /(\S+)-/);
-      $retval = check_pkg($p,0);
-      if ($retval ne "notinst") {
-        myexit("Option -n selected, stopping here.","",0) if $nomod;
-        print "\n=> Removing $p\n";
-        run_hooks('preremove',($_));
-        system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$p");
-        run_hooks('postremove',($_));
-      } else {
-        print "$p not installed\n";
-      }
+    print "Examining dependencies for:\n";
+    foreach my $userpkg (@pkgs) {
+        ($i) = ( $userpkg =~ /(\S+)-/ );
+        print "  $i";
+        $depinuse = 0;
+        foreach $j (@cswpkgs) {
+            $retval = parse_catalog( $j, 6 );
+            if ( $retval ne "none" && $retval ne "not in catalog" && $i ne $j )
+            {
+                (@deptmp) = split( /\|/, $retval );
+                foreach $k (@deptmp) {
+                    if ( $k eq $i ) {
+                        print STDERR "DEBUG:\n$i is in use by $j\n" if $debug;
+                        $depinuse = 1;
+                        last;
+                    }
+                }
+            }
+            $depinuse ? last : next;
+        }
+        push( @rempkgs, $userpkg ) unless $depinuse;
+        $depinuse ? print " (in use)\n" : print " (remove)\n";
     }
 
-    run_hooks('postbatchremove',@rempkgs);
-  } else {
-    print "Nothing to remove.\n";
-  }
-  myexit("","",0);
+    if ( scalar(@rempkgs) > 0 && !$yes ) {
+        print scalar(@rempkgs),
+            " package"
+          . ( scalar(@rempkgs) > 1 ? "s" : "" )
+          . " to remove. Do you want to continue? ([y],n,auto) ";
+        chomp( my $prompt = <STDIN> );
+        if ( $prompt =~ /^[nN]/ ) {
+            myexit( "", "", 0 );
+        }
+        elsif ( $prompt =~ /^a(uto)*/i ) {
+            print "Turning on automatic mode as if --yes was passed.\n";
+            $yes = 1;
+        }
+    }
+    $pkgforce = "-a $admin -n" if $yes;
+
+    if ( scalar(@rempkgs) > 0 ) {
+        run_hooks( 'prebatchremove', @rempkgs );
+
+        foreach (@rempkgs) {
+            my ( $p, $v ) = ( $_ =~ /(\S+)-/ );
+            $retval = check_pkg( $p, 0 );
+            if ( $retval ne "notinst" ) {
+                myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
+                print "\n=> Removing $p\n";
+                run_hooks( 'preremove', ($_) );
+                system(
+                    "$pkgrm",
+                    split( ' ', $root_path ),
+                    split( ' ', $pkgforce ),
+                    split( ' ', $pkgtrace ), "$p"
+                );
+                run_hooks( 'postremove', ($_) );
+            }
+            else {
+                print "$p not installed\n";
+            }
+        }
+
+        run_hooks( 'postbatchremove', @rempkgs );
+    }
+    else {
+        print "Nothing to remove.\n";
+    }
+    myexit( "", "", 0 );
 }
 
 # Remove list of packages with pkgrm
 #   pkgs - packages to remove
 sub rem_pkgs {
-  my @pkgs = @_;
-  my $pkgrm = "/usr/sbin/pkgrm";
-  my $pkgforce = "";
-  my $pkgtrace = "";
+    my @pkgs     = @_;
+    my $pkgrm    = "/usr/sbin/pkgrm";
+    my $pkgforce = "";
+    my $pkgtrace = "";
 
-  if (scalar(@pkgs) > 0 && ! $yes) {
-    print scalar(@pkgs)," package" . (scalar(@pkgs) > 1 ? "s" : "") . " to remove. Do you want to continue? ([y],n,auto) ";
-    chomp (my $prompt = <STDIN>);
-    if ($prompt =~ /^[nN]/) {
-      myexit("","",0);
-    } elsif ($prompt =~ /^a(uto)*/i) {
-      print "Turning on automatic mode as if --yes was passed.\n";
-      $yes = 1
-    }
-  }
-
-  $pkgforce = "-a $admin -n" if $yes;
-  $pkgtrace = "-v" if $trace;
-  my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
-
-  if (scalar(@pkgs) > 0) {
-    run_hooks('prebatchremove',@pkgs);
-
-    foreach (@pkgs) {
-      myexit("Option -n selected, stopping here.","",0) if $nomod;
-      print "\n=> Removing $_\n";
-      my $pkgver = check_pkg($_,0);
-      run_hooks('preremove',("$_-$pkgver"));
-      system("$pkgrm",split(' ',$root_path),split(' ',$pkgforce),split(' ',$pkgtrace),"$_");
-      run_hooks('postremove',("$_-$pkgver"));
+    if ( scalar(@pkgs) > 0 && !$yes ) {
+        print scalar(@pkgs),
+            " package"
+          . ( scalar(@pkgs) > 1 ? "s" : "" )
+          . " to remove. Do you want to continue? ([y],n,auto) ";
+        chomp( my $prompt = <STDIN> );
+        if ( $prompt =~ /^[nN]/ ) {
+            myexit( "", "", 0 );
+        }
+        elsif ( $prompt =~ /^a(uto)*/i ) {
+            print "Turning on automatic mode as if --yes was passed.\n";
+            $yes = 1;
+        }
     }
 
-    run_hooks('postbatchremove',@pkgs);
-  } else {
-    print "Nothing to remove.\n";
-  }
+    $pkgforce = "-a $admin -n" if $yes;
+    $pkgtrace = "-v"           if $trace;
+    my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+
+    if ( scalar(@pkgs) > 0 ) {
+        run_hooks( 'prebatchremove', @pkgs );
+
+        foreach (@pkgs) {
+            myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
+            print "\n=> Removing $_\n";
+            my $pkgver = check_pkg( $_, 0 );
+            run_hooks( 'preremove', ("$_-$pkgver") );
+            system(
+                "$pkgrm",
+                split( ' ', $root_path ),
+                split( ' ', $pkgforce ),
+                split( ' ', $pkgtrace ), "$_"
+            );
+            run_hooks( 'postremove', ("$_-$pkgver") );
+        }
+
+        run_hooks( 'postbatchremove', @pkgs );
+    }
+    else {
+        print "Nothing to remove.\n";
+    }
 }
 
 # Run hooks
 sub run_hooks {
-  my $hook_name = shift;
-  my @hook_args = @_;
+    my $hook_name = shift;
+    my @hook_args = @_;
 
-  my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
-  my ($hook,$hookfile,$oldwd,$status,$code);
-  my @hooks_to_run;
-  my @valid_hooks = ('prebatchinstall',
-                     'prebatchupgrade',
-                     'prebatchremove',
-                     'preinstall',
-                     'preupgrade',
-                     'preremove',
-                     'postbatchinstall',
-                     'postbatchupgrade',
-                     'postbatchremove',
-                     'postinstall',
-                     'postupgrade',
-                     'postremove',
-		     'prefetch',
-		     'postfetch',
-		     'preargproc',
-		     'postargproc');
+    my $hook_dir = "/etc/opt/csw/pkg-hooks/$hook_name.d";
+    my ( $hook, $hookfile, $oldwd, $status, $code );
+    my @hooks_to_run;
+    my @valid_hooks = (
+        'prebatchinstall',  'prebatchupgrade',
+        'prebatchremove',   'preinstall',
+        'preupgrade',       'preremove',
+        'postbatchinstall', 'postbatchupgrade',
+        'postbatchremove',  'postinstall',
+        'postupgrade',      'postremove',
+        'prefetch',         'postfetch',
+        'preargproc',       'postargproc'
+    );
 
-  myexit("Invalid hook: $hook_name","",1) unless (grep { /$hook_name/ } @valid_hooks);
+    myexit( "Invalid hook: $hook_name", "", 1 )
+      unless ( grep { /$hook_name/ } @valid_hooks );
 
-  if (! -d $hook_dir) {
-    print STDERR "DEBUG:No $hook_name hook scripts.\n" if $debug;
-  } else {
-    $oldwd = getcwd();
-    chdir($hook_dir) or myexit("Could not cd to $hook_dir","",1);
-
-    @hooks_to_run = glob("*");
-
-    print STDERR "DEBUG:Executing $hook_name hook scripts.\n" if (scalar(@hooks_to_run) && $debug);
-
-    foreach my $hookfile (sort { $a cmp $b } (@hooks_to_run)) {
-      $hook = "$hook_dir/$hookfile";
-      if (-x $hook) {
-        print STDERR "DEBUG:Running $hook.\n" if $debug;
-
-	# @hook_args is (in most cases) a list of
-	# CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
-	# cases, it might be single or multiple URL's of packages
-	# being pulled down, etc
-        system("$hook " . join(' ', @hook_args));
-        $status = $?;
-        $code = $status >> 8;
-
-        print STDERR "DEBUG:Script $hook_name.d/$hookfile returned code: $code\n" if $debug;
-
-        # This allows a hook to stop execution of any further
-        # package actions
-        if ($code == 1) {
-          myexit("Hook $hook_name.d/$hookfile returned with code 1","dying",1);
-        } elsif ($code == 2 && $config{'stop_on_hook_soft_error'} eq 'true') {
-          myexit("Hook $hook_name.d/$hookfile returned with code 2","respecting configuration option stop_on_hook_soft_error",1);
-        } elsif ($code > 2) {
-          print STDERR "Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway ...\n";
-        }
-      }
+    if ( !-d $hook_dir ) {
+        print STDERR "DEBUG:No $hook_name hook scripts\n" if $debug;
     }
+    else {
+        $oldwd = getcwd();
+        chdir($hook_dir) or myexit( "Could not cd to $hook_dir", "", 1 );
 
-    chdir($oldwd);
-  }
+        @hooks_to_run = glob("*");
+
+        print STDERR "DEBUG:Executing $hook_name hook scripts\n"
+          if ( scalar(@hooks_to_run) && $debug );
+
+        foreach my $hookfile ( sort { $a cmp $b } (@hooks_to_run) ) {
+            $hook = "$hook_dir/$hookfile";
+            if ( -x $hook ) {
+                print STDERR "DEBUG:Running $hook\n" if $debug;
+
+                # @hook_args is (in most cases) a list of
+                # CSWfoo-1.2.3,REV=YYYY.mm.dd affected packages, but in other
+                # cases, it might be single or multiple URL's of packages
+                # being pulled down, etc
+                system( "$hook", @hook_args );
+                $status = $?;
+                $code   = $status >> 8;
+
+                print STDERR
+                  "DEBUG:Script $hook_name.d/$hookfile returned code: $code\n"
+                  if $debug;
+
+                # This allows a hook to stop execution of any further
+                # package actions
+                if ( $code == 1 ) {
+                    myexit( "Hook $hook_name.d/$hookfile returned with code 1",
+                        "dying", 1 );
+                }
+                elsif ($code == 2
+                    && $config{'stop_on_hook_soft_error'} eq 'true' )
+                {
+                    myexit(
+                        "Hook $hook_name.d/$hookfile returned with code 2",
+"respecting configuration option stop_on_hook_soft_error",
+                        1
+                    );
+                }
+                elsif ( $code > 2 ) {
+                    print STDERR
+"Hook $hook_name.d/$hookfile returned undefined code $code.\nContinuing anyway ...\n";
+                }
+            }
+        }
+
+        chdir($oldwd);
+    }
 }
 
 # Signal handler
 #   signame - signal caught
 sub signal_handler {
-  my $signame = shift;
+    my $signame = shift;
 
-  myexit("\npkgutil caught a SIG$signame. Exiting.","",1);
+    myexit( "\npkgutil caught a SIG$signame. Exiting.", "", 1 );
 }
 
 # Build package streams (-s)
@@ -2028,78 +2409,89 @@ sub signal_handler {
 #   rel    - os release
 #   output - file name for package stream
 sub stream {
-  my ($arch,$rel,$output) = @_;
-  my ($fh,$mode,$transfile);
+    my ( $arch, $rel, $output ) = @_;
+    my ( $fh, $mode, $transfile );
 
-  if ($output) {
-    $fh = ($output eq "-" ? *STDERR : *STDOUT);
-    $mode = ($output eq "-" ? 4 : 3);
-  } else {
-    $fh = *STDOUT;
-    $mode = 3;
-  }
- 
-  if ($output) {
-    if ($output eq "-") {
-      $transfile =  "/dev/fd/1";
-    } else {
-      if ($output =~ /\//) {
-        if ($output =~ /^\//) {
-          $transfile = $output; # Output given is an absolute path
-        } else {
-          myexit("Relative output paths are not allowed","",1);
-        }
-      } else {
-        $transfile = "$pkgdir/$output";
-      }
+    if ($output) {
+        $fh   = ( $output eq "-" ? *STDERR : *STDOUT );
+        $mode = ( $output eq "-" ? 4       : 3 );
     }
-  } else {
-    $output = "$ARGV[0].$arch.$rel.pkg";
-    $transfile = "$pkgdir/$output";
-  }
-  print STDERR "DEBUG:output: $output\ntransfile: $transfile\n" if $debug;
+    else {
+        $fh   = *STDOUT;
+        $mode = 3;
+    }
 
-  my @install_order = install($mode,0,0);	# Download packages needed
-  myexit("","",1) if (scalar(@install_order) == 0); # Empty list, nothing to do
-  print STDERR "DEBUG:install order: " . join(' ',@install_order) . "\n" if $debug;
+    if ($output) {
+        if ( $output eq "-" ) {
+            $transfile = "/dev/fd/1";
+        }
+        else {
+            if ( $output =~ /\// ) {
+                if ( $output =~ /^\// ) {
+                    $transfile = $output;    # Output given is an absolute path
+                }
+                else {
+                    myexit( "Relative output paths are not allowed", "", 1 );
+                }
+            }
+            else {
+                $transfile = "$pkgdir/$output";
+            }
+        }
+    }
+    else {
+        $output    = "$ARGV[0].$arch.$rel.pkg";
+        $transfile = "$pkgdir/$output";
+    }
+    print STDERR "DEBUG:output: $output\ntransfile: $transfile\n" if $debug;
 
-  foreach (@install_order) {		# Delete package directories
-    my $status = system("/bin/rm","-rf","$pkgdir/$_") if (-d "$pkgdir/$_");
-    myexit("Could not delete $pkgdir/$_","$!",1) if $status;
-  }
+    my @install_order = install( $mode, 0, 0 );    # Download packages needed
+    myexit( "", "", 1 )
+      if ( scalar(@install_order) == 0 );          # Empty list, nothing to do
+    print STDERR "DEBUG:install order: " . join( ' ', @install_order ) . "\n"
+      if $debug;
 
-  foreach (@install_order) {		# pkgtrans them one by one
-    my $file = parse_catalog($_,3);
-    print $fh "Transforming $_ ...\n";
-    my $status = system("$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null");
-    myexit("Could not transform $file","$!",1) if $status;
-  }
+    foreach (@install_order) {                     # Delete package directories
+        my $status = system( "/bin/rm", "-rf", "$pkgdir/$_" )
+          if ( -d "$pkgdir/$_" );
+        myexit( "Could not delete $pkgdir/$_", "$!", 1 ) if $status;
+    }
 
-  # pkgtrans all of them into one package stream
-  print $fh "Transforming packages into stream ($transfile) ...\n";
-  my $status = system("/bin/touch","$transfile");
-  myexit("Could not create stream file","$!",1) if $status;
-  my $transpkgs = join(" ",@install_order);
-  $status = system("/bin/pkgtrans -s $pkgdir $transfile $transpkgs 2> /dev/null");
-  myexit("Could not transform packages into stream","$!",1) if $status;
+    foreach (@install_order) {                     # pkgtrans them one by one
+        my $file = parse_catalog( $_, 3 );
+        print $fh "Transforming $_ ...\n";
+        my $status = system(
+"$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null"
+        );
+        myexit( "Could not transform $file", "$!", 1 ) if $status;
+    }
 
-  foreach (@install_order) {		# Delete package directories
-    my $status = system("/bin/rm","-rf","$pkgdir/$_");
-    myexit("Could not delete $pkgdir/$_","$!",1) if $status;
-  }
+    # pkgtrans all of them into one package stream
+    print $fh "Transforming packages into stream ($transfile) ...\n";
+    my $status = system( "/bin/touch", "$transfile" );
+    myexit( "Could not create stream file", "$!", 1 ) if $status;
+    my $transpkgs = join( " ", @install_order );
+    $status =
+      system("/bin/pkgtrans -s $pkgdir $transfile $transpkgs 2> /dev/null");
+    myexit( "Could not transform packages into stream", "$!", 1 ) if $status;
 
-  # Print cmd needed to install
-  print $fh "\nInstall commands in dependency safe order:\n\n";
-  foreach (@install_order) {
-    print $fh "pkgadd -d $output $_\n";
-  }
+    foreach (@install_order) {    # Delete package directories
+        my $status = system( "/bin/rm", "-rf", "$pkgdir/$_" );
+        myexit( "Could not delete $pkgdir/$_", "$!", 1 ) if $status;
+    }
 
-  myexit("","",0);
+    # Print cmd needed to install
+    print $fh "\nInstall commands in dependency safe order:\n\n";
+    foreach (@install_order) {
+        print $fh "pkgadd -d $output $_\n";
+    }
+
+    myexit( "", "", 0 );
 }
 
 # Show usage info
 sub usage {
-  print <<EOF;
+    print <<EOF;
 pkgutil $pkgutilver, install Solaris packages the easy way.
 
 Usage: pkgutil [option]... [package](-[version])...
@@ -2147,7 +2539,7 @@ Example: pkgutil -i CSWwget\ (install wget and its dependencies)
 
 Written and maintained by Peter Bonivart. Web site: http://pkgutil.net.
 EOF
-  myexit("","",0);
+    myexit( "", "", 0 );
 }
 
 # Comparison of two package versions as per
@@ -2156,76 +2548,83 @@ EOF
 # Note that if neither has a REV code, -1 is *ALWAYS* returned.
 #   p1rev, p2rev - versions to compare
 sub verscmp {
-  my($p1rev,$p2rev) = @_; # crev (new), irev (old), then 1 => upgrade
-  my (@p1list,@p2list);
-  my $p1tmp = "";
-  my $p2tmp = "";
-  my $update = 0;
+    my ( $p1rev, $p2rev ) = @_;    # crev (new), irev (old), then 1 => upgrade
+    my ( @p1list, @p2list );
+    my $p1tmp  = "";
+    my $p2tmp  = "";
+    my $update = 0;
 
-  my $skip = 0;
+    my $skip = 0;
 
-  # 1st case: same strings => no upgrade
-  $skip = 1 if ($p1rev eq $p2rev);
+    # 1st case: same strings => no upgrade
+    $skip = 1 if ( $p1rev eq $p2rev );
 
-  # 2nd case: installed no REV, catalog REV => upgrade
-  if (! $skip) {
-    if ($p1rev !~ /REV=/ && $p2rev =~ /REV=/) {
-      $update = -1;
-      $skip = 1;
-    } elsif ($p2rev !~ /REV=/ && $p1rev =~ /REV=/) {
-      # Reverse case (installed REV, catalog no REV => "downgrade")
-      $update = 1;
-      $skip = 1;
-    }
-  }
-
-  # 3rd case: installed REV, catalog REV => if newer, upgrade
-  if (! $skip) {
-    if ($p1rev =~ /REV=/ && $p2rev =~ /REV=/) {
-      if ($p1rev =~ /rev=/) {
-        ($p1tmp) = ($p1rev =~ /REV=(.+)_/);
-      } else {
-        ($p1tmp) = ($p1rev =~ /REV=(.+)$/);
-      }
-      @p1list = split(/\./,$p1tmp);
-
-      if ($p2rev =~ /rev=/) {
-        ($p2tmp) = ($p2rev =~ /REV=(.+)_/);
-      } else {
-        ($p2tmp) = ($p2rev =~ /REV=(.+)$/);
-      }
-      @p2list = split(/\./,$p2tmp);
-
-      for (my $i = 0; $i < scalar(@p1list); $i++) {
-        $p1list[$i] =~ s/[^0-9]//g;	# Only digits
-        $p2list[$i] =~ s/[^0-9]//g;
-        if ($i >= scalar(@p2list)) {	# p1list is longer than p2list
-          $update = 1;
-          last;
-        }
-        if ($p1list[$i] != $p2list[$i]) {
-          if ($p1list[$i] > $p2list[$i]) {
-            $update = 1;
-          } else {
+    # 2nd case: installed no REV, catalog REV => upgrade
+    if ( !$skip ) {
+        if ( $p1rev !~ /REV=/ && $p2rev =~ /REV=/ ) {
             $update = -1;
-          }
-          print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n" if $debug;
-          last;
+            $skip   = 1;
         }
-        print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n" if $debug;
-      }
-      $update = -1 if (! $update && scalar(@p2list) > scalar(@p1list));
+        elsif ( $p2rev !~ /REV=/ && $p1rev =~ /REV=/ ) {
 
-      $skip = 1;
+            # Reverse case (installed REV, catalog no REV => "downgrade")
+            $update = 1;
+            $skip   = 1;
+        }
     }
-  }
 
-  # 4th case: installed no REV, catalog no REV => upgrade
-  if (! $skip) {
-    $update = 1 if ($p1rev !~ /REV=/ && $p2rev !~ /REV=/);
-  }
+    # 3rd case: installed REV, catalog REV => if newer, upgrade
+    if ( !$skip ) {
+        if ( $p1rev =~ /REV=/ && $p2rev =~ /REV=/ ) {
+            if ( $p1rev =~ /rev=/ ) {
+                ($p1tmp) = ( $p1rev =~ /REV=(.+)_/ );
+            }
+            else {
+                ($p1tmp) = ( $p1rev =~ /REV=(.+)$/ );
+            }
+            @p1list = split( /\./, $p1tmp );
 
-  return $update;
+            if ( $p2rev =~ /rev=/ ) {
+                ($p2tmp) = ( $p2rev =~ /REV=(.+)_/ );
+            }
+            else {
+                ($p2tmp) = ( $p2rev =~ /REV=(.+)$/ );
+            }
+            @p2list = split( /\./, $p2tmp );
+
+            for ( my $i = 0 ; $i < scalar(@p1list) ; $i++ ) {
+                $p1list[$i] =~ s/[^0-9]//g;    # Only digits
+                $p2list[$i] =~ s/[^0-9]//g;
+                if ( $i >= scalar(@p2list) ) {    # p1list is longer than p2list
+                    $update = 1;
+                    last;
+                }
+                if ( $p1list[$i] != $p2list[$i] ) {
+                    if ( $p1list[$i] > $p2list[$i] ) {
+                        $update = 1;
+                    }
+                    else {
+                        $update = -1;
+                    }
+                    print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n"
+                      if $debug;
+                    last;
+                }
+                print STDERR "DEBUG:$i $p1list[$i] $p2list[$i] $update\n"
+                  if $debug;
+            }
+            $update = -1 if ( !$update && scalar(@p2list) > scalar(@p1list) );
+
+            $skip = 1;
+        }
+    }
+
+    # 4th case: installed no REV, catalog no REV => upgrade
+    if ( !$skip ) {
+        $update = 1 if ( $p1rev !~ /REV=/ && $p2rev !~ /REV=/ );
+    }
+
+    return $update;
 }
 
 # Main
@@ -2233,7 +2632,7 @@ sub verscmp {
 init();
 parse_cl();
 
-myexit("","",0);
+myexit( "", "", 0 );
 
 # POD start
 
