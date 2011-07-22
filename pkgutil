@@ -37,7 +37,7 @@ $SIG{HUP} = 'IGNORE';
 $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 # Untainting
-delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
+delete @ENV{qw(LD_LIBRARY_PATH IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
 $ENV{'PATH'} = '/bin:/usr/bin';
 
 # Ensure we always work from a directory that won't
