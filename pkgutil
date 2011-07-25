@@ -1914,7 +1914,7 @@ sub parse_cl {
             ( $loc_arch, $loc_rel ) = split( /:/, $opt_target );
         }
         else {
-            myexit( "$opt_target is not a correct arch:rel combo.", "", 1 );
+            myexit( "$opt_target is not a correct arch:rel combo", "", 1 );
         }
     }
     else {
@@ -2446,7 +2446,7 @@ sub stream {
     print STDERR "DEBUG:output: $output\ntransfile: $transfile\n" if $debug;
 
     my @install_order = install( $mode, 0, 0 );    # Download packages needed
-    myexit( "", "", 1 )
+    myexit( "", "", 0 )
       if ( scalar(@install_order) == 0 );          # Empty list, nothing to do
     print STDERR "DEBUG:install order: " . join( ' ', @install_order ) . "\n"
       if $debug;
