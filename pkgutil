@@ -263,7 +263,7 @@ sub cleanup {
 sub compare {
     my ( $mode, $parse ) = @_;
     my ( @cswpkgs, @retlist );
-    my ( $pkg, $local_ver, $remote_ver, $tmp );
+    my ( $local_ver, $remote_ver, $tmp );
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
     unless ($parse) {    # No header when --parse is being used
@@ -283,7 +283,7 @@ sub compare {
             @cswpkgs = `/bin/pkginfo $root_path | grep CSW`;
         }
     }
-    foreach $pkg (@cswpkgs) {
+    foreach my $pkg (@cswpkgs) {
         ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
         $local_ver = check_pkg( $pkg, 0 );
         $remote_ver = parse_catalog( $pkg, 1 );
@@ -1502,7 +1502,8 @@ sub list_deps {
             close $FILE;
         }
     }
-    return sort keys %deps;
+    my @deps = sort keys %deps;
+    return @deps;
 }
 
 # List files in package (-L)
@@ -2192,7 +2193,7 @@ sub remove {
     my $pkgrm    = "/usr/sbin/pkgrm";
     my $pkgforce = "";
     my $pkgtrace = "";
-    my ( $pkg, $i, $j, $k, $l, $depinuse, $skip );
+    my ( $i, $depinuse, $skip );
     my ( @cswpkgs, @deptmp, @rempkgs, @cswpkgstmp );
 
     $pkgtrace = "-v" if $trace;
@@ -2205,7 +2206,7 @@ sub remove {
     else {
         @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
     }
-    foreach $pkg (@cswpkgstmp) {
+    foreach my $pkg (@cswpkgstmp) {
         ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
         $skip = 0;
         foreach (@pkgs) {
@@ -2218,12 +2219,12 @@ sub remove {
         ($i) = ( $userpkg =~ /(\S+)-/ );
         print "  $i";
         $depinuse = 0;
-        foreach $j (@cswpkgs) {
+        foreach my $j (@cswpkgs) {
             $retval = parse_catalog( $j, 6 );
             if ( $retval ne "none" && $retval ne "not in catalog" && $i ne $j )
             {
                 (@deptmp) = split( /\|/, $retval );
-                foreach $k (@deptmp) {
+                foreach my $k (@deptmp) {
                     if ( $k eq $i ) {
                         print STDERR "DEBUG:\n$i is in use by $j\n" if $debug;
                         $depinuse = 1;
@@ -2468,7 +2469,8 @@ sub stream {
       if $debug;
 
     foreach (@install_order) {                     # Delete package directories
-        my $status = system( "/bin/rm", "-rf", "$pkgdir/$_" )
+        my $status;
+        $status = system( "/bin/rm", "-rf", "$pkgdir/$_" )
           if ( -d "$pkgdir/$_" );
         myexit( "Could not delete $pkgdir/$_", "$!", 1 ) if $status;
     }
