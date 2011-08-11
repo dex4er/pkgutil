@@ -174,8 +174,9 @@ while ( scalar(@tmp) > 0 ) {
     if ( scalar(@field) < 8 || scalar(@field) > 9 ) {
         retcode(2);
         if ( !$quiet ) {
-            if ( $parse ) {
-                print "ERROR\t1\t$field[2]\t", scalar(@field), " fields instead of normal 8 or 9\n";
+            if ($parse) {
+                print "ERROR\t1\t$field[2]\t", scalar(@field),
+                  " fields instead of normal 8 or 9\n";
             }
             else {
                 print "\nERROR! ", scalar(@field),
@@ -189,11 +190,13 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[3] !~ /\.gz$/ ) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
-                print "WARNING\t2\t$field[2]\tPackage $field[2] is not compressed\n";
+            if ($parse) {
+                print
+"WARNING\t2\t$field[2]\tPackage $field[2] is not compressed\n";
             }
             else {
-                print "\nWARNING! Package $field[2] is not compressed. [$line]\n";
+                print
+                  "\nWARNING! Package $field[2] is not compressed. [$line]\n";
             }
         }
     }
@@ -203,8 +206,9 @@ while ( scalar(@tmp) > 0 ) {
         if ( $field[3] =~ /\.gz$/ ) {
             retcode(2);
             if ( !$quiet ) {
-                if ( $parse ) {
-                    print "ERROR\t3\t$field[2]\tPackage $field[2] is compressed\n";
+                if ($parse) {
+                    print
+                      "ERROR\t3\t$field[2]\tPackage $field[2] is compressed\n";
                 }
                 else {
                     print "\nERROR! Package $field[2] is compressed. [$line]\n";
@@ -226,8 +230,9 @@ while ( scalar(@tmp) > 0 ) {
     if ( $arch && ( $arch ne 'i386' && $arch ne 'sparc' && $arch ne 'all' ) ) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
-                print "WARNING\t4\t$field[2]\tPackage $field[2] has an unknown architecture\n";
+            if ($parse) {
+                print
+"WARNING\t4\t$field[2]\tPackage $field[2] has an unknown architecture\n";
             }
             else {
                 print
@@ -239,7 +244,7 @@ while ( scalar(@tmp) > 0 ) {
     if ($rest) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "WARNING\t5\t$field[2]\tPackage $field[2] does not meet the CSW naming standard - too many hyphens\n";
             }
@@ -253,7 +258,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[3] !~ /\.pkg(\.gz)?$/ ) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "WARNING\t6\t$field[2]\tPackage $field[2] does not meet the CSW naming standard - should end in .pkg(.gz)\n";
             }
@@ -267,7 +272,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( !$version || $version !~ /[0-9\.]+,REV=(\d{4})\.(\d{2})\.(\d{2})/ ) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "WARNING\t7\t$field[2]\tPackage $field[2] does not meet the CSW naming standard - REV section incorrect\n";
             }
@@ -282,7 +287,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[6] !~ /^\w/ ) {
         retcode(2);
         if ( !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "ERROR\t8\t$field[2]\tThe dependency field of package $field[2] begins with a non-char\n";
             }
@@ -295,7 +300,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[6] =~ /\|$/ ) {    # Non-char is actually used, e.g. gcc2g++
         retcode(2);
         if ( !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "ERROR\t9\t$field[2]\tThe dependency field of package $field[2] ends with a pipe char\n";
             }
@@ -310,7 +315,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[6] =~ /SUNW/ ) {
         retcode(1) unless $erroronly;
         if ( !$erroronly && !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "WARNING\t10\t$field[2]\tThe dependency field of package $field[2] contains SUNW packages\n";
             }
@@ -326,14 +331,14 @@ while ( scalar(@tmp) > 0 ) {
         foreach ( split( /\|/, $field[6] ) ) {
             if ( !$pkg{$_} ) {
                 retcode(2);
-                if ( $parse ) {
+                if ($parse) {
                     print
-                      "ERROR\t11\t$field[2]\tDependency $_ of package $field[2] is missing\n"
+"ERROR\t11\t$field[2]\tDependency $_ of package $field[2] is missing\n"
                       unless $quiet;
                 }
                 else {
                     print
-                      "\nERROR! Dependency $_ of package $field[2] is missing.\n"
+"\nERROR! Dependency $_ of package $field[2] is missing.\n"
                       unless $quiet;
                 }
             }
@@ -345,8 +350,9 @@ while ( scalar(@tmp) > 0 ) {
         foreach ( split( /\|/, $field[6] ) ) {
             if ( $_ eq $field[2] ) {
                 retcode(2);
-                if ( $parse ) {
-                    print "ERROR\t12\t$field[2]\tPackage $field[2] depends on itself\n"
+                if ($parse) {
+                    print
+"ERROR\t12\t$field[2]\tPackage $field[2] depends on itself\n"
                       unless $quiet;
                 }
                 else {
@@ -367,14 +373,14 @@ while ( scalar(@tmp) > 0 ) {
             shift @deplist;
             if ( $tmppkg eq $field[2] ) {
                 retcode(2);
-                if ( $parse ) {
+                if ($parse) {
                     print
-                      "ERROR\t13\t$field[2]\tCyclic dependency detected in package $field[2]\n"
+"ERROR\t13\t$field[2]\tCyclic dependency detected in package $field[2]\n"
                       unless $quiet;
                 }
                 else {
                     print
-                      "\nERROR! Cyclic dependency detected in package $field[2].\n"
+"\nERROR! Cyclic dependency detected in package $field[2].\n"
                       unless $quiet;
                 }
                 last;
@@ -383,7 +389,7 @@ while ( scalar(@tmp) > 0 ) {
               $config{"maxpkglist"} ? $config{"maxpkglist"} : 100000;
             if ( $deplen++ > $deplenmax ) {
                 retcode(1) unless $erroronly;
-                if ( $parse ) {
+                if ($parse) {
                     print
 "WARNING\t14\t$field[2]\tProbable cyclic dependency detected in package $field[2]. Loop detection aborts iteration\n"
                       unless ( $erroronly || $quiet );
@@ -409,7 +415,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[7] !~ /^\w/ ) {
         retcode(2);
         if ( !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "ERROR\t15\t$field[2]\tThe category field of package $field[2] begins with a non-char\n";
             }
@@ -422,7 +428,7 @@ while ( scalar(@tmp) > 0 ) {
     if ( $field[7] !~ /\w$/ ) {
         retcode(2);
         if ( !$quiet ) {
-            if ( $parse ) {
+            if ($parse) {
                 print
 "ERROR\t16\t$field[2]\tThe category field of package $field[2] ends with a non-char\n";
             }
@@ -438,8 +444,9 @@ while ( scalar(@tmp) > 0 ) {
     if ($verbose) {
         if ( !-r "$pkg{$field[2]}/$field[3]" ) {    # Does the file exist?
             retcode(2);
-            if ( $parse ) {
-                print "ERROR\t17\t$field[2]\tFile $field[3] not found\n" unless $quiet;
+            if ($parse) {
+                print "ERROR\t17\t$field[2]\tFile $field[3] not found\n"
+                  unless $quiet;
             }
             else {
                 print "ERROR! File $field[3] not found.\n" unless $quiet;
@@ -449,8 +456,9 @@ while ( scalar(@tmp) > 0 ) {
             if ( $field[5] != ( stat("$pkg{$field[2]}/$field[3]") )[7] )
             {                                       # Correct size?
                 retcode(2);
-                if ( $parse ) {
-                    print "ERROR\t18\t$field[2]\tSize does not match for $field[2]\n"
+                if ($parse) {
+                    print
+"ERROR\t18\t$field[2]\tSize does not match for $field[2]\n"
                       unless $quiet;
                 }
                 else {
@@ -464,8 +472,9 @@ while ( scalar(@tmp) > 0 ) {
             close $FILE;
             if ( $hash ne $field[4] ) {
                 retcode(2);
-                if ( $parse ) {
-                    print "ERROR\t19\t$field[2]\tMD5 hash does not match for $field[2]\n"
+                if ($parse) {
+                    print
+"ERROR\t19\t$field[2]\tMD5 hash does not match for $field[2]\n"
                       unless $quiet;
                 }
                 else {
@@ -500,12 +509,14 @@ while ( scalar(@tmp) > 0 ) {
                 }
                 if ( $deps ne $field[6] ) {
                     retcode(2);
-                    if ( $parse ) {
-                        print "ERROR\t20\t$field[2]\tDependencies does not match for $field[2]\n"
+                    if ($parse) {
+                        print
+"ERROR\t20\t$field[2]\tDependencies does not match for $field[2]\n"
                           unless $quiet;
                     }
                     else {
-                        print "ERROR! Dependencies does not match for $field[2].\n"
+                        print
+                          "ERROR! Dependencies does not match for $field[2].\n"
                           unless $quiet;
                     }
                 }
@@ -533,12 +544,14 @@ while ( scalar(@tmp) > 0 ) {
             if ( $field[7] ne "none" ) {
                 if ( $cat ne $field[7] ) {
                     retcode(2);
-                    if ( $parse ) {
-                        print "ERROR\t21\t$field[2]\tCategories does not match for $field[2]\n"
+                    if ($parse) {
+                        print
+"ERROR\t21\t$field[2]\tCategories does not match for $field[2]\n"
                           unless $quiet;
                     }
                     else {
-                        print "ERROR! Categories does not match for $field[2].\n"
+                        print
+                          "ERROR! Categories does not match for $field[2].\n"
                           unless $quiet;
                     }
                 }
@@ -547,7 +560,7 @@ while ( scalar(@tmp) > 0 ) {
             # Check version field matches filename
             if ( $pkgver && $version && $pkgver ne $version ) {
                 retcode(2);
-                if ( $parse ) {
+                if ($parse) {
                     print
 "ERROR\t22\t$field[2]\tVersion in filename doesn't match version in pkginfo for $field[2]\n"
                       unless $quiet;
@@ -572,7 +585,7 @@ while ( scalar(@tmplist) > 1 ) {   # No need to check for dups if only one entry
     shift @tmplist;
     if ( $tmp eq $tmplist[0] && $dup ne $tmp ) {
         retcode(2);
-        if ( $parse ) {
+        if ($parse) {
             print "ERROR\t23\t$tmp\t$tmp exists more than once\n" unless $quiet;
         }
         else {
