@@ -631,7 +631,7 @@ No cyclic dependency checking. This option improves speed a lot.
 
 =item B<-p, --parse>
 
-Machine parsable output.
+Machine parsable output. No headers printed and all columns separated by one tab.
 
 =item B<-h, --help>
 
