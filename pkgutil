@@ -46,7 +46,7 @@ $ENV{'PATH'} = '/bin:/usr/bin';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.5b2";
+my $pkgutilver   = "2.5b3";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -2486,7 +2486,7 @@ sub stream {
 
     # pkgtrans all of them into one package stream
     print $FH "Transforming packages into stream ($transfile) ...\n";
-    my $status = system( "/bin/touch", "$transfile" );
+    my $status = system( "/bin/touch", "$transfile" ) unless ( $output eq "-" );
     myexit( "Could not create stream file", "$!", 1 ) if $status;
     my $transpkgs = join( " ", @install_order );
     $status =
