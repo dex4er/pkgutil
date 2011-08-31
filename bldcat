@@ -232,6 +232,12 @@ foreach my $file ( glob "$pkgdir/*" ) {
         open( my $FILE, '<', "$tmpdir/$pkgname/install/depend" );
         while (<$FILE>) {
             chomp;
+
+            # Check if the next line is \s+(arch)vers
+            my $peek    = <$FILE>;
+            my $hasvers = 0;
+            $hasvers    = $peek =~ /^\s+/ if $peek;
+
             if (/^P\s+\S/) {
                 ($deptmp) = (/P\s+(\S+)/);
                 if ( $deptmp ne $pkgname && $deptmp !~ /^SUNW/ )
@@ -241,10 +247,16 @@ foreach my $file ( glob "$pkgdir/*" ) {
             }
             if (/^I\s+\S/) {
                 ($ideptmp) = (/I\s+(\S+)/);
-                if ( $ideptmp ne $pkgname && $ideptmp !~ /^SUNW/ )
-                {    # Skip if circular or SUNW
+                if ( $ideptmp ne $pkgname && $ideptmp !~ /^SUNW/ && !$hasvers )
+                {    # Skip if circular or SUNW or unsupported version req.
                     $ideps = ($ideps) ? "$ideps|$ideptmp" : $ideptmp;
                 }
+            }
+
+            # If there wasn't a version line, reparse the peek line
+            if ( $peek && !$hasvers ) {
+                $_ = $peek;
+                redo;
             }
         }
         close $FILE;
@@ -334,6 +346,8 @@ Peter Bonivart <bonivart@opencsw.org>
 =head1 CREDITS
 
 Maciej Blizinksi
+
+Dominic Cleal
 
 Dagobert Michelsen
 
