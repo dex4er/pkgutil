@@ -793,6 +793,7 @@ sub init {
     %config = (
         "mirror"                  => [],
         "pkgaddopts"              => "",
+        "pkgrmopts"               => "",
         "wgetopts"                => "",
         "use_gpg"                 => "",
         "use_md5"                 => "",
@@ -890,12 +891,14 @@ sub inst_loc_pkgs {
     my $pkgadd     = "/usr/sbin/pkgadd";
     my $pkgaddopts = "";
     my $pkgrm      = "/usr/sbin/pkgrm";
+    my $pkgrmopts  = "";
     my $pkginfo    = "/bin/pkginfo";
+    my $pkgtrace   = "";
     my $file;
-    my $pkgtrace = "";
 
-    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
-    $pkgtrace = "-v" if $trace;
+    $pkgaddopts  .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
+    $pkgtrace     = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
     foreach (@pkglist) {
@@ -930,7 +933,8 @@ sub inst_loc_pkgs {
                 "$pkgrm",
                 split( ' ', $root_path ),
                 split( ' ', $pkgforce ),
-                split( ' ', $pkgtrace ), "$pkgname"
+                split( ' ', $pkgtrace ),
+                split( ' ', $pkgrmopts ), "$pkgname"
             );
         }
 
@@ -973,17 +977,19 @@ sub inst_pkgs {
     my $batchmode  = shift;
     my $updlistlen = shift;
     my @pkglist    = @_;
-    my %upg_pkglist;
     my $tmp        = "";
     my $pkgadd     = "/usr/sbin/pkgadd";
     my $pkgaddopts = "";
     my $pkgrm      = "/usr/sbin/pkgrm";
+    my $pkgrmopts  = "";
+    my $pkgtrace   = "";
+    my $pkgask     = "";
+    my %upg_pkglist;
     my ( $file, $name );
-    my $pkgtrace = "";
-    my $pkgask   = "";
 
-    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
-    $pkgtrace = "-v" if $trace;
+    $pkgaddopts  .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
+    $pkgtrace     = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
     run_hooks( "prebatch$batchmode", @pkglist );
@@ -1024,7 +1030,8 @@ sub inst_pkgs {
                 "$pkgrm",
                 split( ' ', $root_path ),
                 split( ' ', $pkgforce ),
-                split( ' ', $pkgtrace ), "$pkgname"
+                split( ' ', $pkgtrace ),
+                split( ' ', $pkgrmopts ), "$pkgname"
             );
         }
     }
@@ -1121,6 +1128,7 @@ sub install {
     my ( %pkgvers, @pkglist, @excludelist )
       ;    # @pkglist is specifically in the correct order
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    my $pkgrmopts = "$config{pkgrmopts}" if $config{pkgrmopts};
 
     print $FH "Solving needed dependencies ...\n" unless ( $deps || $parse );
 
@@ -1465,7 +1473,8 @@ sub install {
                 "$pkgrm",
                 split( ' ', $root_path ),
                 split( ' ', $pkgforce ),
-                split( ' ', $pkgtrace ), "$_"
+                split( ' ', $pkgtrace ),
+                split( ' ', $pkgrmopts ), "$_"
             );
         }
     }
@@ -2125,6 +2134,9 @@ sub pkgutilver {
           . ( ( $config{pkgaddopts} ) ? $config{pkgaddopts} : "not set" )
           . " (default: none)\n";
         print "pkgliststyle\t\t$pkgliststyle (default: 0)\n";
+        print "pkgrmopts\t\t"
+          . ( ( $config{pkgrmopts} ) ? $config{pkgrmopts} : "not set" )
+          . " (default: none)\n";
         print "root_path\t\t"
           . ( ( $config{root_path} ) ? $config{root_path} : "not set" )
           . " (default: /)\n";
@@ -2188,16 +2200,18 @@ sub read_catalog {
 # Remove packages (-r)
 #   pkgs - packages to remove
 sub remove {
-    my @pkgs     = @_;
-    my $retval   = "";
-    my $pkgrm    = "/usr/sbin/pkgrm";
-    my $pkgforce = "";
-    my $pkgtrace = "";
+    my @pkgs      = @_;
+    my $retval    = "";
+    my $pkgrm     = "/usr/sbin/pkgrm";
+    my $pkgrmopts = "";
+    my $pkgforce  = "";
+    my $pkgtrace  = "";
     my ( $i, $depinuse, $skip );
     my ( @cswpkgs, @deptmp, @rempkgs, @cswpkgstmp );
 
-    $pkgtrace = "-v" if $trace;
+    $pkgtrace     = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
+    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
 
     print "Looking at installed packages ...\n";
     if ($noncsw) {
@@ -2268,7 +2282,8 @@ sub remove {
                     "$pkgrm",
                     split( ' ', $root_path ),
                     split( ' ', $pkgforce ),
-                    split( ' ', $pkgtrace ), "$p"
+                    split( ' ', $pkgtrace ),
+                    split( ' ', $pkgrmopts ), "$p"
                 );
                 run_hooks( 'postremove', ($_) );
             }
@@ -2288,10 +2303,12 @@ sub remove {
 # Remove list of packages with pkgrm
 #   pkgs - packages to remove
 sub rem_pkgs {
-    my @pkgs     = @_;
-    my $pkgrm    = "/usr/sbin/pkgrm";
-    my $pkgforce = "";
-    my $pkgtrace = "";
+    my @pkgs      = @_;
+    my $pkgrm     = "/usr/sbin/pkgrm";
+    my $pkgrmopts = "";
+    my $pkgforce  = "";
+    my $pkgtrace  = "";
+    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
 
     if ( scalar(@pkgs) > 0 && !$yes ) {
         print scalar(@pkgs),
@@ -2324,7 +2341,8 @@ sub rem_pkgs {
                 "$pkgrm",
                 split( ' ', $root_path ),
                 split( ' ', $pkgforce ),
-                split( ' ', $pkgtrace ), "$_"
+                split( ' ', $pkgtrace ),
+                split( ' ', $pkgrmopts ), "$_"
             );
             run_hooks( 'postremove', ("$_-$pkgver") );
         }
@@ -2916,6 +2934,10 @@ C<pkgliststyle>
 
 Style of package list when installing/upgrading packages. 0 is the one used since the first version of pkgutil, it's space efficient but less readable. 1 is the one introduced in v1.7, it's one package per line which is easier to read. 2 is the same as 1 but also displays which distribution a package comes from, e.g. unstable or stable.
 
+C<pkgrmopts>
+
+Send options to pkgrm, one example is "-O nozones" that will only deinstall the packages in the global zone for Solaris 10. 
+
 C<root_path>
 
 Set alternate root path (-R with pkg commands). Default is /.
@@ -2978,6 +3000,8 @@ Sebastian Kayser
 Trygve Laugstol
 
 James Lee
+
+Juraj Lutter
 
 Dagobert Michelsen
 

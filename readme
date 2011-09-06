@@ -24,9 +24,24 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.5. Released 2011-0x-xx
+* v2.5. Released 2011-09-06
+  - Package is now for Solaris 9 (code still runs on Solaris 8)
+  - Package is now arch=all
+  - pkgutil, bldcat and chkcat run through perlcritic and perltidy
+  - Exit codes in pkgutil cleaned up. Use 0 for anything less than an error
+  - pkgutil resets LD_LIBRARY_PATH (Dago)
+  - Untaint: clear ENV variables, set PATH, almost all system calls split up
+  - Reverse order of current, updated and new packages (Ben Walton)
+  - Add option -R/root_path for consistency with Solaris pkg tools. Can be used with LU (Dago)
+  - Add levels to --deptree
+  - Add package dir option (-P/--pkgdir) so doesn't have to be <workdir>/package (Mark Phillips)
+  - Add note about multiple mirrors in pkgutil.conf
+  - Add pkgrmopts in pkgutil.conf for specifying pkgrm options (Juraj Lutter)
+  - Fix bug with "-o -" for streams (Dago)
+  - bldcat: ignore i-deps when version specified in depend file (Dominic Cleal)
   - bldcat: change default work dir from /tmp to /var/tmp since it's safer
     (Mark Phillips)
+  - chkcat: add --parse option
 
 * v2.4. Released 2011-05-15
   - pkgutil: new option --cleanup. When invoked, scans for
