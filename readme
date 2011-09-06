@@ -32,9 +32,11 @@ Version history
   - pkgutil resets LD_LIBRARY_PATH (Dago)
   - Untaint: clear ENV variables, set PATH, almost all system calls split up
   - Reverse order of current, updated and new packages (Ben Walton)
-  - Add option -R/root_path for consistency with Solaris pkg tools. Can be used with LU (Dago)
+  - Add option -R/root_path for consistency with Solaris pkg tools. Can be
+    used with LU (Dago)
   - Add levels to --deptree
-  - Add package dir option (-P/--pkgdir) so doesn't have to be <workdir>/package (Mark Phillips)
+  - Add package dir option (-P/--pkgdir) so doesn't have to be
+    <workdir>/package (Mark Phillips)
   - Add note about multiple mirrors in pkgutil.conf
   - Add pkgrmopts in pkgutil.conf for specifying pkgrm options (Juraj Lutter)
   - Fix bug with "-o -" for streams (Dago)
