@@ -1669,7 +1669,6 @@ sub md5 {
         my $FILE = gensym();
         open( $FILE, "<$file" ) or myexit( "Can't open $file", "$!", 1 );
         binmode($FILE);
-#####        $md5 = Digest::MD5->new->addfile(*FILE)->hexdigest;
         $md5 = Digest::MD5->new->addfile($FILE)->hexdigest;
         close $FILE;
     }
