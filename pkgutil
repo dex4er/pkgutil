@@ -46,7 +46,7 @@ $ENV{'PATH'} = '/bin:/usr/bin';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.5";
+my $pkgutilver   = "2.5.1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -761,8 +761,7 @@ sub gpg {
         myexit( "Bad signature detected in catalog!", "", 1 ) if $status;
         rename( $catalog, $catalog . ".asc" )
           or myexit( "Could not rename catalog!", "", 1 );
-        $status = system( "/opt/csw/bin/gpg", split( ' ', $gpghomedir ),
-            "$catalog.asc", "2>", "/dev/null" );
+        $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2> /dev/null");
         myexit( "Catalog signature is not correct!", "", 1 ) if $status;
         rename( $catalog . ".asc", $catalog )
           or myexit( "Could not rename catalog!", "", 1 );

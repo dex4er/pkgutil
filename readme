@@ -24,6 +24,9 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.5.1. Released 2011-09-11
+  - Fix bug with how gpg is called (Ben Walton)
+
 * v2.5. Released 2011-09-06
   - Package is now for Solaris 9 (code still runs on Solaris 8)
   - Package is now arch=all
