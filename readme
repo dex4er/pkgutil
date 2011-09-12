@@ -35,7 +35,7 @@ Version history
   - pkgutil resets LD_LIBRARY_PATH (Dago)
   - Untaint: clear ENV variables, set PATH, almost all system calls split up
   - Reverse order of current, updated and new packages (Ben Walton)
-  - Add option -R/root_path for consistency with Solaris pkg tools. Can be
+  - Add option -R/--root_path for consistency with Solaris pkg tools. Can be
     used with LU (Dago)
   - Add levels to --deptree
   - Add package dir option (-P/--pkgdir) so doesn't have to be
