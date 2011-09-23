@@ -41,7 +41,8 @@ my ( $deptmp, $status, $pkgname, $ideptmp );
 my (
     $name,    $description, $common, $version,     $package,
     $pkgfile, $hash,        $size,   $deps,        $category,
-    $help,    $fast,        $ideps,  $sizeCatalog, $quiet
+    $help,    $fast,        $ideps,  $sizeCatalog, $quiet,
+    $timestamp
 );
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
@@ -53,6 +54,7 @@ GetOptions(
     "F|fast"      => \$fast,
     "W|workdir=s" => \$dir,
     "q|quiet"     => \$quiet,
+    "t|timestamp" => \$timestamp,
     "f|format=s"  => \$format
 ) || usage();
 
@@ -71,11 +73,12 @@ sub usage {
     print <<EOF;
 bldcat, build CSW catalogs.
 
-Usage: bldcat [-fFWqh] <package dir>
+Usage: bldcat [-fFWtqh] <package dir>
 
   -f, --format=x\tSet catalog format (8,[9])
   -F, --fast\t\tUse fast mode
   -W, --workdir=x\tSet work directory (default: /var/tmp)
+  -t, --timestamp\tAdd timestamp
   -q, --quiet\t\tNo output
   -h, --help\t\tShow this help
 
@@ -112,6 +115,11 @@ open( my $CATALOG, '>', "$pkgdir/catalog.new" )
   || die "Could not write new catalog at $pkgdir/catalog.new: $!";
 open( my $DESCRIPTIONS, '>', "$pkgdir/descriptions.new" )
   || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
+
+if ( $timestamp ) {
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+    printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
+}
 
 foreach my $file ( glob "$pkgdir/*" ) {
     (
@@ -293,7 +301,7 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat [-fFWqh] <package dir>
+bldcat [-fFWtqh] <package dir>
 
 =head1 DESCRIPTION
 
@@ -314,6 +322,10 @@ Make timesaving assumptions. Usually bldcat guarantees to produce working catalo
 =item B<-W, --workdir=x>
 
 Set work directory. Default /var/tmp.
+
+=item B<-t, --timestamp>
+
+Add timestamp comment to top of catalog.
 
 =item B<-q, --quiet>
 
