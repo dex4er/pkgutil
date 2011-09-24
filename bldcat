@@ -42,7 +42,7 @@ my (
     $name,    $description, $common, $version,     $package,
     $pkgfile, $hash,        $size,   $deps,        $category,
     $help,    $fast,        $ideps,  $sizeCatalog, $quiet,
-    $timestamp
+    @parameter
 );
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
@@ -54,7 +54,7 @@ GetOptions(
     "F|fast"      => \$fast,
     "W|workdir=s" => \$dir,
     "q|quiet"     => \$quiet,
-    "t|timestamp" => \$timestamp,
+    "p|param=s"   => \@parameter,
     "f|format=s"  => \$format
 ) || usage();
 
@@ -73,12 +73,12 @@ sub usage {
     print <<EOF;
 bldcat, build CSW catalogs.
 
-Usage: bldcat [-fFWtqh] <package dir>
+Usage: bldcat [-fFWpqh] <package dir>
 
   -f, --format=x\tSet catalog format (8,[9])
   -F, --fast\t\tUse fast mode
   -W, --workdir=x\tSet work directory (default: /var/tmp)
-  -t, --timestamp\tAdd timestamp
+  -p, --param=x\t\tAdd parameter, e.g. timestamp
   -q, --quiet\t\tNo output
   -h, --help\t\tShow this help
 
@@ -116,9 +116,17 @@ open( my $CATALOG, '>', "$pkgdir/catalog.new" )
 open( my $DESCRIPTIONS, '>', "$pkgdir/descriptions.new" )
   || die "Could not write new descriptions at $pkgdir/descriptions.new: $!";
 
-if ( $timestamp ) {
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-    printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
+# Add site features
+if ( scalar(@parameter) > 0 ) {
+    if ( grep { /timestamp/ } @parameter ) {
+        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+        printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
+    }
+    if ( grep { /releasename/ } @parameter ) {
+        my ($releasename) = grep { /releasename/ } @parameter;
+        ($releasename) = ( $releasename =~ /:(.*)/ );
+        print $CATALOG "# RELEASENAME $releasename\n";
+    }
 }
 
 foreach my $file ( glob "$pkgdir/*" ) {
@@ -301,7 +309,7 @@ bldcat - build a CSW catalog from packages in a directory.
 
 =head1 SYNOPSIS
 
-bldcat [-fFWtqh] <package dir>
+bldcat [-fFWpqh] <package dir>
 
 =head1 DESCRIPTION
 
@@ -323,9 +331,9 @@ Make timesaving assumptions. Usually bldcat guarantees to produce working catalo
 
 Set work directory. Default /var/tmp.
 
-=item B<-t, --timestamp>
+=item B<-p, --param=x>
 
-Add timestamp comment to top of catalog.
+Add site features to the top of catalog. Currently supported values are timestamp and releasename. To specify releasename use a colon to separate the actual value from the parameter, e.g. --param=releasename:dublin.
 
 =item B<-q, --quiet>
 
