@@ -46,14 +46,14 @@ $ENV{'PATH'} = '/bin:/usr/bin';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.5.1";
+my $pkgutilver   = "2.6b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
 my $pkgliststyle = 2;
 my $maxpkglist   = 100000;
 my @mirror;
-my $defaultmirror = ("http://mirror.opencsw.org/opencsw/unstable");
+my $defaultmirror = ("http://mirror.opencsw.org/opencsw/testing");
 my $workdir       = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
