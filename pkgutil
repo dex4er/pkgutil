@@ -154,6 +154,11 @@ sub available {
     myexit( "", "", 0 );
 }
 
+# catalog info
+sub catalog_info {
+    myexit( "", "", 0 );
+}
+
 # check binary to avoid trying to use broken wget for example
 #   bin - binary to check
 sub check_binary {
@@ -1785,7 +1790,7 @@ sub parse_cl {
         $opt_findfile,          $opt_describe,         $opt_extract,
         $opt_nodeps,            $opt_single,           @opt_param,
         $opt_list,              $opt_parse,            $opt_cleanup,
-        $opt_pkgdir,            $opt_rootpath
+        $opt_pkgdir,            $opt_rootpath,         $opt_catinfo
     );
 
     usage() unless scalar(@ARGV);
@@ -1832,6 +1837,7 @@ sub parse_cl {
         "parse"           => \$opt_parse,
         "p|param=s"       => \@opt_param,
         "cleanup"         => \$opt_cleanup,
+        "catinfo"         => \$opt_catinfo,
         "P|pkgdir=s"      => \$opt_pkgdir,
         "R|rootpath=s"    => \$opt_rootpath,
         "V|syscheck"      => \$opt_syscheck
@@ -1860,6 +1866,7 @@ sub parse_cl {
     init( $opt_config, @opt_param ) if ( $opt_config || scalar(@opt_param) );
     list_pkgs()   if $opt_list;
     pkgutilver(1) if $opt_syscheck;
+    catalog_info() if $opt_catinfo;
     locate_wget();
     locate_gzip();
 
@@ -2568,6 +2575,7 @@ Usage: pkgutil [option]... [package](-[version])...
   -p, --param=opt:val   Override configuration option
       --parse           Machine parsable output
       --cleanup         Clean up obsolete packages
+      --catinfo         Catalog info
 
 Example: pkgutil -i CSWwget\ (install wget and its dependencies)
 
