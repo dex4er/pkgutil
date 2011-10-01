@@ -118,14 +118,15 @@ open( my $DESCRIPTIONS, '>', "$pkgdir/descriptions.new" )
 
 # Add site features
 if ( scalar(@parameter) > 0 ) {
-    if ( grep { /timestamp/ } @parameter ) {
-        my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-        printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
-    }
-    if ( grep { /release/ } @parameter ) {
-        my ($releasename) = grep { /release/ } @parameter;
-        ($releasename) = ( $releasename =~ /:(.*)/ );
-        print $CATALOG "# RELEASE $releasename\n";
+    foreach my $param (@parameter) {
+        if ( $param eq "timestamp" ) {
+            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
+            printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
+            next;
+        }
+	# Add generic site feature to catalog (e.g. RELEASE testing)
+        my ($key,$value) = ( $param =~ /(.*):(.*)/ );
+        print $CATALOG "# $key $value\n";
     }
 }
 
