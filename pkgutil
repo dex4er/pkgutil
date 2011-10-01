@@ -1832,7 +1832,7 @@ sub parse_cl {
         "F|findfile"      => \$opt_findfile,
         "extract"         => \$opt_extract,
         "single"          => \$opt_single,
-        "deptree=i"       => \$opt_deptree,
+        "deptree:999"     => \$opt_deptree,
         "N|nodeps"        => \$opt_nodeps,
         "parse"           => \$opt_parse,
         "p|param=s"       => \@opt_param,
