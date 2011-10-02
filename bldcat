@@ -334,7 +334,7 @@ Set work directory. Default /var/tmp.
 
 =item B<-p, --param=x>
 
-Add site features to the top of catalog. Currently supported values are timestamp and releasename. To specify releasename use a colon to separate the actual value from the parameter, e.g. --param=releasename:dublin.
+Add site features to the top of catalog. Currently timestamp is supported, other values are simply put in as key/value pairs. To add a timestamp to the catalog, use --param=timestamp. To specify, e.g., the releasename, use a colon to separate the actual value from the key, e.g. --param=RELEASE:testing.
 
 =item B<-q, --quiet>
 
