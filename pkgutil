@@ -62,7 +62,7 @@ my (
     $gzip, $name, $ver,  $pkgname, $filename
 );
 my ( $size, $deps, $cat, $tmppkg, $tmppkg2, $trace, $hash );
-my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror );
+my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror, %catinfo );
 
 # Show available packages in catalog (-a/A)
 #   mode  - 0 = display available packages (-a)
@@ -154,8 +154,17 @@ sub available {
     myexit( "", "", 0 );
 }
 
-# catalog info
+# display catalog info
 sub catalog_info {
+
+    foreach ( sort keys %catinfo ) {
+        print "\n";
+        print "URL\t\t" . $catinfo{ $_ }{ url } . "\n";
+        print "Release\t\t" . $catinfo{ $_ }{ RELEASE } . "\n";
+        print "Creation time\t" . $catinfo{ $_ }{ CREATIONDATE } . "\n";
+        print "Number of pkgs\t" . $catinfo{ $_ }{ num_of_pkgs } . "\n";
+        print "File\t\t" . $catinfo{ $_ }{ filename } . "\n";
+    }
     myexit( "", "", 0 );
 }
 
@@ -1866,7 +1875,6 @@ sub parse_cl {
     init( $opt_config, @opt_param ) if ( $opt_config || scalar(@opt_param) );
     list_pkgs()   if $opt_list;
     pkgutilver(1) if $opt_syscheck;
-    catalog_info() if $opt_catinfo;
     locate_wget();
     locate_gzip();
 
@@ -1993,6 +2001,7 @@ sub parse_cl {
     run_hooks( "postargproc", @norm_argv );
 
     # Complex options
+    catalog_info() if $opt_catinfo;
     list_file() if $opt_listfile;
 
     # Download and stream if both -d and -s selected
@@ -2175,11 +2184,32 @@ sub read_catalog {
     my ( $catalog, $filename ) = @_;
     my @llst;
     my $i = 0;
+    my @keywords = qw(CREATIONDATE RELEASE);
+
+    # Add catalog info to hash
+    my $url = mangle_url($catalog);
+    $catinfo{ $url }{ url } = $catalog;
+    $catinfo{ $url }{ filename } = $filename;
+    # Initialize
+    foreach ( @keywords ) {
+        $catinfo{ $url }{ $_ } = "-";
+    }
 
     my $CATALOG = gensym();
     open( $CATALOG, "<$filename" ) or myexit( "Can't open $filename", "$!", 1 );
     while ( my $line = <$CATALOG> ) {
         chomp $line;
+        # Look for magic comments
+        if ( $line =~ /^#\s\w/ ) {
+            foreach ( @keywords ) {
+                if ( $line =~ /^#\s.+\s.+$/ ) {
+                    my ( $key, $value ) = ( $line =~ /^#\s(.+)\s(.+)$/ );
+                    if ( $key eq $_ ) {
+                        $catinfo{ $url }{ $_ } = $value;
+                    }
+                }
+            }
+        }
         if ( $line =~ /^\w/ ) {
             @llst = split( / /, $line );
             if (   $llst[0]
@@ -2199,6 +2229,7 @@ sub read_catalog {
         }
     }
     close $CATALOG;
+    $catinfo{ $url }{ num_of_pkgs } = $i;
     return $i;
 }
 
