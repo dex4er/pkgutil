@@ -1,6 +1,6 @@
 #!/bin/sh
 #! -*- perl -*-
-eval 'PATH=/opt/csw/bin:$PATH exec perl -x -w $0 ${1+"$@"}'
+eval 'PATH=/opt/csw/bin:$PATH:/usr/perl5/bin exec perl -x -w $0 ${1+"$@"}'
   if 0;
 
 # pkgutil - manages packages on Sun/Oracle Solaris systems
