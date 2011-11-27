@@ -1623,7 +1623,7 @@ sub locate_gzip {
 
 # Find wget
 sub locate_wget {
-    my @locations = ( "/opt/csw/bin", "/usr/sfw/bin", "/usr/local/bin" );
+    my @locations = ( "/opt/csw/bin", "/usr/sfw/bin", "/usr/local/bin", "/usr/bin" );
     my $libexec = "/opt/csw/libexec/pkgutil";
 
     foreach (@locations) {
