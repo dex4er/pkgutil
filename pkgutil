@@ -40,6 +40,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 # Untainting
 delete @ENV{qw(LD_LIBRARY_PATH IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
 $ENV{'PATH'} = '/bin:/usr/bin';
+$ENV{'LANG'} = 'C';
 
 # Ensure we always work from a directory that won't
 # be yanked out from under pkgadd/pkgrm.
@@ -164,6 +165,7 @@ sub catalog_info {
         print "Creation time\t" . $catinfo{ $_ }{ CREATIONDATE } . "\n";
         print "Number of pkgs\t" . $catinfo{ $_ }{ num_of_pkgs } . "\n";
         print "File\t\t" . $catinfo{ $_ }{ filename } . "\n";
+        print "GPG\t\t" . $catinfo{ $_ }{ gpg } . "\n" if $use_gpg;
     }
     myexit( "", "", 0 );
 }
@@ -780,6 +782,10 @@ sub gpg {
         rename( $catalog . ".asc", $catalog )
           or myexit( "Could not rename catalog!", "", 1 );
         print STDERR "DEBUG:Status GPG: $status\n" if $debug;
+
+        # Save catalog signer
+        my $gpgoutput = `/opt/csw/bin/gpg $gpghomedir --verify $catalog 2>&1`;
+        ( $catinfo{ $catalog }{ gpg } ) = ( $gpgoutput =~ /^gpg: .+ signature from (.+)$/m );
     }
     else {
         myexit(
@@ -2905,6 +2911,10 @@ Machine parsable output, no headers and all columns are separated by one tab. Us
 =item B<--cleanup>
 
 Clean up obsolete packages. For example a renamed package that is not needed any more.
+
+=item B<--catinfo>
+
+Display information about the catalogs used, e.g. number of packages and local path.
 
 =back
 
