@@ -63,7 +63,7 @@ my (
     $gzip, $name, $ver,  $pkgname, $filename
 );
 my ( $size, $deps, $cat, $tmppkg, $tmppkg2, $trace, $hash );
-my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror, %catinfo );
+my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror, %catinfo, %state );
 
 # Show available packages in catalog (-a/A)
 #   mode  - 0 = display available packages (-a)
@@ -845,7 +845,7 @@ sub init {
                     print "Unrecognized option (in $file): $var\n";
                     next;
                 }
-                print STDERR "DEBUG:Found $var = $value\n" if $debug;
+                print STDERR "DEBUG:Config:Found $var = $value\n" if $debug;
                 my $r = ref( $config{$var} );
                 if ( !$r ) {
                     $config{$var} = $value;
@@ -1951,6 +1951,25 @@ sub parse_cl {
     close $ADMCPY;
     $admin = "$workdir/admin.run";
 
+###
+    my $statefile = "$workdir/pkgutil.state";
+    if ( -r $statefile ) {    # If state file found, parse it
+        my $STATE = gensym();
+        open( $STATE, "<$statefile" ) or myexit( "Can't open $statefile", "$!", 1 );
+        while (<$STATE>) {
+            chomp;       # Remove newline
+            my ( $var, $value ) = split( /=/, $_, 2 );
+            $state{ $var } = $value;
+            print STDERR "DEBUG:State:Found $var = $value\n" if $debug;
+            print STDERR "DEBUG:State:Found $var = $value\n"; #############
+        }
+        close $STATE;
+    }
+    else {
+        print "DEBUG: no state file found\n";
+    }
+###
+
     # Cleanup supports yes/auto so it needs to have $admin set
     cleanup() if $opt_cleanup;
 
@@ -2249,6 +2268,30 @@ sub read_catalog {
             }
         }
     }
+
+###
+    # Compare state file and catalog releases
+    print "DEBUG:Catalog release:$catinfo{ $url }{ RELEASE }\n";
+    if ( $catinfo{ $url }{ RELEASE } ne $state{ RELEASE } ) {
+        if ( !$yes ) {
+            print "The release level in the previous state file ("
+              . $state{ RELEASE } . ")\nand the current catalog ("
+              . $catinfo{ $url }{ RELEASE } . ") differs.\nBe aware that many "
+              . "packages may have changed.\nDo you want to continue? ([y],n) ";
+            chomp( my $prompt = <STDIN> );
+            if ( $prompt =~ /^[nN]/ ) {
+                myexit( "", "", 0 );
+            }
+        }
+        # Write the state file with the new release
+        my $STATE = gensym();
+        open( $STATE, ">$workdir/pkgutil.state" )
+          or myexit( "Can't open $workdir/pkgutil.state", "$!", 1 );
+        print $STATE "RELEASE=$catinfo{ $url }{ RELEASE }";
+        close $STATE;
+    }
+###
+
     close $CATALOG;
     $catinfo{ $url }{ num_of_pkgs } = $i;
     return $i;
