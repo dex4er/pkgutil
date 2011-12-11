@@ -1437,11 +1437,26 @@ sub install {
     myexit( "",                                   "", 0 ) if $parse;
     myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
 
+    # Warn if cswclassutils is in the list and we have a read-only
+    # /usr/sadm/install/scripts dir
+    if ( grep { /^CSWcas-/ } @dlpkglist ) {	# CAS pkg in the list?
+        my $status = system( "/bin/pkgcond", "is_path_writable",
+                             "/usr/sadm/install/scripts" ); # /usr ro?
+        if ( $status ) {
+            myexit( "A class action script is about to be installed but\n"
+            . "/usr/sadm/install/scripts is read-only so it will fail.\n"
+            . "If you're running a sparse zone, please install/update the\n"
+            . "class action scripts from the global zone. If you want to\n"
+            . "proceed with this installation you have to exclude the\n"
+            . "CAS package (use the -x option). Exiting.", "", 1 );
+        }
+    }
+
     if ( scalar(@dlpkglist) > 0 ) {
         fetch_pkgs( $mode, @dlpkglist );
     }
 
-    # display a list of files when downloading
+    # Display a list of files when downloading
     if ( $mode == 1 ) {
         print "\nPackages downloaded to $pkgdir:\n";
         foreach (@dlpkglist) {
