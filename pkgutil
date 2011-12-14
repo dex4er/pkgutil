@@ -2272,8 +2272,11 @@ sub read_catalog {
 ###
     # Compare state file and catalog releases
     print "DEBUG:Catalog release:$catinfo{ $url }{ RELEASE }\n";
-    if ( $catinfo{ $url }{ RELEASE } ne $state{ RELEASE } ) {
-        if ( !$yes ) {
+    $catinfo{ $url }{ RELEASE } = "-" unless defined $catinfo{ $url }{ RELEASE };
+    $state{ RELEASE } = "-" unless defined $state{ RELEASE };
+
+    if ( "$catinfo{ $url }{ RELEASE }" ne "$state{ RELEASE }" ) {
+        unless ( $yes || "$catinfo{ $url }{ RELEASE }" eq "-" ) {
             print "The release level in the previous state file ("
               . $state{ RELEASE } . ")\nand the current catalog ("
               . $catinfo{ $url }{ RELEASE } . ") differs.\nBe aware that many "
