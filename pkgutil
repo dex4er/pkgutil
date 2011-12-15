@@ -1951,24 +1951,23 @@ sub parse_cl {
     close $ADMCPY;
     $admin = "$workdir/admin.run";
 
-###
+    # Read state file if available
     my $statefile = "$workdir/pkgutil.state";
     if ( -r $statefile ) {    # If state file found, parse it
         my $STATE = gensym();
-        open( $STATE, "<$statefile" ) or myexit( "Can't open $statefile", "$!", 1 );
+        open( $STATE, "<$statefile" )
+          or myexit( "Can't open $statefile", "$!", 1 );
         while (<$STATE>) {
             chomp;       # Remove newline
             my ( $var, $value ) = split( /=/, $_, 2 );
             $state{ $var } = $value;
             print STDERR "DEBUG:State:Found $var = $value\n" if $debug;
-            print STDERR "DEBUG:State:Found $var = $value\n"; #############
         }
         close $STATE;
     }
     else {
-        print "DEBUG: no state file found\n";
+        print "DEBUG: no state file found\n" if $debug;
     }
-###
 
     # Cleanup supports yes/auto so it needs to have $admin set
     cleanup() if $opt_cleanup;
@@ -2269,10 +2268,10 @@ sub read_catalog {
         }
     }
 
-###
     # Compare state file and catalog releases
-    print "DEBUG:Catalog release:$catinfo{ $url }{ RELEASE }\n";
-    $catinfo{ $url }{ RELEASE } = "-" unless defined $catinfo{ $url }{ RELEASE };
+    print "DEBUG:Catalog release:$catinfo{ $url }{ RELEASE }\n" if $debug;
+    $catinfo{ $url }{ RELEASE } = "-"
+      unless defined $catinfo{ $url }{ RELEASE };
     $state{ RELEASE } = "-" unless defined $state{ RELEASE };
 
     if ( "$catinfo{ $url }{ RELEASE }" ne "$state{ RELEASE }" ) {
@@ -2293,7 +2292,6 @@ sub read_catalog {
         print $STATE "RELEASE=$catinfo{ $url }{ RELEASE }";
         close $STATE;
     }
-###
 
     close $CATALOG;
     $catinfo{ $url }{ num_of_pkgs } = $i;
