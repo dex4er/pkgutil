@@ -24,6 +24,24 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.6. Released 2011-12-31
+  - Support site feature RELEASE. Cache names locally, if changed
+    (testing starts to point to kiel instead of dublin e.g.) an alert is
+    issued
+  - Add --catinfo option, OpenCSW #4835 (Sebastian Kayser)
+  - Warn about cswclassutils not in global zone when running in sparse
+    zone (detect read-only /usr)
+  - Change default mirror to http://mirror.opencsw.org/opencsw/testing
+  - Add /usr/perl5/bin to PATH (Dago)
+  - Default unlimited depth for --deptree (Sebastian)
+  - Use -q as default for wget (Dago)
+  - Document (on wiki) how to use pkgutil on Linux for downloading
+  - Add /usr/bin path to locate wget to ease running on Linux
+  - Fix typo in readme about rootpath option
+  - bldcat: make --param very generic, every unrecognized foo:bar means
+    it will be inserted into the catalog as a magic comment (# foo bar)
+  - bldcat: add param option including timestamp and release name
+
 * v2.5.1. Released 2011-09-11
   - Fix bug with how gpg is called (Ben Walton)
 
