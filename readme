@@ -24,6 +24,11 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.6.1. Released 2012-01-xx
+  - Flush pkgserv cache before using /var/sadm/install/contents (Dago)
+  - chkcat: algorithm for cyclic dependency checking improved, it's now
+    so fast that option --nocyclic is deprecated (Dago)
+
 * v2.6. Released 2011-12-31
   - Support site feature RELEASE. Cache names locally, if changed
     (testing starts to point to kiel instead of dublin e.g.) an alert is
@@ -297,8 +302,8 @@ Version history
   - Skip showing pkgadd patch when using -V on 5.11 (Dennis Clarke)
   - Update credits in perldoc/man page
   - Perldoc/man page added to both bldcat and chkcat
-  - Chkcat now includes more tests (Derek Whayman)
-  - Chkcat exit values are 0 for OK, 1 for warning and 2 for error
+  - chkcat now includes more tests (Derek Whayman)
+  - chkcat exit values are 0 for OK, 1 for warning and 2 for error
   - New option -e (erroronly) added to chkcat to supress warnings
   - New option -q (quiet) added to chkcat to supress all output
 
@@ -310,14 +315,14 @@ Version history
   - Increased protection against broken/empty local
     package files (Sebastian Kayser)
   - Perldoc/man updates
-  - Bldcat skips dependencies to the same package
-  - Chkcat checks for packages that contain dependencies to themselves
+  - bldcat skips dependencies to the same package
+  - chkcat checks for packages that contain dependencies to themselves
 
 * v1.4. Released 2009-01-19
   - Dependency calculations are now much faster
   - Support for local file repositories (Dennis Clarke)
   - Keyword "same" when using -c replaced with "SAME" (Dennis Clarke)
-  - Bldcat now skips SUNW packages as dependencies
+  - bldcat now skips SUNW packages as dependencies
 
 * v1.3.1. Released 2008-12-17
   - Small packaging bug fixed. No code changes

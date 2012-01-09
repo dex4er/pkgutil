@@ -4,7 +4,7 @@ eval 'PATH=/opt/csw/bin:$PATH:/usr/perl5/bin exec perl -x -w $0 ${1+"$@"}'
   if 0;
 
 # pkgutil - manages packages on Sun/Oracle Solaris systems
-# Copyright (C) 2008-2011 Peter Bonivart
+# Copyright (C) 2008-2012 Peter Bonivart
 
 # $Id$
 
@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6";
+my $pkgutilver   = "2.6.1b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -681,6 +681,11 @@ sub fetch_pkgs {
 # Find files in package (-F)
 sub find_file {
     my $contents = "/var/sadm/install/contents";
+
+    # Flush the pkgserv cache
+    if ( -x "/usr/bin/pkgadm" ) {
+        system( "/usr/bin/pkgadm sync > dev/null 2>&1" );
+    }
 
     foreach (@ARGV) {
         my $FILE = gensym();
@@ -1555,6 +1560,12 @@ sub list_file {
       $config{root_path}
       ? "$config{root_path}/var/sadm/install/contents"
       : "/var/sadm/install/contents";
+
+    # Flush the pkgserv cache
+    if ( -x "/usr/bin/pkgadm" ) {
+        system( "/usr/bin/pkgadm" . ($config{root_path} ? " -R " . $config{root_path} : "")
+          . " sync > /dev/null 2>&1" );
+    }
 
     foreach (@ARGV) {
         if ( -r $_ && -f _ ) {    # Argument is a package file
@@ -3123,7 +3134,7 @@ For more details, see the readme file.
 
 =head1 COPYRIGHT AND DISCLAIMER
 
-Copyright (C) 2008-2011 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+Copyright (C) 2008-2012 Peter Bonivart. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
