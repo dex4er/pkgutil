@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.6.1. Released 2012-01-xx
+* v2.6.1. Released 2012-01-13
   - Flush pkgserv cache before using /var/sadm/install/contents (Dago)
   - chkcat: algorithm for cyclic dependency checking improved, it's now
     so fast that option --nocyclic is deprecated (Dago)
