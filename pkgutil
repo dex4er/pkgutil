@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.1b1";
+my $pkgutilver   = "2.6.1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -602,9 +602,6 @@ sub fetch_pkgs {
                 else {
                     run_hooks( "prefetch", "$_/$file", $pkg );
 
-                    ## Testing curl as download method
-                    ##fetch_pkgs_curl("$_/$file","$pkgdir/$file");
-
                     $status = system( "$wget", split( ' ', $wgetopts ),
                         "-O", "$pkgdir/${file}.tmp", "$_/$file" );
                 }
@@ -626,57 +623,6 @@ sub fetch_pkgs {
         md5( $pkg, "$pkgdir/$file", $mode ) if $use_md5;
     }
 }
-
-## Global vars
-##my ($progress,$last);
-
-## Experimental code for curl downloads
-##sub fetch_pkgs_curl {
-##  my ($url,$file) = @_;
-
-##print "url: $url\n";
-##print "file: $file\n";
-
-## Only if available - eval?
-##  use WWW::Curl::Easy;
-
-##  my $curl = new WWW::Curl::Easy;
-
-##  # Setting the options
-##  $curl->setopt(CURLOPT_NOPROGRESS, 1);
-##  $curl->setopt(CURLOPT_NOPROGRESS, 0);
-##  $curl->setopt(CURLOPT_PROGRESSFUNCTION, \&curl_progress_callback);
-##  $curl->setopt(CURLOPT_HEADER, 0);
-##  $curl->setopt(CURLOPT_URL, $url);
-##  my $fp = gensym();
-##  open(my $fp,">$file") or myexit("Can't open $file","$!",1);
-##  $curl->setopt(CURLOPT_WRITEDATA, $fp);
-
-##  # Starts the actual request
-##  my $retcode = $curl->perform;
-
-##print "progress: $progress\n";
-##print "last: $last\n";
-
-##  # Looking at the results ...
-##  if ($retcode == 0) {
-##    print("Transfer went ok\n");
-##    my $response_code = $curl->getinfo(CURLINFO_HTTP_CODE);
-##    # Judge result and next action based on $response_code
-##    print("Received response: $response_code\n");
-##  } else {
-##    print("Error: " . $curl->strerror($retcode) . " ($retcode)\n");
-##  }
-##  close $file;
-##exit;
-##}
-
-##sub curl_progress_callback {
-##  my ($clientp,$dltotal,$dlnow,$ultotal,$ulnow) = @_;
-##  $last = $dlnow;
-##  $progress++;
-##  return 0;
-##}
 
 # Find files in package (-F)
 sub find_file {
