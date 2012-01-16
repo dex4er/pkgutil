@@ -64,7 +64,7 @@ Usage: chkcat [-veqcph] <catalog file>...
   -v, --verbose\t\tVerbose mode
   -e, --erroronly\tSuppress displaying warnings
   -q, --quiet\t\tNo output (only exit codes)
-  -c, --nocyclic\tNo cyclic dependency checking (Legacy, ignored)
+  -c, --nocyclic\tNo cyclic dependency checking (legacy, ignored)
   -p, --parse\t\tMachine parsable output
   -h, --help\t\tShow this help
 
@@ -109,16 +109,17 @@ sub retcode {
 sub deppkgs {
     my ($pkg) = @_;
 
-    if( !exists $deps{$pkg} ) {
+    if ( !exists $deps{$pkg} ) {
         $deps{$pkg} = {};
 
-        my @direct_deps = ($pkgdep{$pkg} eq "none" ? () : split(/\|/,$pkgdep{$pkg}));
+        my @direct_deps =
+          ( $pkgdep{$pkg} eq "none" ? () : split( /\|/, $pkgdep{$pkg} ) );
         foreach my $dd (@direct_deps) {
-            next if( exists $deps{$pkg}{$dd} );
+            next if ( exists $deps{$pkg}{$dd} );
             $deps{$pkg}{$dd} = [];
-            my $d = deppkgs( $dd );
-            foreach my $di (keys %$d) {
-              $deps{$pkg}{$di} = [ $dd, @{$d->{$di}} ];
+            my $d = deppkgs($dd);
+            foreach my $di ( keys %$d ) {
+                $deps{$pkg}{$di} = [ $dd, @{ $d->{$di} } ];
             }
         }
     }
@@ -383,19 +384,23 @@ while ( scalar(@tmp) > 0 ) {
     }
 
     # Check for cyclic dependencies
-    if ($field[6] ne "none") {
+    if ( $field[6] ne "none" ) {
         my $d = deppkgs( $field[2] );
-        if( exists $d->{$field[2]} ) {
+        if ( exists $d->{ $field[2] } ) {
             retcode(2);
             if ($parse) {
                 print
-"ERROR\t13\t$field[2]\tCyclic dependency detected in package $field[2] because of " . join( ":", $field[2], @{$d->{$field[2]}}, $field[2] ) . "\n"
-                unless $quiet;
+"ERROR\t13\t$field[2]\tCyclic dependency detected in package $field[2] because of "
+                  . join( ":", $field[2], @{ $d->{ $field[2] } }, $field[2] )
+                  . "\n"
+                  unless $quiet;
             }
             else {
                 print
-"ERROR! Cyclic dependency detected in package $field[2] because of " . join( " -> ", $field[2], @{$d->{$field[2]}}, $field[2] ) . ".\n"
-                unless $quiet;
+"ERROR! Cyclic dependency detected in package $field[2] because of "
+                  . join( " -> ", $field[2], @{ $d->{ $field[2] } }, $field[2] )
+                  . ".\n"
+                  unless $quiet;
             }
         }
     }

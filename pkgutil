@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.1";
+my $pkgutilver   = "2.7b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -62,7 +62,7 @@ my (
     $line, $tmp,  $wget, $yes,     $force, $nomod,
     $gzip, $name, $ver,  $pkgname, $filename
 );
-my ( $size, $deps, $cat, $tmppkg, $tmppkg2, $trace, $hash );
+my ( $size,    $deps,   $cat, $tmppkg,    $tmppkg2,   $trace,   $hash );
 my ( @exclude, %config, %pkg, %commonpkg, %pkgmirror, %catinfo, %state );
 
 # Show available packages in catalog (-a/A)
@@ -160,12 +160,12 @@ sub catalog_info {
 
     foreach ( sort keys %catinfo ) {
         print "\n";
-        print "URL\t\t" . $catinfo{ $_ }{ url } . "\n";
-        print "Release\t\t" . $catinfo{ $_ }{ RELEASE } . "\n";
-        print "Creation time\t" . $catinfo{ $_ }{ CREATIONDATE } . "\n";
-        print "Number of pkgs\t" . $catinfo{ $_ }{ num_of_pkgs } . "\n";
-        print "File\t\t" . $catinfo{ $_ }{ filename } . "\n";
-        print "GPG\t\t" . $catinfo{ $_ }{ gpg } . "\n" if $use_gpg;
+        print "URL\t\t" . $catinfo{$_}{url} . "\n";
+        print "Release\t\t" . $catinfo{$_}{RELEASE} . "\n";
+        print "Creation time\t" . $catinfo{$_}{CREATIONDATE} . "\n";
+        print "Number of pkgs\t" . $catinfo{$_}{num_of_pkgs} . "\n";
+        print "File\t\t" . $catinfo{$_}{filename} . "\n";
+        print "GPG\t\t" . $catinfo{$_}{gpg} . "\n" if $use_gpg;
     }
     myexit( "", "", 0 );
 }
@@ -630,12 +630,13 @@ sub find_file {
 
     # Flush the pkgserv cache
     if ( -x "/usr/bin/pkgadm" ) {
-        system( "/usr/bin/pkgadm sync > dev/null 2>&1" );
+        system("/usr/bin/pkgadm sync > dev/null 2>&1");
     }
 
     foreach (@ARGV) {
         my $FILE = gensym();
-        open( $FILE, "<$contents" ) or myexit( "Can't open $contents", "$!", 1 );
+        open( $FILE, "<$contents" )
+          or myexit( "Can't open $contents", "$!", 1 );
         while ( my $line = <$FILE> ) {
             chomp $line;
             my ( $file, $pkg ) = ( $line =~ /^(.+?)\s.+\s(.+)$/ );
@@ -728,7 +729,8 @@ sub gpg {
         myexit( "Bad signature detected in catalog!", "", 1 ) if $status;
         rename( $catalog, $catalog . ".asc" )
           or myexit( "Could not rename catalog!", "", 1 );
-        $status = system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2> /dev/null");
+        $status =
+          system("/opt/csw/bin/gpg $gpghomedir $catalog.asc 2> /dev/null");
         myexit( "Catalog signature is not correct!", "", 1 ) if $status;
         rename( $catalog . ".asc", $catalog )
           or myexit( "Could not rename catalog!", "", 1 );
@@ -736,7 +738,8 @@ sub gpg {
 
         # Save catalog signer
         my $gpgoutput = `/opt/csw/bin/gpg $gpghomedir --verify $catalog 2>&1`;
-        ( $catinfo{ $catalog }{ gpg } ) = ( $gpgoutput =~ /^gpg: .+ signature from (.+)$/m );
+        ( $catinfo{$catalog}{gpg} ) =
+          ( $gpgoutput =~ /^gpg: .+ signature from (.+)$/m );
     }
     else {
         myexit(
@@ -866,9 +869,9 @@ sub inst_loc_pkgs {
     my $pkgtrace   = "";
     my $file;
 
-    $pkgaddopts  .= " $config{pkgaddopts}" if $config{pkgaddopts};
-    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
-    $pkgtrace     = "-v" if $trace;
+    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgrmopts  .= " $config{pkgrmopts}"  if $config{pkgrmopts};
+    $pkgtrace = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
     foreach (@pkglist) {
@@ -957,9 +960,9 @@ sub inst_pkgs {
     my %upg_pkglist;
     my ( $file, $name );
 
-    $pkgaddopts  .= " $config{pkgaddopts}" if $config{pkgaddopts};
-    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
-    $pkgtrace     = "-v" if $trace;
+    $pkgaddopts .= " $config{pkgaddopts}" if $config{pkgaddopts};
+    $pkgrmopts  .= " $config{pkgrmopts}"  if $config{pkgrmopts};
+    $pkgtrace = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
 
     run_hooks( "prebatch$batchmode", @pkglist );
@@ -1098,7 +1101,8 @@ sub install {
     my ( %pkgvers, @pkglist, @excludelist )
       ;    # @pkglist is specifically in the correct order
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
-    my $pkgrmopts = "$config{pkgrmopts}" if $config{pkgrmopts};
+    my $pkgrmopts = "";
+    $pkgrmopts = "$config{pkgrmopts}" if $config{pkgrmopts};
 
     print $FH "Solving needed dependencies ...\n" unless ( $deps || $parse );
 
@@ -1396,16 +1400,19 @@ sub install {
 
     # Warn if cswclassutils is in the list and we have a read-only
     # /usr/sadm/install/scripts dir
-    if ( grep { /^CSWcas-/ } @dlpkglist ) {	# CAS pkg in the list?
+    if ( grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
         my $status = system( "/bin/pkgcond", "is_path_writable",
-                             "/usr/sadm/install/scripts" ); # /usr ro?
-        if ( $status ) {
-            myexit( "A class action script is about to be installed but\n"
-            . "/usr/sadm/install/scripts is read-only so it will fail.\n"
-            . "If you're running a sparse zone, please install/update the\n"
-            . "class action scripts from the global zone. If you want to\n"
-            . "proceed with this installation you have to exclude the\n"
-            . "CAS package (use the -x option). Exiting.", "", 1 );
+            "/usr/sadm/install/scripts" );     # /usr ro?
+        if ($status) {
+            myexit(
+                "A class action script is about to be installed but\n"
+                  . "/usr/sadm/install/scripts is read-only so it will fail.\n"
+                  . "If you're running a sparse zone, please install/update the\n"
+                  . "class action scripts from the global zone. If you want to\n"
+                  . "proceed with this installation you have to exclude the\n"
+                  . "CAS package (use the -x option). Exiting.",
+                "", 1
+            );
         }
     }
 
@@ -1509,8 +1516,9 @@ sub list_file {
 
     # Flush the pkgserv cache
     if ( -x "/usr/bin/pkgadm" ) {
-        system( "/usr/bin/pkgadm" . ($config{root_path} ? " -R " . $config{root_path} : "")
-          . " sync > /dev/null 2>&1" );
+        system( "/usr/bin/pkgadm"
+              . ( $config{root_path} ? " -R " . $config{root_path} : "" )
+              . " sync > /dev/null 2>&1" );
     }
 
     foreach (@ARGV) {
@@ -1601,7 +1609,8 @@ sub locate_gzip {
 
 # Find wget
 sub locate_wget {
-    my @locations = ( "/opt/csw/bin", "/usr/sfw/bin", "/usr/local/bin", "/usr/bin" );
+    my @locations =
+      ( "/opt/csw/bin", "/usr/sfw/bin", "/usr/local/bin", "/usr/bin" );
     my $libexec = "/opt/csw/libexec/pkgutil";
 
     foreach (@locations) {
@@ -1915,9 +1924,9 @@ sub parse_cl {
         open( $STATE, "<$statefile" )
           or myexit( "Can't open $statefile", "$!", 1 );
         while (<$STATE>) {
-            chomp;       # Remove newline
+            chomp;            # Remove newline
             my ( $var, $value ) = split( /=/, $_, 2 );
-            $state{ $var } = $value;
+            $state{$var} = $value;
             print STDERR "DEBUG:State:Found $var = $value\n" if $debug;
         }
         close $STATE;
@@ -1998,7 +2007,7 @@ sub parse_cl {
 
     # Complex options
     catalog_info() if $opt_catinfo;
-    list_file() if $opt_listfile;
+    list_file()    if $opt_listfile;
 
     # Download and stream if both -d and -s selected
     stream( $loc_arch, $loc_rel, $opt_output )
@@ -2179,29 +2188,31 @@ sub pkgutilver {
 sub read_catalog {
     my ( $catalog, $filename ) = @_;
     my @llst;
-    my $i = 0;
+    my $i        = 0;
     my @keywords = qw(CREATIONDATE RELEASE);
 
     # Add catalog info to hash
     my $url = mangle_url($catalog);
-    $catinfo{ $url }{ url } = $catalog;
-    $catinfo{ $url }{ filename } = $filename;
+    $catinfo{$url}{url}      = $catalog;
+    $catinfo{$url}{filename} = $filename;
+
     # Initialize
-    foreach ( @keywords ) {
-        $catinfo{ $url }{ $_ } = "-";
+    foreach (@keywords) {
+        $catinfo{$url}{$_} = "-";
     }
 
     my $CATALOG = gensym();
     open( $CATALOG, "<$filename" ) or myexit( "Can't open $filename", "$!", 1 );
     while ( my $line = <$CATALOG> ) {
         chomp $line;
+
         # Look for magic comments
         if ( $line =~ /^#\s\w/ ) {
-            foreach ( @keywords ) {
+            foreach (@keywords) {
                 if ( $line =~ /^#\s.+\s.+$/ ) {
                     my ( $key, $value ) = ( $line =~ /^#\s(.+)\s(.+)$/ );
                     if ( $key eq $_ ) {
-                        $catinfo{ $url }{ $_ } = $value;
+                        $catinfo{$url}{$_} = $value;
                     }
                 }
             }
@@ -2227,21 +2238,24 @@ sub read_catalog {
 
     # Compare state file and catalog releases
     print "DEBUG:Catalog release:$catinfo{ $url }{ RELEASE }\n" if $debug;
-    $catinfo{ $url }{ RELEASE } = "-"
-      unless defined $catinfo{ $url }{ RELEASE };
-    $state{ RELEASE } = "-" unless defined $state{ RELEASE };
+    $catinfo{$url}{RELEASE} = "-"
+      unless defined $catinfo{$url}{RELEASE};
+    $state{RELEASE} = "-" unless defined $state{RELEASE};
 
     if ( "$catinfo{ $url }{ RELEASE }" ne "$state{ RELEASE }" ) {
         unless ( $yes || "$catinfo{ $url }{ RELEASE }" eq "-" ) {
             print "The release level in the previous state file ("
-              . $state{ RELEASE } . ")\nand the current catalog ("
-              . $catinfo{ $url }{ RELEASE } . ") differs.\nBe aware that many "
+              . $state{RELEASE}
+              . ")\nand the current catalog ("
+              . $catinfo{$url}{RELEASE}
+              . ") differs.\nBe aware that many "
               . "packages may have changed.\nDo you want to continue? ([y],n) ";
             chomp( my $prompt = <STDIN> );
             if ( $prompt =~ /^[nN]/ ) {
                 myexit( "", "", 0 );
             }
         }
+
         # Write the state file with the new release
         my $STATE = gensym();
         open( $STATE, ">$workdir/pkgutil.state" )
@@ -2251,7 +2265,7 @@ sub read_catalog {
     }
 
     close $CATALOG;
-    $catinfo{ $url }{ num_of_pkgs } = $i;
+    $catinfo{$url}{num_of_pkgs} = $i;
     return $i;
 }
 
@@ -2267,9 +2281,9 @@ sub remove {
     my ( $i, $depinuse, $skip );
     my ( @cswpkgs, @deptmp, @rempkgs, @cswpkgstmp );
 
-    $pkgtrace     = "-v" if $trace;
+    $pkgtrace = "-v" if $trace;
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
-    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
+    $pkgrmopts .= " $config{pkgrmopts}" if $config{pkgrmopts};
 
     print "Looking at installed packages ...\n";
     if ($noncsw) {
@@ -2341,7 +2355,8 @@ sub remove {
                     split( ' ', $root_path ),
                     split( ' ', $pkgforce ),
                     split( ' ', $pkgtrace ),
-                    split( ' ', $pkgrmopts ), "$p"
+                    split( ' ', $pkgrmopts ),
+                    "$p"
                 );
                 run_hooks( 'postremove', ($_) );
             }
@@ -2366,7 +2381,7 @@ sub rem_pkgs {
     my $pkgrmopts = "";
     my $pkgforce  = "";
     my $pkgtrace  = "";
-    $pkgrmopts   .= " $config{pkgrmopts}" if $config{pkgrmopts};
+    $pkgrmopts .= " $config{pkgrmopts}" if $config{pkgrmopts};
 
     if ( scalar(@pkgs) > 0 && !$yes ) {
         print scalar(@pkgs),
@@ -2562,7 +2577,8 @@ sub stream {
 
     # pkgtrans all of them into one package stream
     print $FH "Transforming packages into stream ($transfile) ...\n";
-    my $status = system( "/bin/touch", "$transfile" ) unless ( $output eq "-" );
+    my $status;
+    $status = system( "/bin/touch", "$transfile" ) unless ( $output eq "-" );
     myexit( "Could not create stream file", "$!", 1 ) if $status;
     my $transpkgs = join( " ", @install_order );
     $status =

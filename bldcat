@@ -39,10 +39,9 @@ my $dir    = "/var/tmp";
 my $pkgdir = ".";
 my ( $deptmp, $status, $pkgname, $ideptmp );
 my (
-    $name,    $description, $common, $version,     $package,
-    $pkgfile, $hash,        $size,   $deps,        $category,
-    $help,    $fast,        $ideps,  $sizeCatalog, $quiet,
-    @parameter
+    $name,  $description, $common, $version,  $package, $pkgfile,
+    $hash,  $size,        $deps,   $category, $help,    $fast,
+    $ideps, $sizeCatalog, $quiet,  @parameter
 );
 my %oldcatalog;
 my %oldcatalog_bypkgfile;
@@ -120,12 +119,18 @@ open( my $DESCRIPTIONS, '>', "$pkgdir/descriptions.new" )
 if ( scalar(@parameter) > 0 ) {
     foreach my $param (@parameter) {
         if ( $param eq "timestamp" ) {
-            my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = gmtime(time);
-            printf $CATALOG ("# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",$year + 1900,$mon + 1,$mday,$hour,$min,$sec);
+            my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) =
+              gmtime(time);
+            printf $CATALOG (
+                "# CREATIONDATE %d-%02d-%02dT%02d:%02d:%02dZ\n",
+                $year + 1900,
+                $mon + 1, $mday, $hour, $min, $sec
+            );
             next;
         }
-	# Add generic site feature to catalog (e.g. RELEASE testing)
-        my ($key,$value) = ( $param =~ /(.*):(.*)/ );
+
+        # Add generic site feature to catalog (e.g. RELEASE testing)
+        my ( $key, $value ) = ( $param =~ /(.*):(.*)/ );
         print $CATALOG "# $key $value\n";
     }
 }
@@ -253,7 +258,7 @@ foreach my $file ( glob "$pkgdir/*" ) {
             # Check if the next line is \s+(arch)vers
             my $peek    = <$FILE>;
             my $hasvers = 0;
-            $hasvers    = $peek =~ /^\s+/ if $peek;
+            $hasvers = $peek =~ /^\s+/ if $peek;
 
             if (/^P\s+\S/) {
                 ($deptmp) = (/P\s+(\S+)/);
