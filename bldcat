@@ -193,7 +193,7 @@ foreach my $file ( glob "$pkgdir/*" ) {
       ( $file =~ /\.gz$/ ? "/bin/gzip -c -d $file" : "cat $file" );
     $status =
       system("$DECOMPRESS | /bin/pkgtrans /dev/fd/0 $tmpdir all 2> /dev/null");
-    die "Could not transform $file: $!" if $status;
+    die "Could not transform $file (file system full/read-only?): $!" if $status;
 
     foreach ( glob "$tmpdir/*" ) {
         ($pkgname) = (/([\w\+-\.]+)$/) if (-d);
