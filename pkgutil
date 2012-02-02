@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.7b1";
+my $pkgutilver   = "2.6.2b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -1883,7 +1883,7 @@ sub parse_cl {
         "F|findfile"      => \$opt_findfile,
         "extract"         => \$opt_extract,
         "single"          => \$opt_single,
-        "deptree:999"     => \$opt_deptree,
+        "deptree:i"       => \$opt_deptree,
         "N|nodeps"        => \$opt_nodeps,
         "parse"           => \$opt_parse,
         "p|param=s"       => \@opt_param,
@@ -1893,6 +1893,9 @@ sub parse_cl {
         "R|rootpath=s"    => \$opt_rootpath,
         "V|syscheck"      => \$opt_syscheck
     ) || usage();
+
+    # If --deptree was given without an argument set it to 999
+    $opt_deptree = 999 if ( defined $opt_deptree && $opt_deptree == 0 );
 
     print STDERR "DEBUG:pkgutil version:$pkgutilver\n" if $debug;
 
