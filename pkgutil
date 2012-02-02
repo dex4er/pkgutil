@@ -58,6 +58,7 @@ my $defaultmirror = ("http://mirror.opencsw.org/opencsw/testing");
 my $workdir       = "/var/opt/csw/pkgutil";
 my $pkgdir;
 my $admin;
+my $logfile;
 my (
     $line, $tmp,  $wget, $yes,     $force, $nomod,
     $gzip, $name, $ver,  $pkgname, $filename
@@ -527,22 +528,28 @@ sub fetch_catalog {
     }
     else {    # http/ftp used, use wget
         locate_wget() unless ( -x $wget );    # If wget disappeared locate alt.
+        logoutput();
         $status = system( "$wget", split( ' ', $wgetopts ),
             "-O", "${filename}.tmp", "$url/catalog" );
         if ($status) {
+            logfail();
             myexit( "\nFetching of catalog failed.", "", 1 );
         }
         else {
+            logend();
             rename "${filename}.tmp", $filename;
         }
+        logoutput();
         $status = system( "$wget", split( ' ', $wgetopts ),
             "-O", "${desc_file}.tmp", "$url/descriptions" );
         if ($status) {
+            logfail();
             print
 "Warning: the descriptions file could not be fetched. The --describe option will not be available"
               if $status;
         }
         else {
+            logend();
             rename "${desc_file}.tmp", $desc_file;
         }
     }
@@ -589,6 +596,7 @@ sub fetch_pkgs {
               . scalar(@pkglist)
               . ") ...\n";
             locate_wget() unless ( -x $wget ); # If wget disappeared locate alt.
+            logoutput();
             my $tried;
             foreach ( @{ $pkgmirror{$file} } ) {
                 $tried = 1;
@@ -611,12 +619,14 @@ sub fetch_pkgs {
                 }
             }
             if ( $status || !$tried ) {
+                logfail();
                 myexit(
 "\nFetching of $pkg failed. Try updating your catalog with pkgutil -U.",
                     "", 1
                 );
             }
             else {
+                logend();
                 rename "$pkgdir/${file}.tmp", "$pkgdir/$file";
             }
         }
@@ -1633,6 +1643,51 @@ sub locate_wget {
     return 1 if ( !$wget );
 }
 
+# These three routines are used to capture the output of sub processes into a
+# log file. If the command completes successfuly, the log file is thrown away.
+# If the command fails, the log file is printed along with an error message by
+# calling logfail.
+
+sub logoutput {
+    my ( $fh );
+    eval { require File::Temp; };    # Check for File::Temp
+    if ( $@ ) {
+        $logfile = "/tmp/pkgutil.$$.log.$^T";
+    }
+    else {
+        ( $fh, $logfile ) = File::Temp::tempfile( DIR => "/tmp" );
+    }
+    open( OLDOUT, '>&STDOUT' );
+    open( OLDERR, '>&STDERR' );
+    open( STDOUT, "> $logfile" );
+    open( STDERR, "> $logfile" );
+}
+
+sub logend {
+    # Reference fh to silence warning
+    select( OLDERR ); select( OLDOUT );
+
+    # Restore output.
+    select( STDOUT);
+    close( STDOUT );
+    open( STDOUT, ">&OLDOUT" );
+    close( STDERR );
+    open( STDERR, ">&OLDERR" );
+    unlink( $logfile );
+}
+
+sub logfail {
+    close( STDOUT );
+    open( STDOUT, ">&OLDOUT" );
+    close( STDERR );
+    open( STDERR, ">&OLDERR" );
+    open( LOG, "< $logfile" ) or
+        die "pkgutil: Error, @_ - can't open log\n";
+    print <LOG>;
+    close( LOG );
+    unlink( $logfile );
+}
+
 # Make a filename from the URL - /es to _es
 #   url - url to mangle
 sub mangle_url {
@@ -1838,6 +1893,8 @@ sub parse_cl {
         "R|rootpath=s"    => \$opt_rootpath,
         "V|syscheck"      => \$opt_syscheck
     ) || usage();
+
+    print STDERR "DEBUG:pkgutil version:$pkgutilver\n" if $debug;
 
     # Simple options
     usage()       if $opt_help;
