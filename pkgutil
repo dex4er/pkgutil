@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.3";
+my $pkgutilver   = "2.6.4b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -1895,7 +1895,8 @@ sub parse_cl {
     # If --deptree was given without an argument set it to 999
     $opt_deptree = 999 if ( defined $opt_deptree && $opt_deptree == 0 );
 
-    print STDERR "DEBUG:pkgutil version:$pkgutilver\n" if $debug;
+    print STDERR "DEBUG:pkgutil version: $pkgutilver\n" if $debug;
+    print STDERR "DEBUG:perl version: $]\n" if $debug;
 
     # Simple options
     usage()       if $opt_help;
