@@ -256,7 +256,7 @@ sub cleanup {
 
     my @obsolete;
     foreach my $pkg (@legacy) {
-        push( @obsolete, $pkg ) unless ( grep { /^$pkg$/ } @deps );
+        push( @obsolete, $pkg ) unless ( grep { /^\Q$pkg\E$/ } @deps );
     }
     my $pkgsep = ( $pkgliststyle ? "\n\t" : " " );
     print scalar(@obsolete)

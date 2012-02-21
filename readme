@@ -24,6 +24,9 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.6.4. Released 2012-02-xx
+  - Fix bug in --cleanup (Laurent Blume)
+
 * v2.6.3. Released 2012-02-17
   - Fix bug with using pkgcond on old Solaris versions (mikera)
 
