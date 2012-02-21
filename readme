@@ -24,7 +24,7 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
-* v2.6.4. Released 2012-02-xx
+* v2.6.4. Released 2012-02-21
   - Fix bug in --cleanup (Laurent Blume)
 
 * v2.6.3. Released 2012-02-17
