@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.4";
+my $pkgutilver   = "2.6.5b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -1408,22 +1408,6 @@ sub install {
     myexit( "",                                   "", 0 ) if $parse;
     myexit( "Option -n selected, stopping here.", "", 0 ) if $nomod;
 
-    # Warn if cswclassutils is in the list and we have a read-only
-    # /usr/sadm/install/scripts dir
-    if ( grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
-        if ( ! -w "/usr/sadm/install/scripts" ) {	# /usr ro?
-            myexit(
-                "A class action script is about to be installed but\n"
-                  . "/usr/sadm/install/scripts is read-only so it will fail.\n"
-                  . "If you're running a sparse zone, please install/update the\n"
-                  . "class action scripts from the global zone. If you want to\n"
-                  . "proceed with this installation you have to exclude the\n"
-                  . "CAS package (use the -x option). Exiting.",
-                "", 1
-            );
-        }
-    }
-
     if ( scalar(@dlpkglist) > 0 ) {
         fetch_pkgs( $mode, @dlpkglist );
     }
@@ -1444,6 +1428,22 @@ sub install {
     extract_pkg(@dlpkglist) if ( $mode == 5 );    # --extract
 
     return @revpkglist if ( $mode == 3 || $mode == 4 );    # If -s used
+
+    # Warn if cswclassutils is in the list and we have a read-only
+    # /usr/sadm/install/scripts dir
+    if ( grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
+        if ( ! -w "/usr/sadm/install/scripts" ) {	# /usr ro?
+            myexit(
+                "A class action script is about to be installed but\n"
+                  . "/usr/sadm/install/scripts is read-only so it will fail.\n"
+                  . "If you're running a sparse zone, please install/update the\n"
+                  . "class action scripts from the global zone. If you want to\n"
+                  . "proceed with this installation you have to exclude the\n"
+                  . "CAS package (use the -x option). Exiting.",
+                "", 1
+            );
+        }
+    }
 
     # Remove incompatible packages
     if ( scalar(@ideppkglist) > 0 && $mode == 0 ) {
