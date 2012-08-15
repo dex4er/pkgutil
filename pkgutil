@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.5b1";
+my $pkgutilver   = "2.6.5";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -1429,10 +1429,10 @@ sub install {
 
     return @revpkglist if ( $mode == 3 || $mode == 4 );    # If -s used
 
-    # Warn if cswclassutils is in the list and we have a read-only
-    # /usr/sadm/install/scripts dir
+    # Warn if cswclassutils is in the install list and we have a
+    # read-only /usr/sadm/install/scripts dir
     if ( grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
-        if ( ! -w "/usr/sadm/install/scripts" ) {	# /usr ro?
+        if ( ! -w "/usr/sadm/install/scripts" && $mode == 0 ) {	# /usr ro?
             myexit(
                 "A class action script is about to be installed but\n"
                   . "/usr/sadm/install/scripts is read-only so it will fail.\n"

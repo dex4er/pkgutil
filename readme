@@ -24,6 +24,10 @@ URL: http://sourceforge.net/projects/pkgutil
 Version history
 ---------------
 
+* v2.6.5. Released 2012-08-15
+  - Fix bug in sparse zone detection, should not trigger
+    when only downloading (Dagobert Michelsen)
+
 * v2.6.4. Released 2012-02-21
   - Fix bug in --cleanup (Laurent Blume)
 
