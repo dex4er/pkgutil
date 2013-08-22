@@ -39,7 +39,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 # Untainting
 delete @ENV{qw(LD_LIBRARY_PATH IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
-$ENV{'PATH'} = '/bin:/usr/bin';
+$ENV{'PATH'} = '/bin:/usr/bin:/opt/csw/bin';
 $ENV{'LANG'} = 'C';
 
 # Ensure we always work from a directory that won't
@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.5";
+my $pkgutilver   = "2.6.6b1";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
@@ -225,7 +225,7 @@ sub check_pkg {
         print STDERR "DEBUG:$pkg not installed\n" if $debug;
     }
     else {
-        $tmp = `/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
+        $tmp = `pkgparam $root_path $pkg VERSION 2> /dev/null`;
         chomp $tmp;
         if ( $mode == 0 ) {
             $retvalue = $tmp;
@@ -294,10 +294,10 @@ sub compare {
     }
     else {
         if ($noncsw) {
-            @cswpkgs = `/bin/pkginfo $root_path`;
+            @cswpkgs = `pkginfo $root_path`;
         }
         else {
-            @cswpkgs = `/bin/pkginfo $root_path | grep CSW`;
+            @cswpkgs = `pkginfo $root_path | grep CSW`;
         }
     }
     foreach my $pkg (@cswpkgs) {
@@ -482,7 +482,7 @@ sub extract_pkg {
         my $file = parse_catalog( $_, 3 );
         print "Extracting $_ to $pkgdir/" . parse_catalog( $_, 2 ) . " ...\n";
         my $status = system(
-"$gzip -c -f -d $pkgdir/$file | /bin/pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null"
+"$gzip -c -f -d $pkgdir/$file | pkgtrans /dev/fd/0 $pkgdir all 2> /dev/null"
         );
         myexit( "Could not extract $file (directory may already exist)", "", 1 )
           if $status;
@@ -871,11 +871,11 @@ sub init {
 #   pkglist - packages to install
 sub inst_loc_pkgs {
     my @pkglist    = @_;
-    my $pkgadd     = "/usr/sbin/pkgadd";
+    my $pkgadd     = "pkgadd";
     my $pkgaddopts = "";
-    my $pkgrm      = "/usr/sbin/pkgrm";
+    my $pkgrm      = "pkgrm";
     my $pkgrmopts  = "";
-    my $pkginfo    = "/bin/pkginfo";
+    my $pkginfo    = "pkginfo";
     my $pkgtrace   = "";
     my $file;
 
@@ -961,9 +961,9 @@ sub inst_pkgs {
     my $updlistlen = shift;
     my @pkglist    = @_;
     my $tmp        = "";
-    my $pkgadd     = "/usr/sbin/pkgadd";
+    my $pkgadd     = "pkgadd";
     my $pkgaddopts = "";
-    my $pkgrm      = "/usr/sbin/pkgrm";
+    my $pkgrm      = "pkgrm";
     my $pkgrmopts  = "";
     my $pkgtrace   = "";
     my $pkgask     = "";
@@ -1147,7 +1147,7 @@ sub install {
             if ( $tmppkg2 ne "CSWcommon" ) {
                 $retvalue = parse_catalog( $tmppkg2, 6 );
                 if ( $retvalue eq "not in catalog" ) {
-                    system( "/bin/pkginfo", split( ' ', $root_path ),
+                    system( "pkginfo", split( ' ', $root_path ),
                         "-q", "$tmppkg2" );
                     if ( $? == 0 )
                     { # Already installed...forgive its absence from the catalog
@@ -1447,7 +1447,7 @@ sub install {
 
     # Remove incompatible packages
     if ( scalar(@ideppkglist) > 0 && $mode == 0 ) {
-        my $pkgrm    = "/usr/sbin/pkgrm";
+        my $pkgrm    = "pkgrm";
         my $pkgtrace = "";
         my $pkgforce = "";
 
@@ -1532,7 +1532,7 @@ sub list_file {
     foreach (@ARGV) {
         if ( -r $_ && -f _ ) {    # Argument is a package file
             if ( $_ =~ /\.pkg$/ ) {
-                my (@tmp) = `/usr/sbin/pkgchk -l -d $_ all`;
+                my (@tmp) = `pkgchk -l -d $_ all`;
                 foreach (@tmp) {
                     next unless ( $_ =~ /^Pathname:\s\// );
                     my ($file) = ( $_ =~ /^Pathname:\s(.+?)\s/ );
@@ -2333,7 +2333,7 @@ sub read_catalog {
 sub remove {
     my @pkgs      = @_;
     my $retval    = "";
-    my $pkgrm     = "/usr/sbin/pkgrm";
+    my $pkgrm     = "pkgrm";
     my $pkgrmopts = "";
     my $pkgforce  = "";
     my $pkgtrace  = "";
@@ -2346,10 +2346,10 @@ sub remove {
 
     print "Looking at installed packages ...\n";
     if ($noncsw) {
-        @cswpkgstmp = `/bin/pkginfo $root_path`;
+        @cswpkgstmp = `pkginfo $root_path`;
     }
     else {
-        @cswpkgstmp = `/bin/pkginfo $root_path | grep CSW`;
+        @cswpkgstmp = `pkginfo $root_path | grep CSW`;
     }
     foreach my $pkg (@cswpkgstmp) {
         ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
@@ -2436,7 +2436,7 @@ sub remove {
 #   pkgs - packages to remove
 sub rem_pkgs {
     my @pkgs      = @_;
-    my $pkgrm     = "/usr/sbin/pkgrm";
+    my $pkgrm     = "pkgrm";
     my $pkgrmopts = "";
     my $pkgforce  = "";
     my $pkgtrace  = "";
