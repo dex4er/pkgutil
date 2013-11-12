@@ -39,7 +39,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 # Untainting
 delete @ENV{qw(LD_LIBRARY_PATH IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
-$ENV{'PATH'} = '/bin:/usr/bin:/opt/csw/bin';
+$ENV{'PATH'} = '/usr/sbin:/bin:/usr/bin:/opt/csw/bin';
 $ENV{'LANG'} = 'C';
 
 # Ensure we always work from a directory that won't
@@ -47,7 +47,7 @@ $ENV{'LANG'} = 'C';
 chdir('/');
 
 my $debug        = 0;
-my $pkgutilver   = "2.6.6b1";
+my $pkgutilver   = "2.6.6";
 my $use_md5      = 0;
 my $use_gpg      = 0;
 my $noncsw       = 0;
