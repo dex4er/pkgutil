@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+#echo $0 "$@" >> /tmp/pkgparam.log
+
+pkg=$1
+var=$2
+
+grep "^$var=" /var/opt/csw/pkg/$pkg/pkginfo | sed "s/^$var=//"
+
+exit 0

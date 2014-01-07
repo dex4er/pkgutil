@@ -1,0 +1,29 @@
+#!/usr/bin/bash
+
+#echo $0 "$@" >> /tmp/pkgrm.log
+
+pkg=$1
+
+test -n "$pkg" || exit 1
+
+test -d /var/opt/csw/pkg/$pkg || exit 2
+
+cat /var/opt/csw/pkg/$pkg/pkgmap | while read n t profile path mode rest; do
+    case "$t" in
+        f|s)
+            rm -f $path
+            ;;
+    esac
+done
+
+cat /var/opt/csw/pkg/$pkg/pkgmap | while read n t profile path mode rest; do
+    case "$t" in
+        d)
+            rmdir $path 2>/dev/null
+            ;;
+    esac
+done
+
+rm -rf /var/opt/csw/pkg/$pkg
+
+exit 0

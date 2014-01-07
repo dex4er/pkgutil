@@ -1,0 +1,49 @@
+#!/usr/bin/bash
+
+#echo $0 "$@" >> /tmp/pkgadd.log
+
+if [ "$1" = "-d" ]; then
+
+    d=`mktemp -d`
+    test -d "$d" || exit 1
+
+    pkgtrans "$2" $d
+    cp -frp $d/*/root/* /
+    cat $d/*/pkgmap | while read n t profile path mode rest; do
+        case "$t" in
+            d)
+                mkdir -p $path
+                chmod $mode $path
+                ;;
+            f)
+                chmod $mode $path
+                ;;
+            l)
+                source=${path#*=}
+                target=${path%=*}
+                rm -f $target
+                ln $source $target
+                ;;
+            s)
+                source=${path#*=}
+                target=${path%=*}
+                rm -f $target
+                ln -s $source $target
+                ;;
+        esac
+    done
+
+    test -d /var/opt/csw/pkg || mkdir -p /var/opt/csw/pkg
+
+    name=`basename $d/*`
+    test -d "$d/$name" || exit 2
+
+    test -d /var/opt/csw/pkg/$name || mkdir -p /var/opt/csw/pkg/$name
+    cp -frp $d/*/install $d/*/pkginfo $d/*/pkgmap /var/opt/csw/pkg/$name
+
+    test -f /var/opt/csw/pkg/$name/install/postinstall && sh /var/opt/csw/pkg/$name/install/postinstall
+
+    test -n "$DEBUG" || rm -rf $d
+fi
+
+exit 0

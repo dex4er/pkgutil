@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+
+#echo $0 "$@" >> /tmp/pkginfo.log
+
+test -d /var/opt/csw/pkg || exit 1
+
+cd /var/opt/csw/pkg
+
+for pkg in *; do
+
+    test -d "$pkg" || continue
+
+    line=`
+        for var in CATEGORY PKG NAME; do
+            grep "^$var=" /var/opt/csw/pkg/$pkg/pkginfo | sed "s/^$var=//"
+        done
+    `
+
+    echo $line
+
+done
+
+exit 0

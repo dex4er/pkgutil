@@ -39,7 +39,7 @@ $SIG{TERM} = $SIG{INT} = $SIG{QUIT} = \&signal_handler;
 
 # Untainting
 delete @ENV{qw(LD_LIBRARY_PATH IFS CDPATH ENV BASH_ENV)};    # Make %ENV safer
-$ENV{'PATH'} = '/usr/sbin:/bin:/usr/bin:/opt/csw/bin';
+$ENV{'PATH'} = '$ENV{HOME}/bin:/usr/sbin:/bin:/usr/bin:/opt/csw/bin';
 $ENV{'LANG'} = 'C';
 
 # Ensure we always work from a directory that won't
@@ -220,12 +220,12 @@ sub check_pkg {
     my $root_path = $config{root_path} ? "-R $config{root_path}" : "";
     my $test_path = $config{root_path} ? $config{root_path}      : "";
 
-    if ( !-d "$test_path/var/sadm/pkg/$pkg" ) {
+    if ( !-d "$test_path/var/opt/csw/pkg/$pkg" ) {
         $retvalue = "notinst";
         print STDERR "DEBUG:$pkg not installed\n" if $debug;
     }
     else {
-        $tmp = `pkgparam $root_path $pkg VERSION 2> /dev/null`;
+        $tmp = `$ENV{HOME}/bin/pkgparam $root_path $pkg VERSION 2> /dev/null`;
         chomp $tmp;
         if ( $mode == 0 ) {
             $retvalue = $tmp;
@@ -294,10 +294,10 @@ sub compare {
     }
     else {
         if ($noncsw) {
-            @cswpkgs = `pkginfo $root_path`;
+            @cswpkgs = `$ENV{HOME}/bin/pkginfo $root_path`;
         }
         else {
-            @cswpkgs = `pkginfo $root_path | grep CSW`;
+            @cswpkgs = `$ENV{HOME}/bin/pkginfo $root_path | grep CSW`;
         }
     }
     foreach my $pkg (@cswpkgs) {
@@ -871,11 +871,11 @@ sub init {
 #   pkglist - packages to install
 sub inst_loc_pkgs {
     my @pkglist    = @_;
-    my $pkgadd     = "pkgadd";
+    my $pkgadd     = "$ENV{HOME}/bin/pkgadd";
     my $pkgaddopts = "";
-    my $pkgrm      = "pkgrm";
+    my $pkgrm      = "$ENV{HOME}/bin/pkgrm";
     my $pkgrmopts  = "";
-    my $pkginfo    = "pkginfo";
+    my $pkginfo    = "$ENV{HOME}/bin/pkginfo";
     my $pkgtrace   = "";
     my $file;
 
@@ -961,9 +961,9 @@ sub inst_pkgs {
     my $updlistlen = shift;
     my @pkglist    = @_;
     my $tmp        = "";
-    my $pkgadd     = "pkgadd";
+    my $pkgadd     = "$ENV{HOME}/bin/pkgadd";
     my $pkgaddopts = "";
-    my $pkgrm      = "pkgrm";
+    my $pkgrm      = "$ENV{HOME}/bin/pkgrm";
     my $pkgrmopts  = "";
     my $pkgtrace   = "";
     my $pkgask     = "";
@@ -1147,7 +1147,7 @@ sub install {
             if ( $tmppkg2 ne "CSWcommon" ) {
                 $retvalue = parse_catalog( $tmppkg2, 6 );
                 if ( $retvalue eq "not in catalog" ) {
-                    system( "pkginfo", split( ' ', $root_path ),
+                    system( "$ENV{HOME}/bin/pkginfo", split( ' ', $root_path ),
                         "-q", "$tmppkg2" );
                     if ( $? == 0 )
                     { # Already installed...forgive its absence from the catalog
@@ -1431,7 +1431,7 @@ sub install {
 
     # Warn if cswclassutils is in the install list and we have a
     # read-only /usr/sadm/install/scripts dir
-    if ( grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
+    if ( 0 && grep { /^CSWcas-/ } @dlpkglist ) {    # CAS pkg in the list?
         if ( ! -w "/usr/sadm/install/scripts" && $mode == 0 ) {	# /usr ro?
             myexit(
                 "A class action script is about to be installed but\n"
@@ -1447,7 +1447,7 @@ sub install {
 
     # Remove incompatible packages
     if ( scalar(@ideppkglist) > 0 && $mode == 0 ) {
-        my $pkgrm    = "pkgrm";
+        my $pkgrm    = "$ENV{HOME}/bin/pkgrm";
         my $pkgtrace = "";
         my $pkgforce = "";
 
@@ -1491,7 +1491,7 @@ sub install {
 # List dependencies (part of --cleanup)
 sub list_deps {
     my $pkgdir =
-      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+      $config{root_path} ? "$config{root_path}/var/opt/csw/pkg" : "/var/opt/csw/pkg";
     my %deps;
 
     chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
@@ -1571,7 +1571,7 @@ sub list_file {
 # List obsolete files (part of --cleanup)
 sub list_obsolete {
     my $pkgdir =
-      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+      $config{root_path} ? "$config{root_path}/var/opt/csw/pkg" : "/var/opt/csw/pkg";
     my @legacy;
 
     chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
@@ -1584,7 +1584,7 @@ sub list_obsolete {
 # List installed packages (-l)
 sub list_pkgs {
     my $pkgdir =
-      $config{root_path} ? "$config{root_path}/var/sadm/pkg" : "/var/sadm/pkg";
+      $config{root_path} ? "$config{root_path}/var/opt/csw/pkg" : "/var/opt/csw/pkg";
 
     chdir($pkgdir) or myexit( "Could not cd to $pkgdir", "", 1 );
     foreach ( $noncsw ? glob("*") : glob("CSW*") ) {
@@ -1927,7 +1927,7 @@ sub parse_cl {
     if ($opt_workdir) {    # Set/create optional working dir
         $workdir = $opt_workdir;
     }
-    elsif ($>) {           # If -W not used and non-root, use home dir
+    elsif (0 && $>) {           # If -W not used and non-root, use home dir
         $workdir = $ENV{HOME} . "/.pkgutil";
         if ( !-d $workdir ) {    # Create if non-existing
             my $status = mkdir $workdir, 0777;
@@ -2333,7 +2333,7 @@ sub read_catalog {
 sub remove {
     my @pkgs      = @_;
     my $retval    = "";
-    my $pkgrm     = "pkgrm";
+    my $pkgrm     = "$ENV{HOME}/bin/pkgrm";
     my $pkgrmopts = "";
     my $pkgforce  = "";
     my $pkgtrace  = "";
@@ -2346,10 +2346,10 @@ sub remove {
 
     print "Looking at installed packages ...\n";
     if ($noncsw) {
-        @cswpkgstmp = `pkginfo $root_path`;
+        @cswpkgstmp = `$ENV{HOME}/bin/pkginfo $root_path`;
     }
     else {
-        @cswpkgstmp = `pkginfo $root_path | grep CSW`;
+        @cswpkgstmp = `$ENV{HOME}/bin/pkginfo $root_path | grep CSW`;
     }
     foreach my $pkg (@cswpkgstmp) {
         ($pkg) = ( $pkg =~ /\s+?(\S+?)\s/ );
@@ -2436,7 +2436,7 @@ sub remove {
 #   pkgs - packages to remove
 sub rem_pkgs {
     my @pkgs      = @_;
-    my $pkgrm     = "pkgrm";
+    my $pkgrm     = "$ENV{HOME}/bin/pkgrm";
     my $pkgrmopts = "";
     my $pkgforce  = "";
     my $pkgtrace  = "";
